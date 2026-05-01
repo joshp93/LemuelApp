@@ -5,8 +5,9 @@ import {
 } from "@expo-google-fonts/nunito";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { StyleSheet, View } from "react-native";
+import { defineBackgroundTask, scheduleBackgroundTask } from "./background/proverb-task";
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -16,6 +17,11 @@ export default function RootLayout() {
     Nunito_400Regular,
     Nunito_400Regular_Italic,
   });
+
+  useEffect(() => {
+    defineBackgroundTask();
+    scheduleBackgroundTask();
+  }, []);
 
   const onLayoutRootView = useCallback(async () => {
     if (fontsLoaded || fontError) {

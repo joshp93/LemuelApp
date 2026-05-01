@@ -1,6 +1,6 @@
 import { View, StyleSheet, ViewProps } from "react-native";
 import { Text } from "./themed-text";
-import { Proverb } from "../_models/proverb";
+import { Proverb } from "../models/proverb";
 
 export interface ProverbCardProps extends ViewProps {
   proverb: Proverb;

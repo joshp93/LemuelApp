@@ -1,11 +1,19 @@
 import { Stack } from "expo-router";
 import { View } from "react-native";
-import { Text } from "./_components/themed-text";
-import { ProverbCard } from "./_components/proverb-card";
-import { useProverbForTheDay } from "./_hooks/useProverbForTheDay";
+import { useEffect } from "react";
+import { Text } from "./components/themed-text";
+import { ProverbCard } from "./components/proverb-card";
+import { useProverbForTheDay } from "./hooks/useProverbForTheDay";
+import { updateProverbWidget } from "./widgets";
 
 export default function Index() {
   const { proverb, loading, error } = useProverbForTheDay();
+
+  useEffect(() => {
+    if (proverb) {
+      updateProverbWidget(proverb);
+    }
+  }, [proverb]);
 
   return (
     <>

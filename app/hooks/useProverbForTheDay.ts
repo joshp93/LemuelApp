@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { getProverbForTheDay } from "../_api/proverbs";
-import { Proverb } from "../_models/proverb";
+import { getProverbForTheDay } from "../api/proverbs";
+import { Proverb } from "../models/proverb";
 
 export function useProverbForTheDay() {
   const [proverb, setProverb] = useState<Proverb | null>(null);

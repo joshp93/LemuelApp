@@ -39,6 +39,24 @@
             "backgroundColor": "#000000"
           }
         }
+      ],
+      [
+        "voltra/app.plugin.js",
+        {
+          "android": {
+            "widgets": [
+              {
+                "id": "proverb_widget",
+                "displayName": "Proverb for the Day",
+                "description": "Display the Proverb of the day",
+                "minCellWidth": 2,
+                "minCellHeight": 2,
+                "targetCellWidth": 2,
+                "targetCellHeight": 2
+              }
+            ]
+          }
+        }
       ]
     ],
     "experiments": {
