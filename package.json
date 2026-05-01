@@ -7,6 +7,8 @@
     "reset-project": "node ./scripts/reset-project.js",
     "preandroid": "expo prebuild --platform android --clean",
     "android": "expo run:android",
+    "preand-release": "expo prebuild --platform android --clean",
+    "and-release": "expo run:android --variant release",
     "preios": "expo prebuild --platform ios --clean",
     "ios": "expo run:ios",
     "web": "expo start --web",
