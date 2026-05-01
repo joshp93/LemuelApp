@@ -16,18 +16,19 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
 }));
 
 // Mock expo modules with manual mock setup
-jest.mock("expo-background-task", () => ({
+jest.mock("expo-background-fetch", () => ({
   registerTaskAsync: jest.fn().mockResolvedValue(undefined),
-  BackgroundTaskResult: {
-    Success: 0,
-    Failed: 1,
+  unregisterTaskAsync: jest.fn().mockResolvedValue(undefined),
+  getRegisteredTasksAsync: jest.fn().mockResolvedValue([]),
+  BackgroundFetchResult: {
+    NewData: 1,
+    NoData: 2,
+    Failed: 3,
   },
 }));
 
 jest.mock("expo-task-manager", () => ({
   defineTask: jest.fn(),
-  isTaskRegisteredAsync: jest.fn().mockResolvedValue(false),
-  unregisterTaskAsync: jest.fn().mockResolvedValue(undefined),
 }));
 
 const mockProverb: Proverb = {
