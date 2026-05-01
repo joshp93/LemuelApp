@@ -15,7 +15,7 @@
       "package": "com.proverbfortheday.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
-        "backgroundColor": "#6F6F6F"
+        "backgroundColor": "#000000"
       },
       "predictiveBackGestureEnabled": false
     },
@@ -31,7 +31,7 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#6F6F6F",
+          "backgroundColor": "#000000",
           "dark": {
             "backgroundColor": "#000000"
           }
