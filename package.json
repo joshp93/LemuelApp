@@ -4,7 +4,6 @@
   "version": "1.0.0",
   "scripts": {
     "start": "expo start",
-    "reset-project": "node ./scripts/reset-project.js",
     "preandroid": "expo prebuild --platform android --clean",
     "android": "expo run:android",
     "preand-release": "expo prebuild --platform android --clean",

@@ -1,10 +1,10 @@
 import { Stack } from "expo-router";
 import { useEffect } from "react";
 import { ScrollView } from "react-native";
-import { useProverbForTheDay } from "../src/hooks/useProverbForTheDay";
-import { updateProverbWidget } from "../src/widgets";
 import { ProverbCard } from "../src/components/proverb-card";
 import { Text } from "../src/components/themed-text";
+import { useProverbForTheDay } from "../src/hooks/useProverbForTheDay";
+import { updateProverbWidget } from "../src/widgets";
 
 export default function Index() {
   const { proverb, loading, error } = useProverbForTheDay();
@@ -19,8 +19,7 @@ export default function Index() {
     <>
       <Stack.Screen
         options={{
-          title:
-            proverb && !loading && !error ? proverb.ref : "Proverb of the Day",
+          title: proverb && !loading && !error ? proverb.ref : "Daily Proverb",
         }}
       />
       <ScrollView

@@ -6,7 +6,7 @@ import {
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useCallback, useEffect } from "react";
-import { StyleSheet, View } from "react-native";
+import { Image, StyleSheet, View } from "react-native";
 import {
   defineBackgroundTask,
   scheduleBackgroundTask,
@@ -41,6 +41,16 @@ export default function RootLayout() {
       <Stack
         screenOptions={{
           headerTitleStyle: styles.defaultText,
+          headerStyle: {
+            backgroundColor: "black",
+          },
+          headerTintColor: "white",
+          headerRight: () => (
+            <Image
+              source={require("../assets/images/app-logo.png")}
+              style={{ width: 40, height: 40, resizeMode: "contain" }}
+            />
+          ),
         }}
       />
     </View>
