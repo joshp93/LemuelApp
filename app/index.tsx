@@ -26,6 +26,7 @@ export default function Index() {
         style={{
           flex: 1,
           padding: 16,
+          backgroundColor: "#E6F4FE",
         }}
       >
         {loading && (
