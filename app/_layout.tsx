@@ -1,3 +1,4 @@
+import "react-native-get-random-values";
 import {
   Nunito_400Regular,
   Nunito_400Regular_Italic,
