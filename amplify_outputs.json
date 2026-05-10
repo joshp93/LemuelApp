@@ -1,7 +1,8 @@
 {
-  "auth": {
-    "aws_region": "eu-west-2",
-    "user_pool_id": "eu-west-2_iQM6jAUkv",
-    "user_pool_client_id": "47im7unupup988ridcvlmcqpg8"
+  "Auth": {
+    "Cognito": {
+      "userPoolId": "eu-west-2_Oas7XphX7",
+      "userPoolClientId": "557lc1t882n3uf3o8ra8cu03oa"
+    }
   }
 }

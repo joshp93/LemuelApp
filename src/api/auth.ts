@@ -16,12 +16,23 @@ export interface AppAuthUser {
 export async function checkUserExists(email: string): Promise<boolean> {
   try {
     console.log("[Auth API] Checking if user exists:", email);
-    const user = await amplifyGetCurrentUser();
-    const exists = user.username.toLowerCase() === email.toLowerCase();
-    console.log("[Auth API] User exists:", exists);
-    return exists;
-  } catch {
-    console.log("[Auth API] User does not exist");
+    const response = await fetch(
+      new Request(
+        "https://8ndcvtnwf1.execute-api.eu-west-2.amazonaws.com/prod/auth/check-user-exists",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email }),
+        },
+      ),
+    );
+    const data = (await response.json()) as { exists: boolean };
+    console.log("[Auth API] User exists:", data.exists);
+    return data.exists === true;
+  } catch (error) {
+    console.log("[Auth API] Error checking if user exists", error);
     return false;
   }
 }
@@ -82,7 +93,7 @@ export async function signIn(
     console.log("[Auth API] Sign in successful");
     return { success: true };
   } catch (error: unknown) {
-    console.log("[Auth API] Sign in failed");
+    console.log("[Auth API] Sign in failed", error);
     const err = error as Error;
     return { success: false, message: err.message };
   }

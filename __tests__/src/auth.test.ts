@@ -55,22 +55,38 @@ describe("Auth API", () => {
   });
 
   describe("checkUserExists", () => {
-    it("should return true when user matches email", async () => {
-      mockAmplifyGetCurrentUser.mockResolvedValueOnce({
-        userId: "user123",
-        username: "test@example.com",
+    let mockFetch: jest.Mock;
+
+    beforeEach(() => {
+      mockFetch = jest.fn();
+      global.fetch = mockFetch;
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it("should return true when user exists", async () => {
+      mockFetch.mockResolvedValueOnce({
+        json: async () => ({ exists: true }),
       });
 
       const result = await checkUserExists("test@example.com");
 
       expect(result).toBe(true);
-      expect(mockAmplifyGetCurrentUser).toHaveBeenCalledTimes(1);
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "POST",
+        }),
+      );
+      expect(mockFetch.mock.calls[0][0].url).toBe(
+        "https://8ndcvtnwf1.execute-api.eu-west-2.amazonaws.com/prod/auth/check-user-exists",
+      );
     });
 
-    it("should return false when user does not match email", async () => {
-      mockAmplifyGetCurrentUser.mockResolvedValueOnce({
-        userId: "user123",
-        username: "other@example.com",
+    it("should return false when user does not exist", async () => {
+      mockFetch.mockResolvedValueOnce({
+        json: async () => ({ exists: false }),
       });
 
       const result = await checkUserExists("test@example.com");
@@ -78,10 +94,18 @@ describe("Auth API", () => {
       expect(result).toBe(false);
     });
 
-    it("should return false when user does not exist", async () => {
-      mockAmplifyGetCurrentUser.mockRejectedValueOnce(
-        new Error("User not found"),
-      );
+    it("should return false on network error", async () => {
+      mockFetch.mockRejectedValueOnce(new Error("Network error"));
+
+      const result = await checkUserExists("test@example.com");
+
+      expect(result).toBe(false);
+    });
+
+    it("should return false on invalid response", async () => {
+      mockFetch.mockResolvedValueOnce({
+        json: async () => ({ exists: undefined }),
+      });
 
       const result = await checkUserExists("test@example.com");
 

@@ -5,4 +5,4 @@ export function configureAmplify() {
   Amplify.configure(amplifyconfig);
 }
 
-export const isConfigured = () => !!amplifyconfig.auth.user_pool_id;
+export const isConfigured = () => !!amplifyconfig.Auth.Cognito.userPoolId;

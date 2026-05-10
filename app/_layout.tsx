@@ -7,7 +7,7 @@ import {
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useState } from "react";
-import { Image, StyleSheet, Text, View } from "react-native";
+import { Image, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from "react-native";
 import { configureAmplify, isConfigured } from "../src/amplify-configuration";
 import { AuthProvider } from "../src/auth/auth-context";
 import {
@@ -40,7 +40,10 @@ function AppContent() {
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
+    >
       <Stack
         screenOptions={{
           headerTitleStyle: styles.defaultText,
@@ -59,7 +62,7 @@ function AppContent() {
           ),
         }}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -95,6 +98,7 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#E6F4FE",
   },
   defaultText: {
     fontFamily: "Nunito_400Regular",

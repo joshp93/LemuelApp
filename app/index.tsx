@@ -1,3 +1,5 @@
+import "react-native-get-random-values";
+
 import { Stack } from "expo-router";
 import { useEffect } from "react";
 import { ScrollView } from "react-native";
