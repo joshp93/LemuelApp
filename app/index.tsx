@@ -1,7 +1,3 @@
-import "../src/amplify-configuration";
-
-import "react-native-get-random-values";
-
 import { Stack } from "expo-router";
 import { useEffect } from "react";
 import { ScrollView } from "react-native";
@@ -27,9 +23,12 @@ export default function Index() {
         }}
       />
       <ScrollView
+        contentContainerStyle={{
+          flexGrow: 1,
+          padding: 16,
+        }}
         style={{
           flex: 1,
-          padding: 16,
           backgroundColor: "#E6F4FE",
         }}
       >

@@ -1,8 +1,0 @@
-{
-  "Auth": {
-    "Cognito": {
-      "userPoolId": "eu-west-2_Oas7XphX7",
-      "userPoolClientId": "557lc1t882n3uf3o8ra8cu03oa"
-    }
-  }
-}

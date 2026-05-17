@@ -99,16 +99,17 @@ describe("SignUp", () => {
     });
   });
 
-  it.skip("should show validation error for password mismatch", async () => {
-    // This test is skipped because the password mismatch validation
-    // only runs on form submit, not on blur
-    const { getByPlaceholderText, getByText } = render(<SignUp />);
-    const passwordInput = getByPlaceholderText("Password");
-    const confirmPasswordInput = getByPlaceholderText("Confirm Password");
+  it("should show validation error for password mismatch", async () => {
+    const { getByPlaceholderText, getAllByText, getByText } = render(
+      <SignUp />,
+    );
 
-    fireEvent.changeText(passwordInput, "Password1");
-    fireEvent(confirmPasswordInput, "mismatch");
-    fireEvent(confirmPasswordInput, "blur");
+    fireEvent.changeText(getByPlaceholderText("Email"), "test@example.com");
+    fireEvent.changeText(getByPlaceholderText("Password"), "Password1");
+    fireEvent.changeText(getByPlaceholderText("Confirm Password"), "Password2");
+
+    const signUpButtons = getAllByText("Sign Up");
+    fireEvent.press(signUpButtons[1]);
 
     await waitFor(() => {
       expect(getByText("Passwords do not match")).toBeTruthy();

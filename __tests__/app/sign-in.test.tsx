@@ -34,52 +34,53 @@ describe("SignIn", () => {
     jest.clearAllMocks();
   });
 
-  it("should render email and password inputs", () => {
-    const { getByPlaceholderText } = render(<SignIn />);
-    expect(getByPlaceholderText("Email")).toBeTruthy();
+  it("should render email preview and password input", () => {
+    const { getByPlaceholderText, getAllByText } = render(<SignIn />);
+    expect(getAllByText("Sign In").length).toBeGreaterThan(0);
     expect(getByPlaceholderText("Password")).toBeTruthy();
   });
 
-  it("should show validation errors for empty fields", async () => {
-    const { getAllByText } = render(<SignIn />);
+  it("should show validation error when password is empty", async () => {
+    const { getAllByText, getByText } = render(<SignIn />);
 
     const signInButtons = getAllByText("Sign In");
     fireEvent.press(signInButtons[1]);
 
     await waitFor(() => {
-      expect(getAllByText("Email is required").length).toBeGreaterThan(0);
+      expect(getByText("Password is required")).toBeTruthy();
     });
   });
 
-  it("should show validation error for invalid email", async () => {
-    const { getByText, getByPlaceholderText } = render(<SignIn />);
-    const emailInput = getByPlaceholderText("Email");
-
-    fireEvent(emailInput, "focus");
-    fireEvent(emailInput, "changeText", "not-an-email");
-    fireEvent(emailInput, "blur");
-
-    await waitFor(() => {
-      expect(getByText("Please enter a valid email address")).toBeTruthy();
-    });
-  });
-
-  it("should sign in successfully", async () => {
+  it("should pass email from route params to sign-in function", async () => {
     mockSignIn.mockResolvedValueOnce({ success: true });
 
     const { getByPlaceholderText, getAllByText } = render(<SignIn />);
 
-    fireEvent.changeText(getByPlaceholderText("Email"), "test@example.com");
     fireEvent.changeText(getByPlaceholderText("Password"), "password123");
 
     const signInButtons = getAllByText("Sign In");
     fireEvent.press(signInButtons[1]);
 
     await waitFor(() => {
-      expect(mockSignIn).toHaveBeenCalledWith(
-        "test@example.com",
-        "password123",
-      );
+      expect(mockSignIn).toHaveBeenCalledWith("", "password123");
+    });
+
+    expect(mockRefreshUser).toHaveBeenCalled();
+    expect(mockReplace).toHaveBeenCalledWith("/");
+  });
+
+  it("should sign in successfully with email param", async () => {
+    mockSignIn.mockResolvedValueOnce({ success: true });
+
+    const { getByPlaceholderText, getAllByText } = render(<SignIn />);
+
+    fireEvent.changeText(getByPlaceholderText("Password"), "password123");
+
+    const signInButtons = getAllByText("Sign In");
+    fireEvent.press(signInButtons[1]);
+
+    await waitFor(() => {
+      expect(mockSignIn).toHaveBeenCalledWith("", "password123");
     });
 
     expect(mockRefreshUser).toHaveBeenCalled();
@@ -96,7 +97,6 @@ describe("SignIn", () => {
       <SignIn />,
     );
 
-    fireEvent.changeText(getByPlaceholderText("Email"), "test@example.com");
     fireEvent.changeText(getByPlaceholderText("Password"), "wrongpassword");
 
     const signInButtons = getAllByText("Sign In");

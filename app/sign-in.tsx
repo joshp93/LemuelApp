@@ -4,51 +4,23 @@ import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { signIn } from "../src/api/auth";
 import { useAuth } from "../src/auth/auth-context";
 
-const isValidEmail = (email: string) => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-};
-
 export default function SignIn() {
   const router = useRouter();
   const params = useLocalSearchParams<{ email?: string }>();
   const { refreshUser } = useAuth();
-  const [email, setEmail] = useState(params.email || "");
+  const email = params.email || "";
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<{
-    email?: string;
-    password?: string;
-  }>({});
-
-  const validateField = (field: "email" | "password", value: string) => {
-    if (!value) {
-      setFieldErrors((prev) => ({
-        ...prev,
-        [field]: `${field === "email" ? "Email" : "Password"} is required`,
-      }));
-      return false;
-    }
-    if (field === "email" && !isValidEmail(value)) {
-      setFieldErrors((prev) => ({
-        ...prev,
-        email: "Please enter a valid email address",
-      }));
-      return false;
-    }
-    setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
-    return true;
-  };
+  const [fieldError, setFieldError] = useState<string>();
 
   const handleSignIn = async () => {
     setFormError("");
+    setFieldError(undefined);
 
-    const emailValid = validateField("email", email);
-    const passwordValid = validateField("password", password);
-
-    if (!emailValid || !passwordValid) {
+    if (!password) {
+      setFieldError("Password is required");
       return;
     }
 
@@ -59,6 +31,12 @@ export default function SignIn() {
     if (result.success) {
       await refreshUser();
       router.replace("/");
+    } else if (result.requiresConfirmation) {
+      // User account not confirmed yet, redirect to confirmation screen
+      router.replace({
+        pathname: "/confirm-sign-up",
+        params: { email },
+      });
     } else {
       setFormError(result.message || "Sign in failed. Please try again.");
     }
@@ -69,34 +47,23 @@ export default function SignIn() {
       <Stack.Screen options={{ title: "Sign In" }} />
       <View style={styles.container}>
         <Text style={styles.title}>Sign In</Text>
+        <Text style={styles.emailPreview}>{email}</Text>
 
         {formError ? <Text style={styles.formError}>{formError}</Text> : null}
-
-        <TextInput
-          style={[styles.input, fieldErrors.email ? styles.inputError : null]}
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-          onBlur={() => validateField("email", email)}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          autoComplete="email"
-        />
-        {fieldErrors.email ? (
-          <Text style={styles.fieldError}>{fieldErrors.email}</Text>
-        ) : null}
 
         <View style={styles.passwordContainer}>
           <TextInput
             style={[
               styles.input,
               styles.passwordInput,
-              fieldErrors.password ? styles.inputError : null,
+              fieldError ? styles.inputError : null,
             ]}
             placeholder="Password"
             value={password}
             onChangeText={setPassword}
-            onBlur={() => validateField("password", password)}
+            onBlur={() => {
+              if (!password) setFieldError("Password is required");
+            }}
             secureTextEntry={!showPassword}
           />
           <Pressable
@@ -108,8 +75,8 @@ export default function SignIn() {
             </Text>
           </Pressable>
         </View>
-        {fieldErrors.password ? (
-          <Text style={styles.fieldError}>{fieldErrors.password}</Text>
+        {fieldError ? (
+          <Text style={styles.fieldError}>{fieldError}</Text>
         ) : null}
 
         <Pressable
@@ -117,13 +84,13 @@ export default function SignIn() {
           onPress={handleSignIn}
           disabled={loading}
         >
-          <Text style={styles.buttonText}>
+<Text style={styles.buttonText}>
             {loading ? "Signing in..." : "Sign In"}
           </Text>
         </Pressable>
-      </View>
-    </>
-  );
+        </View>
+      </>
+    );
 }
 
 const styles = StyleSheet.create({
@@ -137,8 +104,14 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "bold",
     textAlign: "center",
-    marginBottom: 30,
+    marginBottom: 10,
     color: "#333",
+  },
+  emailPreview: {
+    fontSize: 16,
+    textAlign: "center",
+    color: "#666",
+    marginBottom: 30,
   },
   formError: {
     color: "#dc3545",

@@ -6,11 +6,7 @@ import {
   useEffect,
   useState,
 } from "react";
-import {
-  logout as amplifyLogout,
-  getAuthenticatedUser,
-  getIdToken,
-} from "../api/auth";
+import * as auth from "../api/auth";
 
 interface AuthUser {
   userId: string;
@@ -23,6 +19,7 @@ interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
   refreshUser: () => Promise<void>;
+  refreshToken: () => Promise<boolean>;
   signOut: () => Promise<void>;
 }
 
@@ -35,15 +32,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshUser = useCallback(async () => {
     try {
       console.log("[Auth] Checking for authenticated user...");
-      const authenticatedUser = await getAuthenticatedUser();
+      const authenticatedUser = await auth.getAuthenticatedUser();
       if (authenticatedUser) {
-        console.log("[Auth] User is authenticated, fetching ID token...");
-        const token = await getIdToken();
+        console.log("[Auth] User is authenticated, fetching valid ID token...");
+        const token = await auth.getValidIdToken();
         if (token) {
           console.log("[Auth] User signed in successfully");
           setUser({ ...authenticatedUser, token });
         } else {
-          console.log("[Auth] No ID token found, user is null");
+          console.log("[Auth] No valid ID token found, user is null");
           setUser(null);
         }
       } else {
@@ -56,6 +53,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const refreshToken = useCallback(async (): Promise<boolean> => {
+    try {
+      console.log("[Auth] Manually refreshing token...");
+      const success = await auth.refreshAccessToken();
+      if (success) {
+        console.log("[Auth] Token refreshed successfully, updating user...");
+        // Re-fetch user with new token
+        await refreshUser();
+      } else {
+        console.log("[Auth] Token refresh failed, signing out...");
+        setUser(null);
+      }
+      return success;
+    } catch (error: unknown) {
+      console.error("[Auth] Error refreshing token", error);
+      setUser(null);
+      return false;
+    }
+  }, [refreshUser]);
+
   useEffect(() => {
     console.log("[Auth] Initializing auth state...");
     refreshUser().finally(() => {
@@ -66,13 +83,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     console.log("[Auth] Signing out user...");
-    await amplifyLogout();
+    await auth.signOut();
     console.log("[Auth] User signed out");
     setUser(null);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, refreshUser, signOut }}>
+    <AuthContext.Provider value={{ user, loading, refreshUser, refreshToken, signOut }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,54 +1,31 @@
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { verifyAccount } from "../src/api/auth";
+import { resendVerificationCode, verifyAccount } from "../src/api/auth";
 
 export default function ConfirmSignUp() {
   const router = useRouter();
   const params = useLocalSearchParams<{ email?: string }>();
-  const [email, setEmail] = useState(params.email || "");
+  const email = params.email || "";
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const [formError, setFormError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<{
-    email?: string;
-    code?: string;
-  }>({});
-
-  useEffect(() => {
-    if (params.email) {
-      setEmail(params.email);
-    }
-  }, [params.email]);
-
-  const validateField = (field: "email" | "code", value: string) => {
-    if (!value) {
-      setFieldErrors((prev) => ({
-        ...prev,
-        [field]: `${field === "email" ? "Email" : "Verification code"} is required`,
-      }));
-      return false;
-    }
-    if (field === "code" && value.length !== 6) {
-      setFieldErrors((prev) => ({
-        ...prev,
-        code: "Please enter the 6-digit code",
-      }));
-      return false;
-    }
-    setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
-    return true;
-  };
+  const [resendMessage, setResendMessage] = useState("");
+  const [fieldError, setFieldError] = useState<string>();
 
   const handleConfirm = async () => {
     setFormError("");
-    setSuccessMessage("");
+    setFieldError(undefined);
 
-    const emailValid = validateField("email", email);
-    const codeValid = validateField("code", code);
+    if (!code) {
+      setFieldError("Verification code is required");
+      return;
+    }
 
-    if (!emailValid || !codeValid) {
+    if (code.length !== 6) {
+      setFieldError("Please enter the 6-digit code");
       return;
     }
 
@@ -67,6 +44,19 @@ export default function ConfirmSignUp() {
     }
   };
 
+  const handleResend = async () => {
+    setFormError("");
+    setResendMessage("");
+    setResending(true);
+    const result = await resendVerificationCode(email);
+    setResending(false);
+    if (result.success) {
+      setResendMessage("Code resent! Check your email.");
+    } else {
+      setFormError(result.message || "Failed to resend code. Please try again.");
+    }
+  };
+
   return (
     <>
       <Stack.Screen options={{ title: "Confirm Sign Up" }} />
@@ -81,31 +71,21 @@ export default function ConfirmSignUp() {
           <Text style={styles.success}>{successMessage}</Text>
         ) : null}
 
-        <TextInput
-          style={[styles.input, fieldErrors.email ? styles.inputError : null]}
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-          onBlur={() => validateField("email", email)}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          autoComplete="email"
-        />
-        {fieldErrors.email ? (
-          <Text style={styles.fieldError}>{fieldErrors.email}</Text>
-        ) : null}
+        <Text style={styles.emailPreview}>{email}</Text>
 
         <TextInput
-          style={[styles.input, fieldErrors.code ? styles.inputError : null]}
+          style={[styles.input, fieldError ? styles.inputError : null]}
           placeholder="Verification Code"
           value={code}
           onChangeText={setCode}
-          onBlur={() => validateField("code", code)}
+          onBlur={() => {
+            if (!code) setFieldError("Verification code is required");
+          }}
           keyboardType="number-pad"
           maxLength={6}
         />
-        {fieldErrors.code ? (
-          <Text style={styles.fieldError}>{fieldErrors.code}</Text>
+        {fieldError ? (
+          <Text style={styles.fieldError}>{fieldError}</Text>
         ) : null}
 
         <Pressable
@@ -115,6 +95,20 @@ export default function ConfirmSignUp() {
         >
           <Text style={styles.buttonText}>
             {loading ? "Verifying..." : "Verify"}
+          </Text>
+        </Pressable>
+
+        {resendMessage ? (
+          <Text style={styles.resendMessage}>{resendMessage}</Text>
+        ) : null}
+
+        <Pressable
+          style={[styles.resendButton, resending && styles.buttonDisabled]}
+          onPress={handleResend}
+          disabled={resending}
+        >
+          <Text style={styles.resendButtonText}>
+            {resending ? "Sending..." : "Resend Code"}
           </Text>
         </Pressable>
       </View>
@@ -141,6 +135,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 30,
     color: "#666",
+  },
+  emailPreview: {
+    fontSize: 16,
+    textAlign: "center",
+    color: "#666",
+    marginBottom: 30,
   },
   formError: {
     color: "#dc3545",
@@ -186,5 +186,20 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 16,
     fontWeight: "600",
+  },
+  resendMessage: {
+    color: "#28a745",
+    fontSize: 14,
+    textAlign: "center",
+    marginTop: 15,
+  },
+  resendButton: {
+    marginTop: 15,
+    padding: 10,
+  },
+  resendButtonText: {
+    color: "#007AFF",
+    fontSize: 16,
+    textAlign: "center",
   },
 });

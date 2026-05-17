@@ -1,3 +1,5 @@
+import "react-native-get-random-values";
+
 import {
   Nunito_400Regular,
   Nunito_400Regular_Italic,
@@ -56,7 +58,7 @@ function AppContent() {
           },
           headerTintColor: "white",
           headerRight: () => (
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <View style={styles.headerLogoContainer}>
               <Image
                 source={require("../assets/images/app-logo.png")}
                 style={{ width: 40, height: 40, resizeMode: "contain" }}
@@ -82,6 +84,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#E6F4FE",
+  },
+  headerLogoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "white",
+    borderRadius: 30,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginBottom: 2,
+    height: 36,
   },
   defaultText: {
     fontFamily: "Nunito_400Regular",
