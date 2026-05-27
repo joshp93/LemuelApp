@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   BackgroundTaskResult,
   BackgroundTaskStatus,
@@ -5,12 +6,14 @@ import {
   registerTaskAsync,
 } from "expo-background-task";
 import * as TaskManager from "expo-task-manager";
-import { updateProverbWidget } from "../../src/widgets";
 import { getProverbForTheDay } from "../api/proverbs";
 import { getChosenVersion } from "../api/version-storage";
-import { scheduleDailyProverbNotification } from "../notifications/daily-proverb-notification";
+import { scheduleProverbNotification } from "../notifications/daily-proverb-notification";
+import { getNotificationsEnabled } from "../notifications/notification-preferences";
+import { updateProverbWidget } from "../widgets";
 
 const TASK_NAME = "daily-proverb-fetch";
+const INITIALIZED_KEY = "background_task_initialized";
 
 const executeBackgroundTask = async () => {
   try {
@@ -18,9 +21,24 @@ const executeBackgroundTask = async () => {
     const version = storedVersion || "niv";
     const proverb = await getProverbForTheDay(version);
     await updateProverbWidget(proverb);
-    await scheduleDailyProverbNotification();
+
+    const notificationsEnabled = await getNotificationsEnabled();
+    if (notificationsEnabled) {
+      await scheduleProverbNotification(proverb);
+    }
   } catch (error) {
     console.error("Background task failed:", error);
+  }
+};
+
+const updateWidgetOnly = async () => {
+  try {
+    const storedVersion = await getChosenVersion();
+    const version = storedVersion || "niv";
+    const proverb = await getProverbForTheDay(version);
+    await updateProverbWidget(proverb);
+  } catch (error) {
+    console.error("Failed to update widget:", error);
   }
 };
 
@@ -34,14 +52,15 @@ export const registerBackgroundTask = async () => {
   }
 };
 
-export const scheduleBackgroundTask = async () => {
-  const isRegistered = await TaskManager.isTaskRegisteredAsync(TASK_NAME);
+export const initializeBackgroundTask = async () => {
+  await registerBackgroundTask();
 
-  if (!isRegistered) {
-    await registerBackgroundTask();
+  const hasInitialized = await AsyncStorage.getItem(INITIALIZED_KEY);
+  if (!hasInitialized) {
+    // On first run, populate widget without sending notification
+    await updateWidgetOnly();
+    await AsyncStorage.setItem(INITIALIZED_KEY, "true");
   }
-
-  await executeBackgroundTask();
 };
 
 export const defineBackgroundTask = () => {

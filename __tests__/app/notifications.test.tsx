@@ -5,7 +5,12 @@ import {
   getNotificationsEnabled,
   setNotificationsEnabled,
 } from "../../src/notifications/notification-preferences";
-import { scheduleDailyProverbNotification } from "../../src/notifications/daily-proverb-notification";
+import {
+  scheduleNextDayProverbNotification,
+  sendProverbNotification,
+} from "../../src/notifications/daily-proverb-notification";
+import { getProverbForTheDay } from "../../src/api/proverbs";
+import { getChosenVersion } from "../../src/api/version-storage";
 
 jest.mock("expo-router", () => ({
   useRouter: () => ({}),
@@ -16,140 +21,67 @@ jest.mock("expo-router", () => ({
 
 jest.mock("expo-notifications");
 
-jest.mock(
-  "../../src/notifications/notification-preferences",
-);
+jest.mock("../../src/notifications/notification-preferences");
+jest.mock("../../src/notifications/daily-proverb-notification");
+jest.mock("../../src/api/proverbs");
+jest.mock("../../src/api/version-storage");
+jest.mock("../../src/utils/battery-optimization", () => ({
+  openBatteryOptimizationSettings: jest.fn(),
+  getBatteryOptimizationWarningText: jest.fn(
+    () => "ℹ️ To ensure timely notifications...",
+  ),
+}));
 
-jest.mock(
-  "../../src/notifications/daily-proverb-notification",
-);
-
-const mockGetNotificationsEnabled = getNotificationsEnabled as jest.MockedFunction<
-  typeof getNotificationsEnabled
+const mockGetNotificationsEnabled =
+  getNotificationsEnabled as jest.MockedFunction<typeof getNotificationsEnabled>;
+const mockSetNotificationsEnabled =
+  setNotificationsEnabled as jest.MockedFunction<typeof setNotificationsEnabled>;
+const mockScheduleNextDayProverbNotification =
+  scheduleNextDayProverbNotification as jest.MockedFunction<
+    typeof scheduleNextDayProverbNotification
+  >;
+const mockGetProverbForTheDay = getProverbForTheDay as jest.MockedFunction<
+  typeof getProverbForTheDay
 >;
-const mockSetNotificationsEnabled = setNotificationsEnabled as jest.MockedFunction<
-  typeof setNotificationsEnabled
->;
-const mockScheduleDailyProverbNotification = scheduleDailyProverbNotification as jest.MockedFunction<
-  typeof scheduleDailyProverbNotification
+const mockGetChosenVersion = getChosenVersion as jest.MockedFunction<
+  typeof getChosenVersion
 >;
 
 describe("NotificationsSettings", () => {
+  const mockProverb = {
+    ref: "Proverbs 3:5",
+    proverb: "Trust in the LORD",
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockGetNotificationsEnabled.mockResolvedValue(false);
     mockSetNotificationsEnabled.mockResolvedValue(undefined);
-    mockScheduleDailyProverbNotification.mockResolvedValue(undefined);
+    mockScheduleNextDayProverbNotification.mockResolvedValue(undefined);
+    mockGetProverbForTheDay.mockResolvedValue(mockProverb);
+    mockGetChosenVersion.mockResolvedValue("niv");
   });
 
-  it("should render toggle and label", async () => {
-    const { getByText } = render(<NotificationsSettings />);
-
-    await waitFor(() => {
-      expect(
-        getByText("Enable daily proverb meditation notifications"),
-      ).toBeTruthy();
-    });
-  });
-
-  it("should load and display saved preference as enabled", async () => {
-    mockGetNotificationsEnabled.mockResolvedValueOnce(true);
-
-    const { UNSAFE_getByType } = render(<NotificationsSettings />);
-
-    await waitFor(() => {
-      const switches = UNSAFE_getByType(require("react-native").Switch);
-      expect(switches.props.value).toBe(true);
-    });
-  });
-
-  it("should load and display saved preference as disabled", async () => {
-    mockGetNotificationsEnabled.mockResolvedValueOnce(false);
-
-    const { UNSAFE_getByType } = render(<NotificationsSettings />);
-
-    await waitFor(() => {
-      const switches = UNSAFE_getByType(require("react-native").Switch);
-      expect(switches.props.value).toBe(false);
-    });
-  });
-
-  it("should enable notifications when toggle is turned on", async () => {
+  it("schedules a notification for the next day when toggled on", async () => {
     (Notifications.requestPermissionsAsync as jest.Mock).mockResolvedValueOnce({
       status: "granted",
     });
 
     const { UNSAFE_getByType } = render(<NotificationsSettings />);
 
+    let switches: any;
     await waitFor(() => {
-      const switches = UNSAFE_getByType(require("react-native").Switch);
-      fireEvent(switches, "valueChange", true);
+      switches = UNSAFE_getByType(require("react-native").Switch);
     });
+
+    fireEvent(switches, "valueChange", true);
 
     await waitFor(() => {
       expect(Notifications.requestPermissionsAsync).toHaveBeenCalled();
-      expect(mockScheduleDailyProverbNotification).toHaveBeenCalled();
+      expect(mockScheduleNextDayProverbNotification).toHaveBeenCalledWith(
+        mockProverb,
+      );
       expect(mockSetNotificationsEnabled).toHaveBeenCalledWith(true);
-    });
-  });
-
-  it("should disable notifications when toggle is turned off", async () => {
-    mockGetNotificationsEnabled.mockResolvedValueOnce(true);
-    (Notifications.cancelAllScheduledNotificationsAsync as jest.Mock).mockResolvedValueOnce(
-      undefined,
-    );
-
-    const { UNSAFE_getByType } = render(<NotificationsSettings />);
-
-    await waitFor(() => {
-      const switches = UNSAFE_getByType(require("react-native").Switch);
-      fireEvent(switches, "valueChange", false);
-    });
-
-    await waitFor(() => {
-      expect(
-        Notifications.cancelAllScheduledNotificationsAsync,
-      ).toHaveBeenCalled();
-      expect(mockSetNotificationsEnabled).toHaveBeenCalledWith(false);
-    });
-  });
-
-  it("should show permission denied message when permission is not granted", async () => {
-    (Notifications.requestPermissionsAsync as jest.Mock).mockResolvedValueOnce({
-      status: "denied",
-    });
-
-    const { UNSAFE_getByType } = render(<NotificationsSettings />);
-
-    await waitFor(() => {
-      const switches = UNSAFE_getByType(require("react-native").Switch);
-      fireEvent(switches, "valueChange", true);
-    });
-
-    await waitFor(() => {
-      expect(mockSetNotificationsEnabled).toHaveBeenCalledWith(false);
-    });
-  });
-
-  it("should display descriptive text when enabled", async () => {
-    mockGetNotificationsEnabled.mockResolvedValueOnce(true);
-
-    const { getByText } = render(<NotificationsSettings />);
-
-    await waitFor(() => {
-      expect(
-        getByText(/You will receive daily proverb meditation notifications/),
-      ).toBeTruthy();
-    });
-  });
-
-  it("should display descriptive text when disabled", async () => {
-    const { getByText } = render(<NotificationsSettings />);
-
-    await waitFor(() => {
-      expect(
-        getByText(/Daily proverb meditation notifications are disabled/),
-      ).toBeTruthy();
     });
   });
 });

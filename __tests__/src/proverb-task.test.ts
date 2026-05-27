@@ -1,13 +1,21 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as BackgroundTask from "expo-background-task";
 import type { TaskManagerTaskExecutor } from "expo-task-manager";
 import * as TaskManager from "expo-task-manager";
 import { getProverbForTheDay } from "../../src/api/proverbs";
 import {
   defineBackgroundTask,
+  initializeBackgroundTask,
   registerBackgroundTask,
-  scheduleBackgroundTask,
 } from "../../src/background/proverb-task";
+import { scheduleProverbNotification } from "../../src/notifications/daily-proverb-notification";
+import { getNotificationsEnabled } from "../../src/notifications/notification-preferences";
 import { updateProverbWidget } from "../../src/widgets";
+
+jest.mock("@react-native-async-storage/async-storage", () => ({
+  getItem: jest.fn(),
+  setItem: jest.fn(),
+}));
 
 jest.mock("expo-background-task", () => ({
   getStatusAsync: jest.fn(),
@@ -36,7 +44,10 @@ jest.mock("../../src/widgets", () => ({
 }));
 
 jest.mock("../../src/notifications/daily-proverb-notification", () => ({
-  scheduleDailyProverbNotification: jest.fn(),
+  scheduleProverbNotification: jest.fn(),
+}));
+jest.mock("../../src/notifications/notification-preferences", () => ({
+  getNotificationsEnabled: jest.fn(),
 }));
 
 describe("registerBackgroundTask", () => {
@@ -79,11 +90,7 @@ describe("registerBackgroundTask", () => {
   });
 });
 
-describe("scheduleBackgroundTask", () => {
-  const mockIsTaskRegisteredAsync =
-    TaskManager.isTaskRegisteredAsync as jest.MockedFunction<
-      typeof TaskManager.isTaskRegisteredAsync
-    >;
+describe("initializeBackgroundTask", () => {
   const mockGetStatusAsync =
     BackgroundTask.getStatusAsync as jest.MockedFunction<
       typeof BackgroundTask.getStatusAsync
@@ -92,35 +99,78 @@ describe("scheduleBackgroundTask", () => {
     BackgroundTask.registerTaskAsync as jest.MockedFunction<
       typeof BackgroundTask.registerTaskAsync
     >;
+  const mockGetItem = AsyncStorage.getItem as jest.MockedFunction<
+    typeof AsyncStorage.getItem
+  >;
+  const mockSetItem = AsyncStorage.setItem as jest.MockedFunction<
+    typeof AsyncStorage.setItem
+  >;
+  const mockGetProverbForTheDay = getProverbForTheDay as jest.MockedFunction<
+    typeof getProverbForTheDay
+  >;
+  const mockUpdateProverbWidget = updateProverbWidget as jest.MockedFunction<
+    typeof updateProverbWidget
+  >;
+  const mockScheduleProverbNotification =
+    scheduleProverbNotification as jest.MockedFunction<
+      typeof scheduleProverbNotification
+    >;
+
+  const mockProverb = {
+    ref: "Proverbs 3:5",
+    proverb: "Trust in the LORD",
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it("should register the background task if not already registered", async () => {
-    mockIsTaskRegisteredAsync.mockResolvedValueOnce(false);
+  it("should register the task", async () => {
+    mockGetItem.mockResolvedValueOnce("true");
     mockGetStatusAsync.mockResolvedValueOnce(
       BackgroundTask.BackgroundTaskStatus.Available,
     );
     mockRegisterTaskAsync.mockResolvedValueOnce(undefined);
 
-    await scheduleBackgroundTask();
+    await initializeBackgroundTask();
 
-    expect(mockIsTaskRegisteredAsync).toHaveBeenCalledWith(
-      "daily-proverb-fetch",
-    );
+    expect(mockGetStatusAsync).toHaveBeenCalledTimes(1);
     expect(mockRegisterTaskAsync).toHaveBeenCalledWith("daily-proverb-fetch", {
       minimumInterval: 60 * 24,
     });
   });
 
-  it("should NOT register if task is already registered", async () => {
-    mockIsTaskRegisteredAsync.mockResolvedValueOnce(true);
+  it("should execute widget update on first run only (no notification)", async () => {
+    mockGetItem.mockResolvedValueOnce(null);
+    mockGetStatusAsync.mockResolvedValueOnce(
+      BackgroundTask.BackgroundTaskStatus.Available,
+    );
+    mockRegisterTaskAsync.mockResolvedValueOnce(undefined);
+    mockGetProverbForTheDay.mockResolvedValueOnce(mockProverb);
+    mockUpdateProverbWidget.mockResolvedValueOnce(undefined);
 
-    await scheduleBackgroundTask();
+    await initializeBackgroundTask();
 
-    expect(mockIsTaskRegisteredAsync).toHaveBeenCalledTimes(1);
-    expect(mockGetStatusAsync).toHaveBeenCalledTimes(0);
+    expect(mockGetProverbForTheDay).toHaveBeenCalledTimes(1);
+    expect(mockUpdateProverbWidget).toHaveBeenCalledWith(mockProverb);
+    expect(mockScheduleProverbNotification).not.toHaveBeenCalled();
+    expect(mockSetItem).toHaveBeenCalledWith(
+      "background_task_initialized",
+      "true",
+    );
+  });
+
+  it("should NOT execute widget update on subsequent runs", async () => {
+    mockGetItem.mockResolvedValueOnce("true");
+    mockGetStatusAsync.mockResolvedValueOnce(
+      BackgroundTask.BackgroundTaskStatus.Available,
+    );
+    mockRegisterTaskAsync.mockResolvedValueOnce(undefined);
+
+    await initializeBackgroundTask();
+
+    expect(mockGetProverbForTheDay).not.toHaveBeenCalled();
+    expect(mockUpdateProverbWidget).not.toHaveBeenCalled();
   });
 });
 
@@ -134,76 +184,77 @@ describe("defineBackgroundTask", () => {
   const mockUpdateProverbWidget = updateProverbWidget as jest.MockedFunction<
     typeof updateProverbWidget
   >;
-  const mockScheduleDailyProverbNotification = jest.requireMock(
-    "../../src/notifications/daily-proverb-notification",
-  ).scheduleDailyProverbNotification;
+  const mockScheduleProverbNotification =
+    scheduleProverbNotification as jest.MockedFunction<
+      typeof scheduleProverbNotification
+    >;
+  const mockGetNotificationsEnabled =
+    getNotificationsEnabled as jest.MockedFunction<
+      typeof getNotificationsEnabled
+    >;
+
+  const mockProverb = {
+    ref: "Proverbs 3:5",
+    proverb: "Trust in the LORD",
+  };
+
+  let taskExecutor: TaskManagerTaskExecutor;
 
   beforeEach(() => {
     jest.clearAllMocks();
     jest.spyOn(console, "error").mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
-  });
-
-  it("should define a task with the correct name", async () => {
-    mockDefineTask.mockImplementationOnce(() => {});
-
+    mockDefineTask.mockImplementation(
+      (_name: string, task: TaskManagerTaskExecutor) => {
+        taskExecutor = task;
+      },
+    );
+    mockGetProverbForTheDay.mockResolvedValue(mockProverb);
     defineBackgroundTask();
+  });
 
+  it("should define a task with the correct name", () => {
     expect(mockDefineTask).toHaveBeenCalledWith(
       "daily-proverb-fetch",
       expect.any(Function),
     );
   });
 
-  it("should fetch proverb, update widget, and schedule notification when task executes", async () => {
-    const mockProverb = {
-      ref: "Proverbs 3:5",
-      proverb: "Trust in the LORD",
-    };
-    mockGetProverbForTheDay.mockResolvedValueOnce(mockProverb);
-    mockUpdateProverbWidget.mockResolvedValueOnce(undefined);
-    mockScheduleDailyProverbNotification.mockResolvedValueOnce(undefined);
+  describe("when notifications are enabled", () => {
+    it("should fetch proverb, update widget, and schedule notification", async () => {
+      mockGetNotificationsEnabled.mockResolvedValue(true);
 
-    let taskExecutor: TaskManagerTaskExecutor;
-    mockDefineTask.mockImplementationOnce(
-      (_name: string, task: TaskManagerTaskExecutor) => {
-        taskExecutor = task;
-      },
-    );
+      await taskExecutor({
+        data: {},
+        error: null,
+        executionInfo: { eventId: "", taskName: "" },
+      });
 
-    defineBackgroundTask();
-    await taskExecutor!({
-      data: {},
-      error: null,
-      executionInfo: { eventId: "", taskName: "" },
+      expect(mockGetProverbForTheDay).toHaveBeenCalledTimes(1);
+      expect(mockUpdateProverbWidget).toHaveBeenCalledWith(mockProverb);
+      expect(mockScheduleProverbNotification).toHaveBeenCalledWith(mockProverb);
     });
+  });
 
-    expect(mockGetProverbForTheDay).toHaveBeenCalledTimes(1);
-    expect(mockUpdateProverbWidget).toHaveBeenCalledWith(mockProverb);
-    expect(mockScheduleDailyProverbNotification).toHaveBeenCalledTimes(1);
+  describe("when notifications are disabled", () => {
+    it("should fetch proverb, update widget, but NOT schedule notification", async () => {
+      mockGetNotificationsEnabled.mockResolvedValue(false);
+
+      await taskExecutor({
+        data: {},
+        error: null,
+        executionInfo: { eventId: "", taskName: "" },
+      });
+
+      expect(mockGetProverbForTheDay).toHaveBeenCalledTimes(1);
+      expect(mockUpdateProverbWidget).toHaveBeenCalledWith(mockProverb);
+      expect(mockScheduleProverbNotification).not.toHaveBeenCalled();
+    });
   });
 
   it("should return BackgroundTaskResult.Success on success", async () => {
-    const mockProverb = {
-      ref: "Proverbs 3:5",
-      proverb: "Trust in the LORD",
-    };
-    mockGetProverbForTheDay.mockResolvedValueOnce(mockProverb);
-    mockUpdateProverbWidget.mockResolvedValueOnce(undefined);
-    mockScheduleDailyProverbNotification.mockResolvedValueOnce(undefined);
+    mockGetNotificationsEnabled.mockResolvedValue(true);
 
-    let taskExecutor: TaskManagerTaskExecutor;
-    mockDefineTask.mockImplementationOnce(
-      (_name: string, task: TaskManagerTaskExecutor) => {
-        taskExecutor = task;
-      },
-    );
-
-    defineBackgroundTask();
-    const result = await taskExecutor!({
+    const result = await taskExecutor({
       data: {},
       error: null,
       executionInfo: { eventId: "", taskName: "" },
@@ -219,15 +270,7 @@ describe("defineBackgroundTask", () => {
       .spyOn(console, "error")
       .mockImplementation(() => {});
 
-    let taskExecutor: TaskManagerTaskExecutor;
-    mockDefineTask.mockImplementationOnce(
-      (_name: string, task: TaskManagerTaskExecutor) => {
-        taskExecutor = task;
-      },
-    );
-
-    defineBackgroundTask();
-    await taskExecutor!({
+    await taskExecutor({
       data: {},
       error: null,
       executionInfo: { eventId: "", taskName: "" },

@@ -1,6 +1,5 @@
 import * as Notifications from "expo-notifications";
-import { getProverbForTheDay } from "../api/proverbs";
-import { getChosenVersion } from "../api/version-storage";
+import type { Proverb } from "../models/proverb";
 
 const NOTIFICATION_ID = "daily-proverb-meditation";
 
@@ -28,13 +27,11 @@ const createAndroidChannel = async () => {
   });
 };
 
-const getRandomTimeInWindow = (): Date => {
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
+const getRandomTimeInWindow = (date: Date): Date => {
   const startOfDay = new Date(
-    tomorrow.getFullYear(),
-    tomorrow.getMonth(),
-    tomorrow.getDate(),
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
   );
 
   const windowStartMinutes = WINDOW_START_HOUR * 60;
@@ -48,18 +45,54 @@ const getRandomTimeInWindow = (): Date => {
   return randomDate;
 };
 
-export const scheduleDailyProverbNotification = async () => {
+export const sendProverbNotification = async (proverb: Proverb) => {
   try {
-    console.debug("Scheduling daily proverb notification...");
     await Notifications.requestPermissionsAsync();
-
     await createAndroidChannel();
-    const storedVersion = await getChosenVersion();
-    const version = storedVersion || "niv";
-    const proverb = await getProverbForTheDay(version);
-
     await Notifications.cancelAllScheduledNotificationsAsync();
+    await Notifications.scheduleNotificationAsync({
+      identifier: NOTIFICATION_ID,
+      content: {
+        title: "Daily Proverb Meditation",
+        body: `Tap to begin meditation on "${proverb.proverb}"`,
+        data: { proverb: proverb.proverb, ref: proverb.ref },
+      },
+      trigger: null, // send immediately
+    });
+  } catch (error) {
+    console.error("Failed to send daily proverb notification:", error);
+  }
+};
 
+export const scheduleProverbNotification = async (proverb: Proverb) => {
+  try {
+    await Notifications.requestPermissionsAsync();
+    await createAndroidChannel();
+    await Notifications.cancelAllScheduledNotificationsAsync();
+    await Notifications.scheduleNotificationAsync({
+      identifier: NOTIFICATION_ID,
+      content: {
+        title: "Daily Proverb Meditation",
+        body: `Tap to begin meditation on "${proverb.ref}"`,
+        data: { proverb: proverb.proverb, ref: proverb.ref },
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: getRandomTimeInWindow(new Date()),
+      },
+    });
+  } catch (error) {
+    console.error("Failed to schedule daily proverb notification:", error);
+  }
+};
+
+export const scheduleNextDayProverbNotification = async (proverb: Proverb) => {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  try {
+    await Notifications.requestPermissionsAsync();
+    await createAndroidChannel();
+    await Notifications.cancelAllScheduledNotificationsAsync();
     await Notifications.scheduleNotificationAsync({
       identifier: NOTIFICATION_ID,
       content: {
@@ -69,10 +102,10 @@ export const scheduleDailyProverbNotification = async () => {
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.DATE,
-        date: getRandomTimeInWindow(),
+        date: getRandomTimeInWindow(tomorrow),
       },
     });
   } catch (error) {
-    console.error("Failed to schedule daily proverb notification:", error);
+    console.error("Failed to schedule next day proverb notification:", error);
   }
 };

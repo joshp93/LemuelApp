@@ -18,7 +18,7 @@ import {
 import { AuthProvider } from "../src/auth/auth-context";
 import {
   defineBackgroundTask,
-  scheduleBackgroundTask,
+  initializeBackgroundTask,
 } from "../src/background/proverb-task";
 import { HeaderMenu } from "../src/components/header-menu";
 import { initializeNotifications } from "../src/notifications/daily-proverb-notification";
@@ -33,7 +33,7 @@ function AppContent() {
 
   useEffect(() => {
     defineBackgroundTask();
-    scheduleBackgroundTask();
+    initializeBackgroundTask();
     initializeNotifications();
   }, []);
 
