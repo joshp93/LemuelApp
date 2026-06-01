@@ -1,8 +1,8 @@
 import { Canvas, Path, Skia, useCanvasRef } from "@shopify/react-native-skia";
 import { Stack } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LayoutChangeEvent, Pressable, StyleSheet, View } from "react-native";
-import { useSharedValue, withTiming } from "react-native-reanimated";
+import Animated, { useAnimatedStyle, useDerivedValue, useSharedValue, withTiming } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { Text } from "../src/components/themed-text";
 import { useProverbForTheDay } from "../src/hooks/useProverbForTheDay";
@@ -46,6 +46,8 @@ export default function MeditationScreen() {
   const ref = useCanvasRef();
   const { proverb, loading } = useProverbForTheDay();
   const progress = useSharedValue(0);
+  const textOpacity = useSharedValue(0);
+  const animationStarted = useRef(false);
 
   const handleLayout = useCallback((e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
@@ -53,10 +55,25 @@ export default function MeditationScreen() {
   }, []);
 
   useEffect(() => {
-    progress.value = withTiming(1, { duration: DURATION_MS }, (finished) => {
-      if (finished) scheduleOnRN(setIsComplete, true);
-    });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!animationStarted.current && !loading && proverb) {
+      animationStarted.current = true;
+      progress.value = withTiming(1, { duration: DURATION_MS }, (finished) => {
+        if (finished) scheduleOnRN(setIsComplete, true);
+      });
+      textOpacity.value = withTiming(1, { duration: 1000 });
+    }
+  }, [loading, proverb]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const textAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: textOpacity.value,
+  }));
+
+  const segments = [
+    { start: useDerivedValue(() => 0.25), end: useDerivedValue(() => 0.25 + progress.value * 0.25) },
+    { start: useDerivedValue(() => 0.25 - progress.value * 0.25), end: useDerivedValue(() => 0.25) },
+    { start: useDerivedValue(() => 0.75 - progress.value * 0.25), end: useDerivedValue(() => 0.75) },
+    { start: useDerivedValue(() => 0.75), end: useDerivedValue(() => 0.75 + progress.value * 0.25) },
+  ];
 
   const outlinePath = useMemo(() => {
     const { width: W, height: H } = canvasSize;
@@ -91,25 +108,27 @@ export default function MeditationScreen() {
         }}
       />
       <Canvas style={StyleSheet.absoluteFill} ref={ref}>
-        {outlinePath && glowLayers.map(({ w, a }, i) => (
-          <Path
-            key={i}
-            path={outlinePath}
-            style="stroke"
-            strokeWidth={w}
-            color={`rgba(25,51,179,${a})`}
-            start={0}
-            end={progress}
-            strokeCap="round"
-            strokeJoin="round"
-          />
-        ))}
+        {outlinePath && segments.map((seg, si) =>
+          glowLayers.map(({ w, a }, li) => (
+            <Path
+              key={`${si}-${li}`}
+              path={outlinePath}
+              style="stroke"
+              strokeWidth={w}
+              color={`rgba(25,51,179,${a})`}
+              start={seg.start}
+              end={seg.end}
+              strokeCap="round"
+              strokeJoin="round"
+            />
+          ))
+        )}
       </Canvas>
 
       {proverb && !loading && (
-        <View style={styles.textContainer}>
+        <Animated.View style={[styles.textContainer, textAnimatedStyle]}>
           <Text style={styles.proverbText}>{proverb.proverb}</Text>
-        </View>
+        </Animated.View>
       )}
 
       {isComplete && (
