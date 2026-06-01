@@ -14,15 +14,8 @@ describe("ProverbCard", () => {
     expect(getByText("Trust in the LORD with all your heart")).toBeTruthy();
   });
 
-  it("should render with default compact false", () => {
-    const { getByText } = render(<ProverbCard proverb={mockProverb} />);
-
-    const textElement = getByText("Trust in the LORD with all your heart");
-    expect(textElement).toBeTruthy();
-  });
-
-  it("should apply compact styles when compact is true", () => {
-    const { getByText } = render(<ProverbCard proverb={mockProverb} compact />);
+  it("should render with custom fontSize", () => {
+    const { getByText } = render(<ProverbCard proverb={mockProverb} fontSize={32} />);
 
     const textElement = getByText("Trust in the LORD with all your heart");
     expect(textElement).toBeTruthy();

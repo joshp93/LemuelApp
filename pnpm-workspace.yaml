@@ -1,3 +1,9 @@
+allowBuilds:
+  '@shopify/react-native-skia': true
+  msgpackr-extract: true
+  unrs-resolver: true
+  vd-tool: true
+
 nodeLinker: hoisted
 
 onlyBuiltDependencies:

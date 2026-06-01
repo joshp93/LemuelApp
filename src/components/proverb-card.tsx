@@ -4,21 +4,28 @@ import { Text } from "./themed-text";
 
 export interface ProverbCardProps extends ViewProps {
   proverb: Proverb;
-  compact?: boolean;
+  /**
+   * Font size in px for the proverb text.
+   * @default 40
+   */
+  fontSize?: number;
 }
 
+/**
+ * Displays a single proverb with optional citation.
+ *
+ * When `fontSize` is provided the proverb text renders at that size with a
+ * proportional line-height. The citation always renders at 12px regardless.
+ */
 export function ProverbCard({
   proverb,
-  compact = false,
+  fontSize = 40,
   style,
   ...props
 }: ProverbCardProps) {
   return (
-    <View
-      style={[compact ? styles.compact : styles.container, style]}
-      {...props}
-    >
-      <Text style={compact ? styles.compactText : styles.proverbText}>
+    <View style={[styles.container, style]} {...props}>
+      <Text style={[styles.proverbText, { fontSize, lineHeight: fontSize * 1.05 }]}>
         {proverb.proverb}
       </Text>
       {proverb.citation && (
@@ -32,18 +39,8 @@ const styles = StyleSheet.create({
   container: {
     padding: 16,
   },
-  compact: {
-    padding: 8,
-  },
   proverbText: {
-    fontSize: 40,
     fontStyle: "normal",
-    lineHeight: 42,
-  },
-  compactText: {
-    fontSize: 18,
-    fontStyle: "normal",
-    lineHeight: 20,
   },
   citationText: {
     marginTop: 8,

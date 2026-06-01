@@ -7,11 +7,15 @@ jest.mock("../../src/hooks/useProverbForTheDay");
 jest.mock("../../src/widgets", () => ({
   updateProverbWidget: jest.fn(),
 }));
+
+jest.mock("react-native-safe-area-context", () => ({
+  ...jest.requireActual("react-native-safe-area-context"),
+  useSafeAreaInsets: () => ({ top: 47, left: 0, right: 0, bottom: 34 }),
+}));
+
 const mockRouterPush = jest.fn();
 jest.mock("expo-router", () => ({
-  Stack: {
-    Screen: () => null,
-  },
+  Stack: { Screen: () => null },
   useRouter: () => ({ push: mockRouterPush }),
 }));
 

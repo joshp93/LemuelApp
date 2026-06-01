@@ -1,14 +1,20 @@
 import { Stack, useRouter } from "expo-router";
 import { useEffect } from "react";
-import { Pressable, ScrollView, View, StyleSheet } from "react-native";
+import { Platform, Pressable, ScrollView, View, StyleSheet, useWindowDimensions } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ProverbCard } from "../src/components/proverb-card";
 import { Text } from "../src/components/themed-text";
 import { VersionDropdown } from "../src/components/version-dropdown";
+import { useFitProverbFontSize } from "../src/hooks/useFitProverbFontSize";
 import { useProverbForTheDay } from "../src/hooks/useProverbForTheDay";
 import { updateProverbWidget } from "../src/widgets";
 
+const BTN_BLOCK = 85;
+
 export default function Index() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { width: screenWidth, height: windowHeight } = useWindowDimensions();
 
   const {
     proverb,
@@ -24,6 +30,17 @@ export default function Index() {
       updateProverbWidget(proverb);
     }
   }, [proverb]);
+
+  const headerHeight = insets.top + (Platform.OS === "ios" ? 44 : 56);
+  const textBoxWidth = screenWidth - 64;
+  const textBoxHeight = windowHeight - headerHeight - BTN_BLOCK - 64;
+
+  const { fontSize, overflowsAtMin } = useFitProverbFontSize(
+    proverb?.proverb,
+    textBoxWidth,
+    textBoxHeight,
+    { minSize: 20, maxSize: 56 },
+  );
 
   const title = proverb && !loading && !error ? proverb.ref : "Daily Proverb";
 
@@ -57,13 +74,14 @@ export default function Index() {
       />
       <ScrollView
         contentContainerStyle={{
-          flexGrow: 1,
           padding: 16,
+          flexGrow: 1,
         }}
         style={{
           flex: 1,
           backgroundColor: "#E6F4FE",
         }}
+        scrollEnabled={overflowsAtMin}
       >
         {loading && (
           <Text
@@ -75,7 +93,11 @@ export default function Index() {
           </Text>
         )}
         {error && <Text>{error}</Text>}
-        {proverb && !loading && !error && <ProverbCard proverb={proverb} />}
+        <View style={overflowsAtMin ? undefined : { flex: 1, justifyContent: "flex-start" }}>
+          {proverb && !loading && !error && (
+            <ProverbCard proverb={proverb} fontSize={fontSize} />
+          )}
+        </View>
       </ScrollView>
       <Pressable
         style={styles.meditationButton}

@@ -1,10 +1,11 @@
 import { Canvas, Fill, Path, Shader, Skia, useCanvasSize, useClock, type Uniforms } from "@shopify/react-native-skia";
 import { Stack } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LayoutChangeEvent, Pressable, StyleSheet, View } from "react-native";
+import { LayoutChangeEvent, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import Animated, { useAnimatedStyle, useDerivedValue, useSharedValue, withTiming } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { Text } from "../src/components/themed-text";
+import { useFitProverbFontSize } from "../src/hooks/useFitProverbFontSize";
 import { useProverbForTheDay } from "../src/hooks/useProverbForTheDay";
 
 const DURATION_MS = 60000;
@@ -134,6 +135,15 @@ export default function MeditationScreen() {
     opacity: textOpacity.value,
   }));
 
+  const textBoxWidth = canvasSize.width - 2 * (INSET + CORNER_RADIUS);
+  const textBoxHeight = canvasSize.height - (INSET + CORNER_RADIUS + 8) - 100;
+  const { fontSize, overflowsAtMin } = useFitProverbFontSize(
+    proverb?.proverb,
+    textBoxWidth,
+    textBoxHeight,
+    { minSize: 14, maxSize: 40 },
+  );
+
   const segments = [
     { start: useDerivedValue(() => 0.25), end: useDerivedValue(() => 0.25 + progress.value * 0.25) },
     { start: useDerivedValue(() => 0.25 - progress.value * 0.25), end: useDerivedValue(() => 0.25) },
@@ -196,17 +206,23 @@ export default function MeditationScreen() {
         )}
       </Canvas>
 
-      {proverb && !loading && (
-        <Animated.View style={[styles.textContainer, textAnimatedStyle]}>
-          <Text style={styles.proverbText}>{proverb.proverb}</Text>
-        </Animated.View>
-      )}
+      <View style={styles.overlay}>
+        {proverb && !loading && (
+          <Animated.View style={[styles.textContainer, textAnimatedStyle]}>
+            <ScrollView scrollEnabled={overflowsAtMin}>
+              <Text style={[styles.proverbText, { fontSize, lineHeight: fontSize * 1.4 }]}>
+                {proverb.proverb}
+              </Text>
+            </ScrollView>
+          </Animated.View>
+        )}
 
-      {isComplete && (
-        <Pressable style={styles.captureButton} onPress={() => {}}>
-          <Text style={styles.captureButtonText}>Capture your thoughts...</Text>
-        </Pressable>
-      )}
+        {isComplete && (
+          <Pressable style={styles.captureButton} onPress={() => {}}>
+            <Text style={styles.captureButtonText}>Capture your thoughts...</Text>
+          </Pressable>
+        )}
+      </View>
     </View>
   );
 }
@@ -216,24 +232,22 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#000",
   },
+  overlay: {
+    flex: 1,
+  },
   textContainer: {
-    position: "absolute",
-    top: INSET + CORNER_RADIUS + 8,
-    left: 0,
-    right: 0,
+    flex: 1,
     paddingHorizontal: INSET + CORNER_RADIUS,
+    paddingTop: INSET + CORNER_RADIUS + 8,
+    paddingBottom: 100,
   },
   proverbText: {
     color: "#b8c8ff",
-    fontSize: 24,
-    lineHeight: 34,
     textAlign: "left",
   },
   captureButton: {
-    position: "absolute",
-    bottom: 36,
-    left: INSET,
-    right: INSET,
+    marginHorizontal: INSET,
+    marginBottom: 36,
     backgroundColor: ACCENT_COLOR,
     padding: 15,
     borderRadius: 8,
