@@ -1,20 +1,28 @@
 import { Stack, useRouter } from "expo-router";
 import { useEffect } from "react";
-import { Platform, Pressable, ScrollView, View, StyleSheet, useWindowDimensions } from "react-native";
+import {
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ProverbCard } from "../src/components/proverb-card";
 import { Text } from "../src/components/themed-text";
 import { VersionDropdown } from "../src/components/version-dropdown";
-import { useFitProverbFontSize } from "../src/hooks/useFitProverbFontSize";
+import { useFitFontSize } from "../src/hooks/useFitFontSize";
 import { useProverbForTheDay } from "../src/hooks/useProverbForTheDay";
 import { updateProverbWidget } from "../src/widgets";
 
+const FONT_SIZES = [56, 40, 24];
 const BTN_BLOCK = 85;
 
 export default function Index() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { width: screenWidth, height: windowHeight } = useWindowDimensions();
+  const { height: windowHeight } = useWindowDimensions();
 
   const {
     proverb,
@@ -32,14 +40,12 @@ export default function Index() {
   }, [proverb]);
 
   const headerHeight = insets.top + (Platform.OS === "ios" ? 44 : 56);
-  const textBoxWidth = screenWidth - 64;
   const textBoxHeight = windowHeight - headerHeight - BTN_BLOCK - 64;
 
-  const { fontSize, overflowsAtMin } = useFitProverbFontSize(
+  const { fontSize, onTextLayout } = useFitFontSize(
     proverb?.proverb,
-    textBoxWidth,
     textBoxHeight,
-    { minSize: 20, maxSize: 56 },
+    FONT_SIZES,
   );
 
   const title = proverb && !loading && !error ? proverb.ref : "Daily Proverb";
@@ -76,12 +82,11 @@ export default function Index() {
         contentContainerStyle={{
           padding: 16,
           flexGrow: 1,
+          paddingBottom: 36 + 15 + 36,
         }}
         style={{
           flex: 1,
-          backgroundColor: "#E6F4FE",
         }}
-        scrollEnabled={overflowsAtMin}
       >
         {loading && (
           <Text
@@ -93,9 +98,9 @@ export default function Index() {
           </Text>
         )}
         {error && <Text>{error}</Text>}
-        <View style={overflowsAtMin ? undefined : { flex: 1, justifyContent: "flex-start" }}>
+        <View style={{ justifyContent: "flex-start" }}>
           {proverb && !loading && !error && (
-            <ProverbCard proverb={proverb} fontSize={fontSize} />
+            <ProverbCard proverb={proverb} fontSize={fontSize} onTextLayout={onTextLayout} />
           )}
         </View>
       </ScrollView>
@@ -111,12 +116,14 @@ export default function Index() {
 
 const styles = StyleSheet.create({
   meditationButton: {
+    position: "absolute",
+    bottom: 36,
+    left: 16,
+    right: 16,
     backgroundColor: "black",
     padding: 15,
     borderRadius: 8,
     alignItems: "center",
-    marginHorizontal: 16,
-    marginBottom: 36,
   },
   meditationButtonText: {
     color: "white",

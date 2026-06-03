@@ -1,11 +1,32 @@
-import { Canvas, Fill, Path, Shader, Skia, useCanvasSize, useClock, type Uniforms } from "@shopify/react-native-skia";
-import { Stack } from "expo-router";
+import {
+  Canvas,
+  Fill,
+  Path,
+  Shader,
+  Skia,
+  useCanvasSize,
+  useClock,
+  type Uniforms,
+} from "@shopify/react-native-skia";
+import { Stack, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LayoutChangeEvent, Pressable, ScrollView, StyleSheet, View } from "react-native";
-import Animated, { useAnimatedStyle, useDerivedValue, useSharedValue, withTiming } from "react-native-reanimated";
+import {
+  LayoutChangeEvent,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useDerivedValue,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
+import { useAuth } from "../src/auth/auth-context";
 import { Text } from "../src/components/themed-text";
-import { useFitProverbFontSize } from "../src/hooks/useFitProverbFontSize";
+import { useFitFontSize } from "../src/hooks/useFitFontSize";
 import { useProverbForTheDay } from "../src/hooks/useProverbForTheDay";
 
 const DURATION_MS = 60000;
@@ -13,31 +34,32 @@ const INSET = 20;
 const CORNER_RADIUS = 30;
 const STROKE_WIDTH = 8;
 const ACCENT_COLOR = "rgb(25, 51, 179)";
+const FONT_SIZES = [40, 28, 18];
 
 const glowLayers = [
-  { w: 80,  a: 0.015 },
-  { w: 72,  a: 0.018 },
-  { w: 65,  a: 0.021 },
-  { w: 59,  a: 0.026 },
-  { w: 54,  a: 0.031 },
-  { w: 48,  a: 0.037 },
-  { w: 44,  a: 0.044 },
-  { w: 40,  a: 0.052 },
-  { w: 36,  a: 0.062 },
-  { w: 32,  a: 0.074 },
-  { w: 29,  a: 0.089 },
-  { w: 27,  a: 0.106 },
-  { w: 24,  a: 0.127 },
-  { w: 22,  a: 0.152 },
-  { w: 20,  a: 0.181 },
-  { w: 18,  a: 0.217 },
-  { w: 16,  a: 0.259 },
-  { w: 15,  a: 0.309 },
-  { w: 13,  a: 0.37 },
-  { w: 12,  a: 0.442 },
-  { w: 11,  a: 0.528 },
-  { w: 10,  a: 0.63 },
-  { w: 9,  a: 0.753 },
+  { w: 80, a: 0.015 },
+  { w: 72, a: 0.018 },
+  { w: 65, a: 0.021 },
+  { w: 59, a: 0.026 },
+  { w: 54, a: 0.031 },
+  { w: 48, a: 0.037 },
+  { w: 44, a: 0.044 },
+  { w: 40, a: 0.052 },
+  { w: 36, a: 0.062 },
+  { w: 32, a: 0.074 },
+  { w: 29, a: 0.089 },
+  { w: 27, a: 0.106 },
+  { w: 24, a: 0.127 },
+  { w: 22, a: 0.152 },
+  { w: 20, a: 0.181 },
+  { w: 18, a: 0.217 },
+  { w: 16, a: 0.259 },
+  { w: 15, a: 0.309 },
+  { w: 13, a: 0.37 },
+  { w: 12, a: 0.442 },
+  { w: 11, a: 0.528 },
+  { w: 10, a: 0.63 },
+  { w: 9, a: 0.753 },
   { w: STROKE_WIDTH, a: 0.9 },
 ];
 
@@ -103,6 +125,8 @@ export default function MeditationScreen() {
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const { ref } = useCanvasSize();
   const { proverb, loading } = useProverbForTheDay();
+  const { user } = useAuth();
+  const router = useRouter();
   const progress = useSharedValue(0);
   const textOpacity = useSharedValue(0);
   const animationStarted = useRef(false);
@@ -135,20 +159,30 @@ export default function MeditationScreen() {
     opacity: textOpacity.value,
   }));
 
-  const textBoxWidth = canvasSize.width - 2 * (INSET + CORNER_RADIUS);
   const textBoxHeight = canvasSize.height - (INSET + CORNER_RADIUS + 8) - 100;
-  const { fontSize, overflowsAtMin } = useFitProverbFontSize(
+  const { fontSize, onTextLayout } = useFitFontSize(
     proverb?.proverb,
-    textBoxWidth,
     textBoxHeight,
-    { minSize: 14, maxSize: 40 },
+    FONT_SIZES,
   );
 
   const segments = [
-    { start: useDerivedValue(() => 0.25), end: useDerivedValue(() => 0.25 + progress.value * 0.25) },
-    { start: useDerivedValue(() => 0.25 - progress.value * 0.25), end: useDerivedValue(() => 0.25) },
-    { start: useDerivedValue(() => 0.75 - progress.value * 0.25), end: useDerivedValue(() => 0.75) },
-    { start: useDerivedValue(() => 0.75), end: useDerivedValue(() => 0.75 + progress.value * 0.25) },
+    {
+      start: useDerivedValue(() => 0.25),
+      end: useDerivedValue(() => 0.25 + progress.value * 0.25),
+    },
+    {
+      start: useDerivedValue(() => 0.25 - progress.value * 0.25),
+      end: useDerivedValue(() => 0.25),
+    },
+    {
+      start: useDerivedValue(() => 0.75 - progress.value * 0.25),
+      end: useDerivedValue(() => 0.75),
+    },
+    {
+      start: useDerivedValue(() => 0.75),
+      end: useDerivedValue(() => 0.75 + progress.value * 0.25),
+    },
   ];
 
   const outlinePath = useMemo(() => {
@@ -179,6 +213,7 @@ export default function MeditationScreen() {
     <View style={styles.container} onLayout={handleLayout}>
       <Stack.Screen
         options={{
+          contentStyle: { backgroundColor: "#000" },
           headerShown: false,
           statusBarHidden: true,
         }}
@@ -189,28 +224,35 @@ export default function MeditationScreen() {
             <Shader source={effect} uniforms={uniforms} />
           </Fill>
         )}
-        {outlinePath && segments.map((seg, si) =>
-          glowLayers.map(({ w, a }, li) => (
-            <Path
-              key={`${si}-${li}`}
-              path={outlinePath}
-              style="stroke"
-              strokeWidth={w}
-              color={`rgba(25,51,179,${a})`}
-              start={seg.start}
-              end={seg.end}
-              strokeCap="round"
-              strokeJoin="round"
-            />
-          ))
-        )}
+        {outlinePath &&
+          segments.map((seg, si) =>
+            glowLayers.map(({ w, a }, li) => (
+              <Path
+                key={`${si}-${li}`}
+                path={outlinePath}
+                style="stroke"
+                strokeWidth={w}
+                color={`rgba(25,51,179,${a})`}
+                start={seg.start}
+                end={seg.end}
+                strokeCap="round"
+                strokeJoin="round"
+              />
+            )),
+          )}
       </Canvas>
 
       <View style={styles.overlay}>
         {proverb && !loading && (
           <Animated.View style={[styles.textContainer, textAnimatedStyle]}>
-            <ScrollView scrollEnabled={overflowsAtMin}>
-              <Text style={[styles.proverbText, { fontSize, lineHeight: fontSize * 1.4 }]}>
+            <ScrollView>
+              <Text
+                style={[
+                  styles.proverbText,
+                  { fontSize, lineHeight: fontSize },
+                ]}
+                onTextLayout={onTextLayout}
+              >
                 {proverb.proverb}
               </Text>
             </ScrollView>
@@ -218,8 +260,18 @@ export default function MeditationScreen() {
         )}
 
         {isComplete && (
-          <Pressable style={styles.captureButton} onPress={() => {}}>
-            <Text style={styles.captureButtonText}>Capture your thoughts...</Text>
+          <Pressable
+            style={styles.captureButton}
+            onPress={() =>
+              router.replace({
+                pathname: "/notes/users/[uuid]/[ref]",
+                params: { uuid: user?.userId ?? "", ref: proverb.ref },
+              })
+            }
+          >
+            <Text style={styles.captureButtonText}>
+              Capture your thoughts...
+            </Text>
           </Pressable>
         )}
       </View>
@@ -229,7 +281,11 @@ export default function MeditationScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: "#000",
   },
   overlay: {

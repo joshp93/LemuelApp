@@ -1,5 +1,6 @@
 import { VoltraAndroid } from "voltra";
 import { Proverb } from "../models/proverb";
+import { COLORS } from "../constants/theme";
 
 export interface ProverbWidgetProps {
   proverb: Proverb | null;
@@ -10,7 +11,7 @@ export const ProverbWidget = ({ proverb }: ProverbWidgetProps) => (
     deepLinkUrl="lemuel://"
     style={{
       padding: 16,
-      backgroundColor: "#E6F4FE",
+      backgroundColor: COLORS.lightBackground,
       borderRadius: 16,
       width: "100%",
       height: "100%",

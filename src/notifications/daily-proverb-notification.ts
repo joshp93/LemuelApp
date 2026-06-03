@@ -11,6 +11,7 @@ import {
   getScheduledTimeHour,
   getScheduledTimeMinute,
 } from "./notification-preferences";
+import { COLORS } from "../constants/theme";
 
 const NOTIFICATION_ID = "daily-proverb-meditation";
 const SNOOZE_NOTIFICATION_ID = "daily-proverb-snoozed";
@@ -31,7 +32,7 @@ const _createAndroidChannel = async () => {
       name: "Daily Proverb",
       importance: Notifications.AndroidImportance.HIGH,
       vibrationPattern: [0, 250, 250, 250],
-      lightColor: "#E6F4FE",
+      lightColor: COLORS.lightBackground,
     });
   }
 };

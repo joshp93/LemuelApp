@@ -8,7 +8,7 @@ import {
 } from "react";
 import * as auth from "../api/auth";
 
-interface AuthUser {
+export interface AuthUser {
   userId: string;
   username: string;
   email: string;
@@ -75,10 +75,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     console.log("[Auth] Initializing auth state...");
-    refreshUser().finally(() => {
-      console.log("[Auth] Auth initialization complete");
+    const initialize = async () => {
+      await refreshUser();
       setLoading(false);
-    });
+    };
+    initialize();
   }, [refreshUser]);
 
   const signOut = useCallback(async () => {

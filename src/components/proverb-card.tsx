@@ -1,4 +1,9 @@
-import { StyleSheet, View, ViewProps } from "react-native";
+import {
+  StyleSheet,
+  TextLayoutEvent,
+  View,
+  ViewProps,
+} from "react-native";
 import { Proverb } from "../../src/models/proverb";
 import { Text } from "./themed-text";
 
@@ -9,6 +14,8 @@ export interface ProverbCardProps extends ViewProps {
    * @default 40
    */
   fontSize?: number;
+  /** Called with text layout data for font-fitting. */
+  onTextLayout?: (e: TextLayoutEvent) => void;
 }
 
 /**
@@ -20,12 +27,16 @@ export interface ProverbCardProps extends ViewProps {
 export function ProverbCard({
   proverb,
   fontSize = 40,
+  onTextLayout,
   style,
   ...props
 }: ProverbCardProps) {
   return (
     <View style={[styles.container, style]} {...props}>
-      <Text style={[styles.proverbText, { fontSize, lineHeight: fontSize * 1.05 }]}>
+      <Text
+        style={[styles.proverbText, { fontSize, lineHeight: fontSize }]}
+        onTextLayout={onTextLayout}
+      >
         {proverb.proverb}
       </Text>
       {proverb.citation && (

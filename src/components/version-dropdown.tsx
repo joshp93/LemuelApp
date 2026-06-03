@@ -1,3 +1,4 @@
+import { COLORS } from "../constants/theme";
 import { useState } from "react";
 import {
   FlatList,
@@ -133,7 +134,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   menuItemSelected: {
-    backgroundColor: "#E6F4FE",
+    backgroundColor: COLORS.lightBackground,
   },
   menuItemText: {
     fontSize: 16,

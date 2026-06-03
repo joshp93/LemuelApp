@@ -19,6 +19,7 @@ import { AuthProvider } from "../src/auth/auth-context";
 import { initializeBackgroundTask } from "../src/background/proverb-task";
 import { HeaderMenu } from "../src/components/header-menu";
 import { initializeNotifications } from "../src/notifications/daily-proverb-notification";
+import { COLORS } from "../src/constants/theme";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -46,12 +47,13 @@ function AppContent() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "padding"}
-      style={styles.container}
-      enabled
-    >
-      <Stack
-        screenOptions={{
-          headerTitleStyle: styles.defaultText,
+style={styles.container}
+        enabled
+      >
+        <Stack
+          screenOptions={{
+            contentStyle: { backgroundColor: COLORS.lightBackground },
+            headerTitleStyle: styles.defaultText,
           headerStyle: {
             backgroundColor: "black",
           },
@@ -75,6 +77,7 @@ function AppContent() {
         <Stack.Screen name="notifications" />
         <Stack.Screen name="meditation" />
         <Stack.Screen name="account" />
+        <Stack.Screen name="notes/users/[uuid]/[ref]" />
       </Stack>
     </KeyboardAvoidingView>
   );
@@ -91,7 +94,7 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#E6F4FE",
+    backgroundColor: COLORS.lightBackground,
   },
   headerLogoContainer: {
     flexDirection: "row",

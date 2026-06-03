@@ -1,4 +1,4 @@
-import { Stack, useRouter } from "expo-router";
+import { Stack } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -7,28 +7,23 @@ import {
   Text,
   View,
 } from "react-native";
-import { useAuth } from "../src/auth/auth-context";
-import { getAccountDetails, type AccountDetails } from "../src/api/account";
+import {
+  getAccountDetails,
+  type AccountDetails,
+} from "../src/api/account";
+import { withAuth, type WithAuthProps } from "../src/auth/with-auth";
 
 /**
  * Account screen showing the authenticated user's profile details.
  * Redirects to the email-entry screen if the user is not signed in.
+ * This redirect is handled by the withAuth HOC.
  */
-export default function Account() {
-  const { user, loading: authLoading } = useAuth();
-  const router = useRouter();
+function Account({ user }: WithAuthProps) {
   const [account, setAccount] = useState<AccountDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (authLoading) return;
-
-    if (!user) {
-      router.replace("/email-entry");
-      return;
-    }
-
     getAccountDetails(user.userId)
       .then((data) => {
         setAccount(data);
@@ -38,7 +33,7 @@ export default function Account() {
         setError(err.message);
         setLoading(false);
       });
-  }, [user, authLoading, router]);
+  }, [user.userId]);
 
   const formatDate = (iso: string) => {
     try {
@@ -60,7 +55,7 @@ export default function Account() {
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={styles.content}
       >
-        {loading || authLoading ? (
+        {loading ? (
           <ActivityIndicator size="large" color="#333" />
         ) : error ? (
           <Text selectable style={styles.error}>
@@ -72,7 +67,7 @@ export default function Account() {
               Email
             </Text>
             <Text selectable style={styles.value}>
-              {user?.email}
+              {user.email}
             </Text>
 
             <View style={styles.divider} />
@@ -111,6 +106,8 @@ export default function Account() {
     </>
   );
 }
+
+export default withAuth(Account);
 
 const styles = StyleSheet.create({
   container: {

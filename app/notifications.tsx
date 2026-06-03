@@ -150,12 +150,6 @@ export default function NotificationsSettings() {
     };
   }, [loadPreferences]);
 
-  useEffect(() => {
-    if (!loading && enabled) {
-      reschedule();
-    }
-  }, [loading, enabled]);
-
   const handleToggle = async (value: boolean) => {
     setEnabled(value);
     await setNotificationsEnabled(value);
@@ -168,6 +162,7 @@ export default function NotificationsSettings() {
           await setNotificationsEnabled(false);
           return;
         }
+        await reschedule();
       } catch (error) {
         console.error("Failed to request notification permissions:", error);
         setEnabled(false);

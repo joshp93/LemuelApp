@@ -2,7 +2,7 @@ import { render, waitFor } from "@testing-library/react-native";
 import Account from "../../app/account";
 import { getAccountDetails } from "../../src/api/account";
 
-const mockReplace = jest.fn();
+const mockRedirect = jest.fn();
 const mockAuthUser: {
   value: {
     user: {
@@ -27,9 +27,10 @@ const mockAuthUser: {
 };
 
 jest.mock("expo-router", () => ({
-  useRouter: () => ({
-    replace: mockReplace,
-  }),
+  Redirect: (props: any) => {
+    mockRedirect(props);
+    return null;
+  },
   Stack: {
     Screen: () => null,
   },
@@ -62,7 +63,7 @@ describe("Account", () => {
   it("should redirect to email-entry if not authenticated", () => {
     render(<Account />);
 
-    expect(mockReplace).toHaveBeenCalledWith("/email-entry");
+    expect(mockRedirect).toHaveBeenCalledWith({ href: "/email-entry" });
   });
 
   it("should not redirect while auth is loading", () => {
@@ -71,9 +72,10 @@ describe("Account", () => {
       loading: true,
     };
 
-    render(<Account />);
+    const { toJSON } = render(<Account />);
 
-    expect(mockReplace).not.toHaveBeenCalled();
+    expect(mockRedirect).not.toHaveBeenCalled();
+    expect(toJSON()).toBeNull();
   });
 
   it("should render account details when authenticated", async () => {
