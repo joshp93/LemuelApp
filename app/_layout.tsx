@@ -5,10 +5,12 @@ import {
   Nunito_400Regular_Italic,
   useFonts,
 } from "@expo-google-fonts/nunito";
-import { Stack } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Stack, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import {
+  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -29,16 +31,48 @@ function AppContent() {
     Nunito_400Regular_Italic,
   });
 
+  const router = useRouter();
+
   useEffect(() => {
     initializeBackgroundTask();
     initializeNotifications();
   }, []);
+
+  const onLayoutRootView = useCallback(async () => {
+    if (fontsLoaded || fontError) {
+      await SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, fontError]);
 
   useEffect(() => {
     if (fontsLoaded || fontError) {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError]);
+
+  useEffect(() => {
+    if (!fontsLoaded && !fontError) return;
+
+    (async () => {
+      const shown = await AsyncStorage.getItem("notification_prompt_shown");
+      if (!shown) {
+        setTimeout(() => {
+          Alert.alert(
+            "Daily Proverb Reminders",
+            "Would you like to receive a daily notification with the proverb of the day? You can adjust this anytime in Settings.",
+            [
+              { text: "Not Now", style: "cancel" },
+              {
+                text: "Go to Settings",
+                onPress: () => router.push("/settings"),
+              },
+            ],
+          );
+        }, 1000);
+        await AsyncStorage.setItem("notification_prompt_shown", "true");
+      }
+    })();
+  }, [fontsLoaded, fontError, router]);
 
   if (!fontsLoaded && !fontError) {
     return null;
@@ -47,13 +81,13 @@ function AppContent() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "padding"}
-style={styles.container}
-        enabled
-      >
-        <Stack
-          screenOptions={{
-            contentStyle: { backgroundColor: COLORS.lightBackground },
-            headerTitleStyle: styles.defaultText,
+      style={styles.container}
+      enabled
+    >
+      <Stack
+        screenOptions={{
+          contentStyle: { backgroundColor: COLORS.lightBackground },
+          headerTitleStyle: styles.defaultText,
           headerStyle: {
             backgroundColor: "black",
           },
@@ -74,7 +108,7 @@ style={styles.container}
         <Stack.Screen name="sign-in" />
         <Stack.Screen name="sign-up" />
         <Stack.Screen name="confirm-sign-up" />
-        <Stack.Screen name="notifications" />
+        <Stack.Screen name="settings" />
         <Stack.Screen name="meditation" />
         <Stack.Screen name="account" />
         <Stack.Screen name="notes/users/[uuid]/[ref]" />

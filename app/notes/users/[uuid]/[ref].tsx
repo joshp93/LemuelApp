@@ -14,6 +14,7 @@ import {
 } from "react-native-pell-rich-editor";
 import { getUserNote, saveUserNote } from "../../../../src/api/notes";
 import { withAuth, type WithAuthProps } from "../../../../src/auth/with-auth";
+import { LemuelButton } from "../../../../src/components/lemuel-button";
 import { ProverbCard } from "../../../../src/components/proverb-card";
 import { Text } from "../../../../src/components/themed-text";
 import { VersionDropdown } from "../../../../src/components/version-dropdown";
@@ -63,19 +64,18 @@ function UserNotePage({ user }: WithAuthProps) {
   }, [uuid, ref]);
 
   const handleSave = useCallback(async () => {
-    if (!uuid || !ref || saving) return;
     setSaving(true);
     try {
-      await saveUserNote(uuid, ref, editorContent);
+      await saveUserNote(uuid!, ref!, editorContent);
       router.push("/");
     } catch (err) {
       console.error("Failed to save note:", err);
     } finally {
       setSaving(false);
     }
-  }, [uuid, ref, editorContent, saving, router]);
+  }, [uuid, ref, editorContent, router]);
 
-  const onTopHalfLayout = useCallback((e: LayoutChangeEvent) => {
+  const handleTopHalfLayout = useCallback((e: LayoutChangeEvent) => {
     setTopHalfHeight(e.nativeEvent.layout.height);
   }, []);
 
@@ -112,31 +112,22 @@ function UserNotePage({ user }: WithAuthProps) {
       />
 
       <View style={styles.row}>
-        {!isFullScreen && (
-          <View style={styles.half} onLayout={onTopHalfLayout}>
-            {/* Proverb display */}
-            <ScrollView
-              contentContainerStyle={styles.proverbContent}
-            >
-              {proverbLoading && (
-                <Text style={{ textAlign: "center" }}>Loading proverb...</Text>
-              )}
-              {proverbError && <Text>{proverbError}</Text>}
-              {proverb && !proverbLoading && !proverbError && (
-                <ProverbCard proverb={proverb} fontSize={fontSize} onTextLayout={onTextLayout} />
-              )}
-            </ScrollView>
-          </View>
-        )}
-
-        {/* Editor — bottom half, or full screen */}
         <View
-          style={
-            isFullScreen
-              ? styles.editorFullScreen
-              : styles.half
-          }
+          style={isFullScreen ? { display: "none" } : styles.half}
+          onLayout={handleTopHalfLayout}
         >
+          <ScrollView contentContainerStyle={styles.proverbContent}>
+            {proverb && !proverbLoading && !proverbError && (
+              <ProverbCard
+                proverb={proverb}
+                fontSize={fontSize}
+                onTextLayout={onTextLayout}
+              />
+            )}
+          </ScrollView>
+        </View>
+
+        <View style={isFullScreen ? styles.editorFullScreen : styles.half}>
           {isFullScreen && (
             <Pressable
               style={styles.closeFullScreen}
@@ -160,7 +151,6 @@ function UserNotePage({ user }: WithAuthProps) {
               initialContentHTML={editorContent}
               useContainer={false}
             />
-            {/* Toolbar + fullscreen toggle inside the editor half */}
             {!isFullScreen && (
               <View style={styles.toolbarRow}>
                 <View style={styles.toolbarFlex}>
@@ -176,25 +166,24 @@ function UserNotePage({ user }: WithAuthProps) {
                     iconSize={24}
                   />
                 </View>
-                <Pressable
+                <LemuelButton
                   style={styles.fullScreenButton}
                   onPress={() => setIsFullScreen(true)}
+                  textStyle={styles.fullScreenButtonText}
                 >
-                  <Text style={styles.fullScreenButtonText}>⛶</Text>
-                </Pressable>
+                  ⛶
+                </LemuelButton>
               </View>
             )}
           </View>
           {/* Save button — outside editor, still in the 50% container */}
-          <Pressable
-            style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+          <LemuelButton
+            style={styles.saveButton}
             onPress={handleSave}
             disabled={saving}
           >
-            <Text style={styles.saveButtonText}>
-              {saving ? "Saving..." : "Save"}
-            </Text>
-          </Pressable>
+            {saving ? "Saving..." : "Save"}
+          </LemuelButton>
         </View>
       </View>
     </View>
@@ -259,6 +248,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginHorizontal: 8,
     marginTop: 4,
+    marginBottom: 8,
   },
   toolbarFlex: {
     flex: 1,
@@ -267,7 +257,7 @@ const styles = StyleSheet.create({
     padding: 8,
     marginLeft: 4,
     backgroundColor: "#eee",
-    borderRadius: 6,
+    borderRadius: 0,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -281,10 +271,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     marginHorizontal: 16,
-    marginBottom: 12,
-  },
-  saveButtonDisabled: {
-    opacity: 0.5,
+    marginBottom: 36,
   },
   saveButtonText: {
     color: "white",

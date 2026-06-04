@@ -2,6 +2,7 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { createAccount } from "../src/api/auth";
+import { LemuelButton } from "../src/components/lemuel-button";
 
 const isValidEmail = (email: string) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -165,15 +166,9 @@ export default function SignUp() {
           <Text style={styles.fieldError}>{fieldErrors.confirmPassword}</Text>
         ) : null}
 
-        <Pressable
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleSignUp}
-          disabled={loading}
-        >
-          <Text style={styles.buttonText}>
-            {loading ? "Signing up..." : "Sign Up"}
-          </Text>
-        </Pressable>
+        <LemuelButton onPress={handleSignUp} disabled={loading}>
+          {loading ? "Signing up..." : "Sign Up"}
+        </LemuelButton>
 
         <Pressable style={styles.backButton} onPress={handleBack}>
           <Text style={styles.backButtonText}>Back to Email</Text>
@@ -243,20 +238,6 @@ const styles = StyleSheet.create({
   showPasswordText: {
     color: "#007AFF",
     fontSize: 16,
-  },
-  button: {
-    backgroundColor: "black",
-    padding: 15,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "600",
   },
   links: {
     marginTop: 20,

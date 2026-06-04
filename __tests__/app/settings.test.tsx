@@ -1,6 +1,6 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import * as Notifications from "expo-notifications";
-import NotificationsSettings from "../../app/notifications";
+import SettingsScreen from "../../app/settings";
 import {
   getNotificationMode,
   getNotificationsEnabled,
@@ -12,14 +12,16 @@ import {
   getScheduledTimeMinute,
 } from "../../src/notifications/notification-preferences";
 import {
-  scheduleProverbNotification,
   sendProverbNotification,
 } from "../../src/notifications/daily-proverb-notification";
 import { getProverbForTheDay } from "../../src/api/proverbs";
 import { getChosenVersion } from "../../src/api/version-storage";
+import { getMeditationDuration } from "../../src/settings/meditation-preferences";
 
 jest.mock("expo-router", () => ({
-  useRouter: () => ({}),
+  useNavigation: () => ({
+    addListener: jest.fn(() => jest.fn()),
+  }),
   Stack: {
     Screen: () => null,
   },
@@ -31,6 +33,7 @@ jest.mock("../../src/notifications/notification-preferences");
 jest.mock("../../src/notifications/daily-proverb-notification");
 jest.mock("../../src/api/proverbs");
 jest.mock("../../src/api/version-storage");
+jest.mock("../../src/settings/meditation-preferences");
 jest.mock("@react-native-community/datetimepicker", () => "DateTimePicker");
 
 jest.mock("../../src/utils/battery-optimization", () => ({
@@ -72,10 +75,6 @@ const mockGetScheduledTimeMinute =
   getScheduledTimeMinute as jest.MockedFunction<
     typeof getScheduledTimeMinute
   >;
-const mockScheduleProverbNotification =
-  scheduleProverbNotification as jest.MockedFunction<
-    typeof scheduleProverbNotification
-  >;
 const mockSendProverbNotification =
   sendProverbNotification as jest.MockedFunction<
     typeof sendProverbNotification
@@ -87,8 +86,12 @@ const mockGetProverbForTheDay =
 const mockGetChosenVersion = getChosenVersion as jest.MockedFunction<
   typeof getChosenVersion
 >;
+const mockGetMeditationDuration =
+  getMeditationDuration as jest.MockedFunction<
+    typeof getMeditationDuration
+  >;
 
-describe("NotificationsSettings", () => {
+describe("SettingsScreen", () => {
   const mockProverb = {
     ref: "Proverbs 3:5",
     proverb: "Trust in the LORD",
@@ -104,38 +107,30 @@ describe("NotificationsSettings", () => {
     mockGetRandomWindowEndMinute.mockResolvedValue(0);
     mockGetScheduledTimeHour.mockResolvedValue(8);
     mockGetScheduledTimeMinute.mockResolvedValue(0);
-    mockScheduleProverbNotification.mockResolvedValue(undefined);
     mockSendProverbNotification.mockResolvedValue(undefined);
     mockGetProverbForTheDay.mockResolvedValue(mockProverb);
     mockGetChosenVersion.mockResolvedValue("niv");
+    mockGetMeditationDuration.mockResolvedValue(60000);
   });
 
-  it("schedules a notification when toggled on", async () => {
-    (Notifications.requestPermissionsAsync as jest.Mock).mockResolvedValueOnce({
-      status: "granted",
-    });
-
-    const { UNSAFE_getByType } = render(<NotificationsSettings />);
-
-    let switches: any;
+  it("shows the Settings title", async () => {
+    const { getByText } = render(<SettingsScreen />);
     await waitFor(() => {
-      switches = UNSAFE_getByType(require("react-native").Switch);
-    });
-
-    fireEvent(switches, "valueChange", true);
-
-    await waitFor(() => {
-      expect(Notifications.requestPermissionsAsync).toHaveBeenCalled();
-      expect(mockScheduleProverbNotification).toHaveBeenCalledWith(
-        mockProverb,
-      );
+      expect(getByText("Notifications")).toBeTruthy();
     });
   });
 
-  it("shows expandable sections when enabled", async () => {
+  it("shows meditation duration section", async () => {
+    const { getByText } = render(<SettingsScreen />);
+    await waitFor(() => {
+      expect(getByText("Meditation timer")).toBeTruthy();
+    });
+  });
+
+  it("shows expandable sections when notifications enabled", async () => {
     mockGetNotificationsEnabled.mockResolvedValue(true);
 
-    const { getByText } = render(<NotificationsSettings />);
+    const { getByText } = render(<SettingsScreen />);
 
     await waitFor(() => {
       expect(getByText("Send at a random time")).toBeTruthy();
@@ -143,8 +138,8 @@ describe("NotificationsSettings", () => {
     });
   });
 
-  it("does not show expandable sections when disabled", async () => {
-    const { queryByText } = render(<NotificationsSettings />);
+  it("does not show expandable sections when notifications disabled", async () => {
+    const { queryByText } = render(<SettingsScreen />);
 
     await waitFor(() => {
       expect(queryByText("Send at a random time")).toBeNull();
@@ -156,7 +151,7 @@ describe("NotificationsSettings", () => {
     mockGetNotificationsEnabled.mockResolvedValue(true);
     mockGetNotificationMode.mockResolvedValue("random");
 
-    const { getByText } = render(<NotificationsSettings />);
+    const { getByText } = render(<SettingsScreen />);
 
     await waitFor(() => {
       expect(getByText("09:00")).toBeTruthy();
@@ -170,29 +165,18 @@ describe("NotificationsSettings", () => {
     mockGetScheduledTimeHour.mockResolvedValue(14);
     mockGetScheduledTimeMinute.mockResolvedValue(30);
 
-    const { getByText } = render(<NotificationsSettings />);
+    const { getByText } = render(<SettingsScreen />);
 
     await waitFor(() => {
       expect(getByText("14:30")).toBeTruthy();
     });
   });
 
-  it("shows 24-hour format note when enabled", async () => {
-    mockGetNotificationsEnabled.mockResolvedValue(true);
-
-    const { getAllByText } = render(<NotificationsSettings />);
-
-    await waitFor(() => {
-      const notes = getAllByText("Times are in 24-hour format");
-      expect(notes.length).toBe(2);
-    });
-  });
-
   it("sends an example notification when button pressed", async () => {
     mockGetNotificationsEnabled.mockResolvedValue(true);
-    const { getByText } = render(<NotificationsSettings />);
+    const { getByText, findByText } = render(<SettingsScreen />);
 
-    const sendButton = await waitFor(() => getByText("Send example notification"));
+    const sendButton = await findByText("Send example notification");
     fireEvent.press(sendButton);
 
     await waitFor(() => {
@@ -203,7 +187,7 @@ describe("NotificationsSettings", () => {
   it("shows battery optimization info when enabled", async () => {
     mockGetNotificationsEnabled.mockResolvedValue(true);
 
-    const { getByText } = render(<NotificationsSettings />);
+    const { getByText } = render(<SettingsScreen />);
 
     await waitFor(() => {
       expect(getByText("To ensure timely notifications...")).toBeTruthy();

@@ -2,13 +2,13 @@ import { Stack, useRouter } from "expo-router";
 import { useEffect } from "react";
 import {
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   useWindowDimensions,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LemuelButton } from "../src/components/lemuel-button";
 import { ProverbCard } from "../src/components/proverb-card";
 import { Text } from "../src/components/themed-text";
 import { VersionDropdown } from "../src/components/version-dropdown";
@@ -100,16 +100,20 @@ export default function Index() {
         {error && <Text>{error}</Text>}
         <View style={{ justifyContent: "flex-start" }}>
           {proverb && !loading && !error && (
-            <ProverbCard proverb={proverb} fontSize={fontSize} onTextLayout={onTextLayout} />
+            <ProverbCard
+              proverb={proverb}
+              fontSize={fontSize}
+              onTextLayout={onTextLayout}
+            />
           )}
         </View>
       </ScrollView>
-      <Pressable
-        style={styles.meditationButton}
+      <LemuelButton
         onPress={() => router.push("/meditation")}
+        style={styles.meditationButton}
       >
-        <Text style={styles.meditationButtonText}>Start Meditation</Text>
-      </Pressable>
+        Start Meditation
+      </LemuelButton>
     </View>
   );
 }
@@ -120,15 +124,5 @@ const styles = StyleSheet.create({
     bottom: 36,
     left: 16,
     right: 16,
-    backgroundColor: "black",
-    padding: 15,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  meditationButtonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "600",
-    fontFamily: "Nunito_400Regular",
   },
 });

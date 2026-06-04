@@ -2,6 +2,7 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { resendVerificationCode, verifyAccount } from "../src/api/auth";
+import { LemuelButton } from "../src/components/lemuel-button";
 
 export default function ConfirmSignUp() {
   const router = useRouter();
@@ -53,7 +54,9 @@ export default function ConfirmSignUp() {
     if (result.success) {
       setResendMessage("Code resent! Check your email.");
     } else {
-      setFormError(result.message || "Failed to resend code. Please try again.");
+      setFormError(
+        result.message || "Failed to resend code. Please try again.",
+      );
     }
   };
 
@@ -88,15 +91,9 @@ export default function ConfirmSignUp() {
           <Text style={styles.fieldError}>{fieldError}</Text>
         ) : null}
 
-        <Pressable
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleConfirm}
-          disabled={loading}
-        >
-          <Text style={styles.buttonText}>
-            {loading ? "Verifying..." : "Verify"}
-          </Text>
-        </Pressable>
+        <LemuelButton onPress={handleConfirm} disabled={loading}>
+          {loading ? "Verifying..." : "Verify"}
+        </LemuelButton>
 
         {resendMessage ? (
           <Text style={styles.resendMessage}>{resendMessage}</Text>
@@ -172,20 +169,6 @@ const styles = StyleSheet.create({
   },
   inputError: {
     borderColor: "#dc3545",
-  },
-  button: {
-    backgroundColor: "black",
-    padding: 15,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "600",
   },
   resendMessage: {
     color: "#28a745",

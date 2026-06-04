@@ -10,6 +10,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { createAccountRecord } from "../src/api/account";
 import { signIn } from "../src/api/auth";
 import { useAuth } from "../src/auth/auth-context";
+import { LemuelButton } from "../src/components/lemuel-button";
 
 export default function SignIn() {
   const router = useRouter();
@@ -93,15 +94,9 @@ export default function SignIn() {
           <Text style={styles.fieldError}>{fieldError}</Text>
         ) : null}
 
-        <Pressable
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleSignIn}
-          disabled={loading}
-        >
-          <Text style={styles.buttonText}>
-            {loading ? "Signing in..." : "Sign In"}
-          </Text>
-        </Pressable>
+        <LemuelButton onPress={handleSignIn} disabled={loading}>
+          {loading ? "Signing in..." : "Sign In"}
+        </LemuelButton>
 
         <Pressable style={styles.backButton} onPress={handleBack}>
           <Text style={styles.backButtonText}>Back to Email</Text>
@@ -171,20 +166,6 @@ const styles = StyleSheet.create({
   showPasswordText: {
     color: "#007AFF",
     fontSize: 16,
-  },
-  button: {
-    backgroundColor: "black",
-    padding: 15,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "600",
   },
   links: {
     marginTop: 20,

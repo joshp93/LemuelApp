@@ -2,13 +2,13 @@ import { Stack, useRouter } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
 import { checkUserExists } from "../src/api/auth";
+import { LemuelButton } from "../src/components/lemuel-button";
 
 const isValidEmail = (email: string) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -76,13 +76,9 @@ export default function EmailEntry() {
           autoComplete="email"
         />
 
-        <Pressable
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleContinue}
-          disabled={loading}
-        >
-          <Text style={styles.buttonText}>{loading ? "" : "Continue"}</Text>
-        </Pressable>
+        <LemuelButton onPress={handleContinue} disabled={loading}>
+          {loading ? "" : "Continue"}
+        </LemuelButton>
         {loading && <ActivityIndicator style={styles.loader} />}
       </View>
     </>
@@ -129,19 +125,5 @@ const styles = StyleSheet.create({
   },
   loader: {
     marginTop: 10,
-  },
-  button: {
-    backgroundColor: "black",
-    padding: 15,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "600",
   },
 });

@@ -10,13 +10,7 @@ import {
 } from "@shopify/react-native-skia";
 import { Stack, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  LayoutChangeEvent,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
+import { LayoutChangeEvent, ScrollView, StyleSheet, View } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useDerivedValue,
@@ -25,11 +19,12 @@ import Animated, {
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { useAuth } from "../src/auth/auth-context";
+import { LemuelButton } from "../src/components/lemuel-button";
 import { Text } from "../src/components/themed-text";
 import { useFitFontSize } from "../src/hooks/useFitFontSize";
 import { useProverbForTheDay } from "../src/hooks/useProverbForTheDay";
+import { getMeditationDuration } from "../src/settings/meditation-preferences";
 
-const DURATION_MS = 60000;
 const INSET = 20;
 const CORNER_RADIUS = 30;
 const STROKE_WIDTH = 8;
@@ -123,6 +118,7 @@ half4 main(vec2 xy) {
 export default function MeditationScreen() {
   const [isComplete, setIsComplete] = useState(false);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+  const [durationMs, setDurationMs] = useState(60000);
   const { ref } = useCanvasSize();
   const { proverb, loading } = useProverbForTheDay();
   const { user } = useAuth();
@@ -136,6 +132,7 @@ export default function MeditationScreen() {
     const { width, height } = e.nativeEvent.layout;
     setCanvasSize({ width, height });
     resolution.value = [width, height];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const effect = useMemo(() => Skia.RuntimeEffect.Make(sksl), []);
@@ -146,14 +143,21 @@ export default function MeditationScreen() {
   }));
 
   useEffect(() => {
+    (async () => {
+      const dur = await getMeditationDuration();
+      setDurationMs(dur);
+    })();
+  }, []);
+
+  useEffect(() => {
     if (!animationStarted.current && !loading && proverb) {
       animationStarted.current = true;
-      progress.value = withTiming(1, { duration: DURATION_MS }, (finished) => {
+      progress.value = withTiming(1, { duration: durationMs }, (finished) => {
         if (finished) scheduleOnRN(setIsComplete, true);
       });
       textOpacity.value = withTiming(1, { duration: 1000 });
     }
-  }, [loading, proverb]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [loading, proverb, durationMs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const textAnimatedStyle = useAnimatedStyle(() => ({
     opacity: textOpacity.value,
@@ -247,10 +251,7 @@ export default function MeditationScreen() {
           <Animated.View style={[styles.textContainer, textAnimatedStyle]}>
             <ScrollView>
               <Text
-                style={[
-                  styles.proverbText,
-                  { fontSize, lineHeight: fontSize },
-                ]}
+                style={[styles.proverbText, { fontSize, lineHeight: fontSize }]}
                 onTextLayout={onTextLayout}
               >
                 {proverb.proverb}
@@ -260,19 +261,17 @@ export default function MeditationScreen() {
         )}
 
         {isComplete && (
-          <Pressable
+          <LemuelButton
             style={styles.captureButton}
             onPress={() =>
               router.replace({
                 pathname: "/notes/users/[uuid]/[ref]",
-                params: { uuid: user?.userId ?? "", ref: proverb.ref },
+                params: { uuid: user?.userId ?? "", ref: proverb!.ref },
               })
             }
           >
-            <Text style={styles.captureButtonText}>
-              Capture your thoughts...
-            </Text>
-          </Pressable>
+            Capture your thoughts...
+          </LemuelButton>
         )}
       </View>
     </View>
@@ -306,13 +305,5 @@ const styles = StyleSheet.create({
     marginBottom: 36,
     backgroundColor: ACCENT_COLOR,
     padding: 15,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  captureButtonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "600",
-    fontFamily: "Nunito_400Regular",
   },
 });

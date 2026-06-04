@@ -79,19 +79,19 @@ describe("HeaderMenu", () => {
     expect(mockSignOut).toHaveBeenCalled();
   });
 
-  it("should render Notifications menu item", () => {
+  it("should render Settings menu item", () => {
     const { getByTestId, getByText } = render(<HeaderMenu />);
     fireEvent.press(getByTestId("burger-button"));
 
-    expect(getByText("Notifications")).toBeTruthy();
+    expect(getByText("Settings")).toBeTruthy();
   });
 
-  it("should navigate to notifications when pressed", () => {
+  it("should navigate to settings when pressed", () => {
     const { getByTestId, getByText } = render(<HeaderMenu />);
     fireEvent.press(getByTestId("burger-button"));
 
-    fireEvent.press(getByText("Notifications"));
+    fireEvent.press(getByText("Settings"));
 
-    expect(mockPush).toHaveBeenCalledWith("/notifications");
+    expect(mockPush).toHaveBeenCalledWith("/settings");
   });
 });

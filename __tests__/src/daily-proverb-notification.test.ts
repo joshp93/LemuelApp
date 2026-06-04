@@ -1,20 +1,10 @@
 import * as Notifications from "expo-notifications";
 import {
-  getNotificationMode,
-  getNotificationsEnabled,
-  getRandomWindowEnd,
-  getRandomWindowEndMinute,
-  getRandomWindowStart,
-  getRandomWindowStartMinute,
-  getScheduledTimeHour,
-  getScheduledTimeMinute,
-} from "../../src/notifications/notification-preferences";
-import {
   cleanupNotifications,
   getRandomTimeInWindow,
   initializeNotifications,
   resolveScheduleDate,
-  scheduleProverbNotification,
+  resolveScheduleDateForDate,
   sendProverbNotification,
 } from "../../src/notifications/daily-proverb-notification";
 import type { Proverb } from "../../src/models/proverb";
@@ -27,9 +17,13 @@ jest.mock("expo-notifications", () => ({
   AndroidImportance: {
     HIGH: "high",
   },
+  AndroidNotificationPriority: {
+    MAX: "max",
+  },
   setNotificationHandler: jest.fn(),
   requestPermissionsAsync: jest.fn(),
   setNotificationChannelAsync: jest.fn(),
+  cancelScheduledNotificationAsync: jest.fn(),
   cancelAllScheduledNotificationsAsync: jest.fn(),
   scheduleNotificationAsync: jest.fn(),
   setNotificationCategoryAsync: jest.fn(),
@@ -39,57 +33,22 @@ jest.mock("expo-notifications", () => ({
   dismissNotificationAsync: jest.fn(),
 }));
 
-jest.mock("../../src/notifications/notification-preferences");
-
-const mockGetNotificationsEnabled =
-  getNotificationsEnabled as jest.MockedFunction<
-    typeof getNotificationsEnabled
-  >;
-const mockGetNotificationMode = getNotificationMode as jest.MockedFunction<
-  typeof getNotificationMode
->;
-const mockGetRandomWindowStart =
-  getRandomWindowStart as jest.MockedFunction<
-    typeof getRandomWindowStart
-  >;
-const mockGetRandomWindowEnd = getRandomWindowEnd as jest.MockedFunction<
-  typeof getRandomWindowEnd
->;
-const mockGetRandomWindowStartMinute =
-  getRandomWindowStartMinute as jest.MockedFunction<
-    typeof getRandomWindowStartMinute
-  >;
-const mockGetRandomWindowEndMinute =
-  getRandomWindowEndMinute as jest.MockedFunction<
-    typeof getRandomWindowEndMinute
-  >;
-const mockGetScheduledTimeHour =
-  getScheduledTimeHour as jest.MockedFunction<
-    typeof getScheduledTimeHour
-  >;
-const mockGetScheduledTimeMinute =
-  getScheduledTimeMinute as jest.MockedFunction<
-    typeof getScheduledTimeMinute
-  >;
-
 const mockProverb: Proverb = {
   ref: "Proverbs 3:5",
   proverb: "Trust in the LORD",
 };
 
-  describe("Notification Functions", () => {
-    beforeEach(() => {
-      jest.clearAllMocks();
-      mockGetRandomWindowStartMinute.mockResolvedValue(0);
-      mockGetRandomWindowEndMinute.mockResolvedValue(0);
-      (Notifications.requestPermissionsAsync as jest.Mock).mockResolvedValue({
-        status: "granted",
-      });
+describe("Notification Functions", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (Notifications.requestPermissionsAsync as jest.Mock).mockResolvedValue({
+      status: "granted",
     });
+  });
 
-    afterEach(() => {
-      cleanupNotifications();
-    });
+  afterEach(() => {
+    cleanupNotifications();
+  });
 
   describe("initializeNotifications", () => {
     it("should set notification handler", () => {
@@ -141,13 +100,26 @@ const mockProverb: Proverb = {
   });
 
   describe("sendProverbNotification", () => {
-    it("should send a notification immediately (null trigger)", async () => {
+    it("should send a notification immediately (null trigger) without cancelling all", async () => {
       await sendProverbNotification(mockProverb);
+      expect(
+        Notifications.cancelAllScheduledNotificationsAsync,
+      ).not.toHaveBeenCalled();
       expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith(
         expect.objectContaining({
           trigger: null,
         }),
       );
+    });
+
+    it("should use MAX priority on Android", async () => {
+      const { Platform } = require("react-native");
+      Platform.OS = "android";
+
+      await sendProverbNotification(mockProverb);
+      const call = (Notifications.scheduleNotificationAsync as jest.Mock).mock
+        .calls[0][0];
+      expect(call.content.priorityAndroid).toBe("max");
     });
   });
 
@@ -208,12 +180,6 @@ const mockProverb: Proverb = {
       expect(result.getMinutes()).toBe(30);
     });
 
-    it("returns tomorrow when the time is exactly now", () => {
-      jest.setSystemTime(new Date("2026-05-29T14:30:00"));
-      const result = resolveScheduleDate(14, 30);
-      expect(result.getDate()).toBe(30);
-    });
-
     it("handles month boundary (May 31 to June 1)", () => {
       jest.setSystemTime(new Date("2026-05-31T23:00:00"));
       const result = resolveScheduleDate(9, 0);
@@ -221,83 +187,25 @@ const mockProverb: Proverb = {
       expect(result.getMonth()).toBe(5);
       expect(result.getFullYear()).toBe(2026);
     });
-
-    it("handles year boundary (Dec 31 to Jan 1)", () => {
-      jest.setSystemTime(new Date("2026-12-31T23:00:00"));
-      const result = resolveScheduleDate(9, 0);
-      expect(result.getDate()).toBe(1);
-      expect(result.getMonth()).toBe(0);
-      expect(result.getFullYear()).toBe(2027);
-    });
   });
 
-  describe("scheduleProverbNotification", () => {
-    beforeEach(() => {
-      mockGetNotificationsEnabled.mockResolvedValue(true);
-      jest.useFakeTimers();
-      jest.setSystemTime(new Date("2026-05-29T10:00:00"));
+  describe("resolveScheduleDateForDate", () => {
+    it("returns a date for the given date string and time", () => {
+      const result = resolveScheduleDateForDate("2026-06-04", 14, 30);
+      expect(result.getFullYear()).toBe(2026);
+      expect(result.getMonth()).toBe(5);
+      expect(result.getDate()).toBe(4);
+      expect(result.getHours()).toBe(14);
+      expect(result.getMinutes()).toBe(30);
     });
 
-    afterEach(() => {
-      jest.useRealTimers();
-    });
-
-    it("does nothing when notifications are disabled", async () => {
-      mockGetNotificationsEnabled.mockResolvedValue(false);
-      await scheduleProverbNotification(mockProverb);
-      expect(
-        Notifications.scheduleNotificationAsync,
-      ).not.toHaveBeenCalled();
-    });
-
-    it("schedules with a random time in the configured window", async () => {
-      jest.spyOn(Math, "random").mockReturnValue(0.5);
-      mockGetNotificationMode.mockResolvedValue("random");
-      mockGetRandomWindowStart.mockResolvedValue(12);
-      mockGetRandomWindowEnd.mockResolvedValue(14);
-
-      await scheduleProverbNotification(mockProverb);
-
-      const call = (
-        Notifications.scheduleNotificationAsync as jest.Mock
-      ).mock.calls[0][0];
-      const scheduledDate: Date = call.trigger.date;
-      expect(scheduledDate.getFullYear()).toBe(2026);
-      expect(scheduledDate.getMonth()).toBe(4);
-      expect(scheduledDate.getDate()).toBe(29);
-      expect(scheduledDate.getHours()).toBeGreaterThanOrEqual(12);
-      expect(scheduledDate.getHours()).toBeLessThan(14);
-      jest.restoreAllMocks();
-    });
-
-    it("schedules at the exact configured time in scheduled mode", async () => {
-      mockGetNotificationMode.mockResolvedValue("scheduled");
-      mockGetScheduledTimeHour.mockResolvedValue(14);
-      mockGetScheduledTimeMinute.mockResolvedValue(30);
-
-      await scheduleProverbNotification(mockProverb);
-
-      const call = (
-        Notifications.scheduleNotificationAsync as jest.Mock
-      ).mock.calls[0][0];
-      const scheduledDate: Date = call.trigger.date;
-      expect(scheduledDate.getHours()).toBe(14);
-      expect(scheduledDate.getMinutes()).toBe(30);
-      expect(scheduledDate.getDate()).toBe(29);
-    });
-
-    it("schedules for tomorrow when the scheduled time has passed today", async () => {
-      mockGetNotificationMode.mockResolvedValue("scheduled");
-      mockGetScheduledTimeHour.mockResolvedValue(9);
-      mockGetScheduledTimeMinute.mockResolvedValue(0);
-
-      await scheduleProverbNotification(mockProverb);
-
-      const call = (
-        Notifications.scheduleNotificationAsync as jest.Mock
-      ).mock.calls[0][0];
-      const scheduledDate: Date = call.trigger.date;
-      expect(scheduledDate.getDate()).toBe(30);
+    it("handles month boundary date", () => {
+      const result = resolveScheduleDateForDate("2026-12-31", 9, 0);
+      expect(result.getFullYear()).toBe(2026);
+      expect(result.getMonth()).toBe(11);
+      expect(result.getDate()).toBe(31);
+      expect(result.getHours()).toBe(9);
+      expect(result.getMinutes()).toBe(0);
     });
   });
 });

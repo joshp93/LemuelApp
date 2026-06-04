@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { useAuth } from "../auth/auth-context";
+import { LemuelButton } from "./lemuel-button";
 
 /**
  * Slide-in drawer menu from the right side of the header.
@@ -79,18 +80,19 @@ export function HeaderMenu() {
             <View style={styles.menuContent}>
               <View style={styles.topItems}>
                 {user && (
-                  <TouchableOpacity
-                    style={styles.emailButton}
+                  <LemuelButton
                     onPress={() => navigateTo("/account")}
+                    style={styles.emailButton}
+                    size="sm"
                   >
-                    <Text style={styles.emailButtonText}>{user.email}</Text>
-                  </TouchableOpacity>
+                    {user.email}
+                  </LemuelButton>
                 )}
                 <TouchableOpacity
                   style={styles.menuItem}
-                  onPress={() => navigateTo("/notifications")}
+                  onPress={() => navigateTo("/settings")}
                 >
-                  <Text style={styles.menuText}>Notifications</Text>
+                  <Text style={styles.menuText}>Settings</Text>
                 </TouchableOpacity>
               </View>
 
@@ -157,17 +159,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   emailButton: {
-    backgroundColor: "black",
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
     marginBottom: 16,
-  },
-  emailButtonText: {
-    color: "white",
-    fontSize: 14,
-    fontWeight: "600",
-    textAlign: "center",
   },
   menuItem: {
     paddingVertical: 16,

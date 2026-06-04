@@ -3,7 +3,6 @@ import { Platform } from "react-native";
 import { ProverbSchema, type Proverb } from "../models/proverb";
 import {
   getNotificationMode,
-  getNotificationsEnabled,
   getRandomWindowEnd,
   getRandomWindowEndMinute,
   getRandomWindowStart,
@@ -23,7 +22,9 @@ const _createNotificationContent = (proverb: Proverb) => ({
   body: `Tap to begin meditation on "${proverb.ref}"`,
   data: { proverb: proverb.proverb, ref: proverb.ref },
   categoryIdentifier: CATEGORY_ID,
-  ...(Platform.OS === "android" ? { priorityAndroid: "max" } : {}),
+  ...(Platform.OS === "android"
+    ? { priorityAndroid: Notifications.AndroidNotificationPriority.MAX }
+    : {}),
 });
 
 const _createAndroidChannel = async () => {
@@ -37,7 +38,7 @@ const _createAndroidChannel = async () => {
   }
 };
 
-const _scheduleNotification = async (
+export const _scheduleNotification = async (
   proverb: Proverb,
   trigger: Notifications.NotificationTriggerInput,
 ) => {
@@ -48,7 +49,8 @@ const _scheduleNotification = async (
   }
 
   await _createAndroidChannel();
-  await Notifications.cancelAllScheduledNotificationsAsync();
+
+  await Notifications.cancelScheduledNotificationAsync(NOTIFICATION_ID);
 
   await Notifications.scheduleNotificationAsync({
     identifier: NOTIFICATION_ID,
@@ -99,6 +101,15 @@ export const resolveScheduleDate = (hour: number, minute: number): Date => {
     0,
     0,
   );
+};
+
+export const resolveScheduleDateForDate = (
+  dateStr: string,
+  hour: number,
+  minute: number,
+): Date => {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d, hour, minute, 0, 0);
 };
 
 const _initializeCategories = async () => {
@@ -171,55 +182,20 @@ export const cleanupNotifications = () => {
 
 export const sendProverbNotification = async (proverb: Proverb) => {
   try {
-    await _scheduleNotification(proverb, null);
-  } catch (error) {
-    console.error("Failed to send daily proverb notification:", error);
-  }
-};
-
-export const scheduleProverbNotification = async (proverb: Proverb) => {
-  try {
-    const enabled = await getNotificationsEnabled();
-    if (!enabled) return;
-
-    const mode = await getNotificationMode();
-    let hour: number;
-    let minute: number;
-
-    if (mode === "random") {
-      const startHour = await getRandomWindowStart();
-      const startMinute = await getRandomWindowStartMinute();
-      const endHour = await getRandomWindowEnd();
-      const endMinute = await getRandomWindowEndMinute();
-      const randomDate = getRandomTimeInWindow(
-        new Date(),
-        startHour,
-        startMinute,
-        endHour,
-        endMinute,
-      );
-      hour = randomDate.getHours();
-      minute = randomDate.getMinutes();
-    } else {
-      hour = await getScheduledTimeHour();
-      minute = await getScheduledTimeMinute();
+    const { status } = await Notifications.requestPermissionsAsync();
+    if (status !== "granted") {
+      console.warn("Notification permissions not granted.");
+      return;
     }
 
-    const targetDate = resolveScheduleDate(hour, minute);
-    console.debug(
-      "Scheduled notification for:",
-      targetDate.toLocaleString("en-GB", {
-        hour12: false,
-        timeZoneName: "short",
-      }),
-    );
+    await _createAndroidChannel();
 
-    const trigger: Notifications.DateTriggerInput = {
-      type: Notifications.SchedulableTriggerInputTypes.DATE,
-      date: targetDate,
-    };
-    await _scheduleNotification(proverb, trigger);
+    await Notifications.scheduleNotificationAsync({
+      identifier: NOTIFICATION_ID,
+      content: _createNotificationContent(proverb),
+      trigger: null,
+    });
   } catch (error) {
-    console.error("Failed to schedule daily proverb notification:", error);
+    console.error("Failed to send daily proverb notification:", error);
   }
 };
