@@ -35,7 +35,7 @@ export async function getAccountDetails(
   }
 
   const response = await fetch(
-    `${LEMUEL_API_BASE_URL}/get-account-details/${uuid}`,
+    `${LEMUEL_API_BASE_URL}/accounts/${uuid}`,
     {
       method: "GET",
       headers: { Authorization: token },
@@ -82,7 +82,7 @@ export async function createAccountRecord(): Promise<boolean> {
 
   try {
     const response = await fetch(
-      `${LEMUEL_API_BASE_URL}/handle-account-creation/${uuid}`,
+      `${LEMUEL_API_BASE_URL}/accounts/${uuid}/create`,
       {
         method: "POST",
         headers: { Authorization: token },

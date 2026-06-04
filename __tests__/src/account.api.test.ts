@@ -39,7 +39,7 @@ describe("getAccountDetails", () => {
 
     const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
     expect(init.method).toBe("GET");
-    expect(url).toContain("/get-account-details/uuid-123");
+    expect(url).toContain("/accounts/uuid-123");
     expect(init.headers).toEqual({ Authorization: "valid-token" });
   });
 
@@ -110,7 +110,7 @@ describe("createAccountRecord", () => {
 
     const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
     expect(init.method).toBe("POST");
-    expect(url).toContain("/handle-account-creation/uuid-123");
+    expect(url).toContain("/accounts/uuid-123/create");
     expect(init.headers).toEqual({ Authorization: "valid-token" });
 
     const flag = await AsyncStorage.getItem("ACCOUNT_CREATED");
