@@ -18,6 +18,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
+import { recordMeditationCompletion } from "../src/api/meditation";
 import { useAuth } from "../src/auth/auth-context";
 import { LemuelButton } from "../src/components/lemuel-button";
 import { Text } from "../src/components/themed-text";
@@ -152,8 +153,13 @@ export default function MeditationScreen() {
   useEffect(() => {
     if (!animationStarted.current && !loading && proverb) {
       animationStarted.current = true;
+      const today = new Date().toISOString().split("T")[0];
+      const userId = user?.userId ?? "";
       progress.value = withTiming(1, { duration: durationMs }, (finished) => {
-        if (finished) scheduleOnRN(setIsComplete, true);
+        if (finished) {
+          scheduleOnRN(setIsComplete, true);
+          scheduleOnRN(recordMeditationCompletion, userId, today);
+        }
       });
       textOpacity.value = withTiming(1, { duration: 1000 });
     }
