@@ -1,4 +1,4 @@
-import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import * as Notifications from "expo-notifications";
 import SettingsScreen from "../../app/settings";
 import {
@@ -98,6 +98,7 @@ describe("SettingsScreen", () => {
   };
 
   beforeEach(() => {
+    jest.useFakeTimers();
     jest.clearAllMocks();
     mockGetNotificationsEnabled.mockResolvedValue(false);
     mockGetNotificationMode.mockResolvedValue("random");
@@ -115,6 +116,7 @@ describe("SettingsScreen", () => {
 
   it("shows the Settings title", async () => {
     const { getByText } = render(<SettingsScreen />);
+    await act(async () => { jest.advanceTimersByTime(300); });
     await waitFor(() => {
       expect(getByText("Notifications")).toBeTruthy();
     });
@@ -122,6 +124,7 @@ describe("SettingsScreen", () => {
 
   it("shows meditation duration section", async () => {
     const { getByText } = render(<SettingsScreen />);
+    await act(async () => { jest.advanceTimersByTime(300); });
     await waitFor(() => {
       expect(getByText("Meditation timer")).toBeTruthy();
     });
@@ -131,6 +134,7 @@ describe("SettingsScreen", () => {
     mockGetNotificationsEnabled.mockResolvedValue(true);
 
     const { getByText } = render(<SettingsScreen />);
+    await act(async () => { jest.advanceTimersByTime(300); });
 
     await waitFor(() => {
       expect(getByText("Send at a random time")).toBeTruthy();
@@ -140,6 +144,7 @@ describe("SettingsScreen", () => {
 
   it("does not show expandable sections when notifications disabled", async () => {
     const { queryByText } = render(<SettingsScreen />);
+    await act(async () => { jest.advanceTimersByTime(300); });
 
     await waitFor(() => {
       expect(queryByText("Send at a random time")).toBeNull();
@@ -152,6 +157,7 @@ describe("SettingsScreen", () => {
     mockGetNotificationMode.mockResolvedValue("random");
 
     const { getByText } = render(<SettingsScreen />);
+    await act(async () => { jest.advanceTimersByTime(300); });
 
     await waitFor(() => {
       expect(getByText("09:00")).toBeTruthy();
@@ -166,6 +172,7 @@ describe("SettingsScreen", () => {
     mockGetScheduledTimeMinute.mockResolvedValue(30);
 
     const { getByText } = render(<SettingsScreen />);
+    await act(async () => { jest.advanceTimersByTime(300); });
 
     await waitFor(() => {
       expect(getByText("14:30")).toBeTruthy();
@@ -175,6 +182,7 @@ describe("SettingsScreen", () => {
   it("sends an example notification when button pressed", async () => {
     mockGetNotificationsEnabled.mockResolvedValue(true);
     const { getByText, findByText } = render(<SettingsScreen />);
+    await act(async () => { jest.advanceTimersByTime(300); });
 
     const sendButton = await findByText("Send example notification");
     fireEvent.press(sendButton);
@@ -188,6 +196,7 @@ describe("SettingsScreen", () => {
     mockGetNotificationsEnabled.mockResolvedValue(true);
 
     const { getByText } = render(<SettingsScreen />);
+    await act(async () => { jest.advanceTimersByTime(300); });
 
     await waitFor(() => {
       expect(getByText("To ensure timely notifications...")).toBeTruthy();

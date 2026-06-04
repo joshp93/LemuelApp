@@ -1,4 +1,4 @@
-import { fireEvent, render } from "@testing-library/react-native";
+import { act, fireEvent, render } from "@testing-library/react-native";
 import { HeaderMenu } from "../../src/components/header-menu";
 
 const mockPush = jest.fn();
@@ -27,12 +27,17 @@ jest.mock("../../src/auth/auth-context", () => ({
 }));
 
 function openMenu() {
-  const { getByTestId } = render(<HeaderMenu />);
-  fireEvent.press(getByTestId("burger-button"));
+  const result = render(<HeaderMenu />);
+  act(() => {
+    fireEvent.press(result.getByTestId("burger-button"));
+    jest.advanceTimersByTime(300);
+  });
+  return result;
 }
 
 describe("HeaderMenu", () => {
   beforeEach(() => {
+    jest.useFakeTimers();
     jest.clearAllMocks();
     mockAuthUser.value = {
       user: { email: "user@example.com" },
@@ -46,52 +51,46 @@ describe("HeaderMenu", () => {
   });
 
   it("should show email as a button when authenticated", () => {
-    const { getByTestId, getByText } = render(<HeaderMenu />);
-    fireEvent.press(getByTestId("burger-button"));
-
+    const { getByText } = openMenu();
     expect(getByText("user@example.com")).toBeTruthy();
   });
 
   it("should navigate to account when email is pressed", () => {
-    const { getByTestId, getByText } = render(<HeaderMenu />);
-    fireEvent.press(getByTestId("burger-button"));
-
-    fireEvent.press(getByText("user@example.com"));
-
+    const { getByText } = openMenu();
+    act(() => {
+      fireEvent.press(getByText("user@example.com"));
+      jest.advanceTimersByTime(300);
+    });
     expect(mockPush).toHaveBeenCalledWith("/account");
   });
 
   it("should render Sign In when not authenticated", () => {
     mockAuthUser.value = { user: null, signOut: mockSignOut };
 
-    const { getByTestId, getByText } = render(<HeaderMenu />);
-    fireEvent.press(getByTestId("burger-button"));
-
+    const { getByText } = openMenu();
     expect(getByText("Sign In")).toBeTruthy();
   });
 
   it("should call signOut when Sign Out is pressed", () => {
-    const { getByTestId, getByText } = render(<HeaderMenu />);
-    fireEvent.press(getByTestId("burger-button"));
-
-    fireEvent.press(getByText("Sign Out"));
-
+    const { getByText } = openMenu();
+    act(() => {
+      fireEvent.press(getByText("Sign Out"));
+      jest.advanceTimersByTime(300);
+    });
     expect(mockSignOut).toHaveBeenCalled();
   });
 
   it("should render Settings menu item", () => {
-    const { getByTestId, getByText } = render(<HeaderMenu />);
-    fireEvent.press(getByTestId("burger-button"));
-
+    const { getByText } = openMenu();
     expect(getByText("Settings")).toBeTruthy();
   });
 
   it("should navigate to settings when pressed", () => {
-    const { getByTestId, getByText } = render(<HeaderMenu />);
-    fireEvent.press(getByTestId("burger-button"));
-
-    fireEvent.press(getByText("Settings"));
-
+    const { getByText } = openMenu();
+    act(() => {
+      fireEvent.press(getByText("Settings"));
+      jest.advanceTimersByTime(300);
+    });
     expect(mockPush).toHaveBeenCalledWith("/settings");
   });
 });
