@@ -1,6 +1,6 @@
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View, KeyboardAvoidingView, Platform } from "react-native";
 import { resendVerificationCode, verifyAccount } from "../src/api/auth";
 import { LemuelButton } from "../src/components/lemuel-button";
 
@@ -63,8 +63,12 @@ export default function ConfirmSignUp() {
   return (
     <>
       <Stack.Screen options={{ title: "Confirm Sign Up" }} />
-      <View style={styles.container}>
-        <Text style={styles.title}>Confirm Sign Up</Text>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+      >
+        <View style={styles.container}>
+          <Text style={styles.title}>Confirm Sign Up</Text>
         <Text style={styles.subtitle}>
           Enter the 6-digit code sent to your email
         </Text>
@@ -108,7 +112,8 @@ export default function ConfirmSignUp() {
             {resending ? "Sending..." : "Resend Code"}
           </Text>
         </Pressable>
-      </View>
+        </View>
+      </KeyboardAvoidingView>
     </>
   );
 }

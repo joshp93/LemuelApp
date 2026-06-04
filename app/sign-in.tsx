@@ -6,7 +6,7 @@ import {
 } from "expo-router";
 import { StackActions } from "expo-router/build/react-navigation";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View, KeyboardAvoidingView, Platform } from "react-native";
 import { createAccountRecord } from "../src/api/account";
 import { signIn } from "../src/api/auth";
 import { useAuth } from "../src/auth/auth-context";
@@ -60,8 +60,12 @@ export default function SignIn() {
   return (
     <>
       <Stack.Screen options={{ title: "Sign In" }} />
-      <View style={styles.container}>
-        <Text style={styles.title}>Sign In</Text>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+      >
+        <View style={styles.container}>
+          <Text style={styles.title}>Sign In</Text>
         <Text style={styles.emailPreview}>{email}</Text>
 
         {formError ? <Text style={styles.formError}>{formError}</Text> : null}
@@ -101,7 +105,8 @@ export default function SignIn() {
         <Pressable style={styles.backButton} onPress={handleBack}>
           <Text style={styles.backButtonText}>Back to Email</Text>
         </Pressable>
-      </View>
+        </View>
+      </KeyboardAvoidingView>
     </>
   );
 }

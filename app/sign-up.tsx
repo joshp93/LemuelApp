@@ -1,6 +1,6 @@
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View, KeyboardAvoidingView, Platform } from "react-native";
 import { createAccount } from "../src/api/auth";
 import { LemuelButton } from "../src/components/lemuel-button";
 
@@ -98,8 +98,12 @@ export default function SignUp() {
   return (
     <>
       <Stack.Screen options={{ title: "Sign Up" }} />
-      <View style={styles.container}>
-        <Text style={styles.title}>Sign Up</Text>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+      >
+        <View style={styles.container}>
+          <Text style={styles.title}>Sign Up</Text>
 
         {formError ? <Text style={styles.formError}>{formError}</Text> : null}
         {successMessage ? (
@@ -173,7 +177,8 @@ export default function SignUp() {
         <Pressable style={styles.backButton} onPress={handleBack}>
           <Text style={styles.backButtonText}>Back to Email</Text>
         </Pressable>
-      </View>
+        </View>
+      </KeyboardAvoidingView>
     </>
   );
 }

@@ -1,7 +1,9 @@
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  KeyboardAvoidingView,
   LayoutChangeEvent,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -83,110 +85,115 @@ function UserNotePage({ user }: WithAuthProps) {
     proverb && !proverbLoading && !proverbError ? proverb.ref : "Daily Proverb";
 
   return (
-    <View style={styles.container}>
-      <Stack.Screen
-        options={{
-          headerTitle: () => (
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <Text
-                style={{
-                  color: "white",
-                  fontSize: 18,
-                  fontFamily: "Nunito_400Regular",
-                }}
-              >
-                {title}
-              </Text>
-              {availableVersions &&
-                availableVersions.length > 0 &&
-                selectedVersion && (
-                  <VersionDropdown
-                    versions={availableVersions}
-                    selectedVersion={selectedVersion}
-                    onSelect={changeVersion}
-                  />
-                )}
-            </View>
-          ),
-        }}
-      />
-
-      <View style={styles.row}>
-        <View
-          style={isFullScreen ? { display: "none" } : styles.half}
-          onLayout={handleTopHalfLayout}
-        >
-          <ScrollView contentContainerStyle={styles.proverbContent}>
-            {proverb && !proverbLoading && !proverbError && (
-              <ProverbCard
-                proverb={proverb}
-                fontSize={fontSize}
-                onTextLayout={onTextLayout}
-              />
-            )}
-          </ScrollView>
-        </View>
-
-        <View style={isFullScreen ? styles.editorFullScreen : styles.half}>
-          {isFullScreen && (
-            <Pressable
-              style={styles.closeFullScreen}
-              onPress={() => setIsFullScreen(false)}
-            >
-              <Text style={styles.closeFullScreenText}>Close</Text>
-            </Pressable>
-          )}
-          <View style={isFullScreen ? { flex: 1 } : styles.editorSection}>
-            <RichEditor
-              ref={richTextRef}
-              onChange={setEditorContent}
-              placeholder="Capture your thoughts..."
-              editorStyle={{
-                backgroundColor: "#fff",
-                color: "#333",
-                placeholderColor: "#999",
-                contentCSSText:
-                  "font-size: 16px; font-family: Nunito; padding: 8px;",
-              }}
-              initialContentHTML={editorContent}
-              useContainer={false}
-            />
-            {!isFullScreen && (
-              <View style={styles.toolbarRow}>
-                <View style={styles.toolbarFlex}>
-                  <RichToolbar
-                    editor={richTextRef}
-                    actions={[
-                      actions.setBold,
-                      actions.setItalic,
-                      actions.setUnderline,
-                      actions.insertBulletsList,
-                      actions.insertOrderedList,
-                    ]}
-                    iconSize={24}
-                  />
-                </View>
-                <LemuelButton
-                  style={styles.fullScreenButton}
-                  onPress={() => setIsFullScreen(true)}
-                  textStyle={styles.fullScreenButtonText}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ flex: 1 }}
+    >
+      <View style={styles.container}>
+        <Stack.Screen
+          options={{
+            headerTitle: () => (
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <Text
+                  style={{
+                    color: "white",
+                    fontSize: 18,
+                    fontFamily: "Nunito_400Regular",
+                  }}
                 >
-                  ⛶
-                </LemuelButton>
+                  {title}
+                </Text>
+                {availableVersions &&
+                  availableVersions.length > 0 &&
+                  selectedVersion && (
+                    <VersionDropdown
+                      versions={availableVersions}
+                      selectedVersion={selectedVersion}
+                      onSelect={changeVersion}
+                    />
+                  )}
               </View>
-            )}
-          </View>
-          {/* Save button — outside editor, still in the 50% container */}
-          <LemuelButton
-            style={styles.saveButton}
-            onPress={handleSave}
-            disabled={saving}
+            ),
+          }}
+        />
+
+        <View style={styles.row}>
+          <View
+            style={isFullScreen ? { display: "none" } : styles.half}
+            onLayout={handleTopHalfLayout}
           >
-            {saving ? "Saving..." : "Save"}
-          </LemuelButton>
+            <ScrollView contentContainerStyle={styles.proverbContent}>
+              {proverb && !proverbLoading && !proverbError && (
+                <ProverbCard
+                  proverb={proverb}
+                  fontSize={fontSize}
+                  onTextLayout={onTextLayout}
+                />
+              )}
+            </ScrollView>
+          </View>
+
+          <View style={isFullScreen ? styles.editorFullScreen : styles.half}>
+            {isFullScreen && (
+              <Pressable
+                style={styles.closeFullScreen}
+                onPress={() => setIsFullScreen(false)}
+              >
+                <Text style={styles.closeFullScreenText}>Close</Text>
+              </Pressable>
+            )}
+            <View style={isFullScreen ? { flex: 1 } : styles.editorSection}>
+              <RichEditor
+                ref={richTextRef}
+                onChange={setEditorContent}
+                placeholder="Capture your thoughts..."
+                editorStyle={{
+                  backgroundColor: "#fff",
+                  color: "#333",
+                  placeholderColor: "#999",
+                  contentCSSText:
+                    "font-size: 16px; font-family: Nunito; padding: 8px;",
+                }}
+                initialContentHTML={editorContent}
+                useContainer={false}
+              />
+              {!isFullScreen && (
+                <View style={styles.toolbarRow}>
+                  <View style={styles.toolbarFlex}>
+                    <RichToolbar
+                      editor={richTextRef}
+                      actions={[
+                        actions.setBold,
+                        actions.setItalic,
+                        actions.setUnderline,
+                        actions.insertBulletsList,
+                        actions.insertOrderedList,
+                      ]}
+                      iconSize={24}
+                    />
+                  </View>
+                  <LemuelButton
+                    style={styles.fullScreenButton}
+                    onPress={() => setIsFullScreen(true)}
+                    textStyle={styles.fullScreenButtonText}
+                  >
+                    ⛶
+                  </LemuelButton>
+                </View>
+              )}
+            </View>
+            {/* Save button — outside editor, still in the 50% container */}
+            <LemuelButton
+              style={styles.saveButton}
+              onPress={handleSave}
+              disabled={saving}
+            >
+              {saving ? "Saving..." : "Save"}
+            </LemuelButton>
+          </View>
         </View>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

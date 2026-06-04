@@ -8,12 +8,10 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Stack, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useCallback, useEffect } from "react";
+import { useEffect } from "react";
 import {
   Alert,
   Image,
-  KeyboardAvoidingView,
-  Platform,
   StyleSheet,
   View,
 } from "react-native";
@@ -37,12 +35,6 @@ function AppContent() {
     initializeBackgroundTask();
     initializeNotifications();
   }, []);
-
-  const onLayoutRootView = useCallback(async () => {
-    if (fontsLoaded || fontError) {
-      await SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded, fontError]);
 
   useEffect(() => {
     if (fontsLoaded || fontError) {
@@ -79,11 +71,7 @@ function AppContent() {
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "padding"}
-      style={styles.container}
-      enabled
-    >
+    <View style={styles.container}>
       <Stack
         screenOptions={{
           contentStyle: { backgroundColor: COLORS.lightBackground },
@@ -113,7 +101,7 @@ function AppContent() {
         <Stack.Screen name="account" />
         <Stack.Screen name="notes/users/[uuid]/[ref]" />
       </Stack>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 

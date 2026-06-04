@@ -2,6 +2,8 @@ import { Stack, useRouter } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -57,8 +59,12 @@ export default function EmailEntry() {
   return (
     <>
       <Stack.Screen options={{ title: "Welcome" }} />
-      <View style={styles.container}>
-        <Text style={styles.title}>Welcome</Text>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+      >
+        <View style={styles.container}>
+          <Text style={styles.title}>Welcome</Text>
         <Text style={styles.subtitle}>Enter your email to continue</Text>
 
         {fieldError ? (
@@ -80,7 +86,8 @@ export default function EmailEntry() {
           {loading ? "" : "Continue"}
         </LemuelButton>
         {loading && <ActivityIndicator style={styles.loader} />}
-      </View>
+        </View>
+      </KeyboardAvoidingView>
     </>
   );
 }
