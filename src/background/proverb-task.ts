@@ -1,31 +1,32 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import Constants from "expo-constants";
 import {
   BackgroundTaskResult,
   BackgroundTaskStatus,
   getStatusAsync,
   registerTaskAsync,
 } from "expo-background-task";
+import Constants from "expo-constants";
+import * as Notifications from "expo-notifications";
 import * as TaskManager from "expo-task-manager";
 import { getProverbForTheDay } from "../api/proverbs";
 import { getChosenVersion } from "../api/version-storage";
-import { sendProverbNotification } from "../notifications/daily-proverb-notification";
+import { Proverb } from "../models/proverb";
+import {
+  getRandomTimeInWindow,
+  resolveScheduleDate,
+  scheduleProverbNotification,
+  sendProverbNotification,
+} from "../notifications/daily-proverb-notification";
 import {
   getNotificationMode,
   getNotificationsEnabled,
-  getRandomWindowEnd,
   getRandomWindowEndMinute,
-  getRandomWindowStart,
+  getRandomWindowHourEnd,
+  getRandomWindowHourStart,
   getRandomWindowStartMinute,
   getScheduledTimeHour,
   getScheduledTimeMinute,
 } from "../notifications/notification-preferences";
-import {
-  getRandomTimeInWindow,
-  resolveScheduleDateForDate,
-  _scheduleNotification,
-} from "../notifications/daily-proverb-notification";
-import * as Notifications from "expo-notifications";
 import { updateProverbWidget } from "../widgets";
 
 const TASK_NAME = "daily-proverb-fetch";
@@ -56,43 +57,18 @@ export const executeBackgroundTask = async () => {
       }
       return false;
     });
+    const mode = await getNotificationMode();
 
     if (!hasTodayNotification) {
-      await sendProverbNotification(todayProverb);
+      await scheduleNotificationForModeAndDate(mode, todayStr, todayProverb);
     }
 
     const tomorrowProverb = await getProverbForTheDay(version, tomorrowStr);
-    const mode = await getNotificationMode();
-    let hour: number;
-    let minute: number;
-    if (mode === "random") {
-      const startHour = await getRandomWindowStart();
-      const startMinute = await getRandomWindowStartMinute();
-      const endHour = await getRandomWindowEnd();
-      const endMinute = await getRandomWindowEndMinute();
-      const randomDate = getRandomTimeInWindow(
-        new Date(Date.now() + 86400000),
-        startHour,
-        startMinute,
-        endHour,
-        endMinute,
-      );
-      hour = randomDate.getHours();
-      minute = randomDate.getMinutes();
-    } else {
-      hour = await getScheduledTimeHour();
-      minute = await getScheduledTimeMinute();
-    }
-
-    const tomorrowTarget = resolveScheduleDateForDate(
+    await scheduleNotificationForModeAndDate(
+      mode,
       tomorrowStr,
-      hour,
-      minute,
+      tomorrowProverb,
     );
-    await _scheduleNotification(tomorrowProverb, {
-      type: Notifications.SchedulableTriggerInputTypes.DATE,
-      date: tomorrowTarget,
-    });
   } catch (error) {
     console.error("Background task failed:", error);
   }
@@ -139,3 +115,47 @@ TaskManager.defineTask(TASK_NAME, async () => {
   await executeBackgroundTask();
   return BackgroundTaskResult.Success;
 });
+
+/**
+ * Schedules a notification, using the provided date and mode
+ * @param The {@link NotificationMode | notification mode}, determined by {@link getNotificationMode}
+ * @param dateString The date string (YYYY-MM-DD) to resolve the schedule date against
+ * @param proverb The proverb to include in the notification content
+ */
+async function scheduleNotificationForModeAndDate(
+  mode: string,
+  dateString: string,
+  proverb: Proverb,
+) {
+  let hour: number;
+  let minute: number;
+  if (mode === "random") {
+    const startHour = await getRandomWindowHourStart();
+    const startMinute = await getRandomWindowStartMinute();
+    const endHour = await getRandomWindowHourEnd();
+    const endMinute = await getRandomWindowEndMinute();
+    const randomDate = getRandomTimeInWindow(
+      new Date(Date.now() + 86400000),
+      startHour,
+      startMinute,
+      endHour,
+      endMinute,
+    );
+    hour = randomDate.getHours();
+    minute = randomDate.getMinutes();
+  } else {
+    hour = await getScheduledTimeHour();
+    minute = await getScheduledTimeMinute();
+  }
+
+  const targetDate = resolveScheduleDate(dateString, hour, minute);
+  if (targetDate <= new Date()) {
+    console.debug("Target date is in the past, sending immediately");
+    sendProverbNotification(proverb);
+    return;
+  }
+  await scheduleProverbNotification(proverb, {
+    type: Notifications.SchedulableTriggerInputTypes.DATE,
+    date: targetDate,
+  });
+}

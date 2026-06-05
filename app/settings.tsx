@@ -23,9 +23,9 @@ import {
   NotificationMode,
   setNotificationMode,
   setNotificationsEnabled,
-  setRandomWindowEnd,
   setRandomWindowEndMinute,
-  setRandomWindowStart,
+  setRandomWindowHourEnd,
+  setRandomWindowHourStart,
   setRandomWindowStartMinute,
   setScheduledTimeHour,
   setScheduledTimeMinute,
@@ -123,9 +123,9 @@ export default function SettingsScreen() {
   const persistAll = async () => {
     await setNotificationsEnabled(enabled);
     await setNotificationMode(mode);
-    await setRandomWindowStart(parseInt(windowStartHour, 10) || 9);
+    await setRandomWindowHourStart(parseInt(windowStartHour, 10) || 9);
     await setRandomWindowStartMinute(parseInt(windowStartMinute, 10) || 0);
-    await setRandomWindowEnd(parseInt(windowEndHour, 10) || 19);
+    await setRandomWindowHourEnd(parseInt(windowEndHour, 10) || 19);
     await setRandomWindowEndMinute(parseInt(windowEndMinute, 10) || 0);
     await setScheduledTimeHour(parseInt(scheduledHour, 10) || 9);
     await setScheduledTimeMinute(parseInt(scheduledMinute, 10) || 0);

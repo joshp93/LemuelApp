@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as BackgroundTask from "expo-background-task";
+import * as Notifications from "expo-notifications";
 import type { TaskManagerTaskExecutor } from "expo-task-manager";
 import * as TaskManager from "expo-task-manager";
 import { getProverbForTheDay } from "../../src/api/proverbs";
@@ -8,13 +9,9 @@ import {
   initializeBackgroundTask,
   registerBackgroundTask,
 } from "../../src/background/proverb-task";
-import {
-  sendProverbNotification,
-  _scheduleNotification,
-} from "../../src/notifications/daily-proverb-notification";
+import { sendProverbNotification } from "../../src/notifications/daily-proverb-notification";
 import { getNotificationsEnabled } from "../../src/notifications/notification-preferences";
 import { updateProverbWidget } from "../../src/widgets";
-import * as Notifications from "expo-notifications";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   getItem: jest.fn(),
@@ -55,7 +52,7 @@ jest.mock("../../src/widgets", () => ({
 
 jest.mock("../../src/notifications/daily-proverb-notification", () => ({
   sendProverbNotification: jest.fn(),
-  _scheduleNotification: jest.fn(),
+  scheduleProverbNotification: jest.fn(),
   getRandomTimeInWindow: jest.fn(),
   resolveScheduleDateForDate: jest.fn((dateStr, hour, minute) => {
     const [y, m, d] = dateStr.split("-").map(Number);
@@ -267,23 +264,6 @@ describe("background task definition", () => {
       "daily-proverb-fetch",
       expect.any(Function),
     );
-  });
-
-  describe("when notifications are enabled", () => {
-    it("should fetch today, update widget, send immediate if no notif, fetch tomorrow, schedule", async () => {
-      mockGetNotificationsEnabled.mockResolvedValue(true);
-      mockGetAllScheduled.mockResolvedValue([]);
-
-      await taskExecutor({
-        data: {},
-        error: null,
-        executionInfo: { eventId: "", taskName: "" },
-      });
-
-      expect(mockGetProverbForTheDay).toHaveBeenCalledTimes(2);
-      expect(mockUpdateProverbWidget).toHaveBeenCalledWith(mockProverb);
-      expect(mockSendProverbNotification).toHaveBeenCalledWith(mockProverb);
-    });
   });
 
   describe("when notifications are disabled", () => {

@@ -1,13 +1,12 @@
 import * as Notifications from "expo-notifications";
+import type { Proverb } from "../../src/models/proverb";
 import {
   cleanupNotifications,
   getRandomTimeInWindow,
   initializeNotifications,
   resolveScheduleDate,
-  resolveScheduleDateForDate,
   sendProverbNotification,
 } from "../../src/notifications/daily-proverb-notification";
-import type { Proverb } from "../../src/models/proverb";
 
 jest.mock("expo-notifications", () => ({
   SchedulableTriggerInputTypes: {
@@ -58,14 +57,15 @@ describe("Notification Functions", () => {
 
     it("should create snooze category", () => {
       initializeNotifications();
-      expect(
-        Notifications.setNotificationCategoryAsync,
-      ).toHaveBeenCalledWith("proverb-meditation", [
-        expect.objectContaining({
-          identifier: "snooze",
-          buttonTitle: "Snooze 10 min",
-        }),
-      ]);
+      expect(Notifications.setNotificationCategoryAsync).toHaveBeenCalledWith(
+        "proverb-meditation",
+        [
+          expect.objectContaining({
+            identifier: "snooze",
+            buttonTitle: "Snooze 10 min",
+          }),
+        ],
+      );
     });
 
     it("should set up snooze response listener", () => {
@@ -76,8 +76,8 @@ describe("Notification Functions", () => {
     });
 
     it("should not set up duplicate listener", () => {
-      const mockAdd = Notifications
-        .addNotificationResponseReceivedListener as jest.Mock;
+      const mockAdd =
+        Notifications.addNotificationResponseReceivedListener as jest.Mock;
       initializeNotifications();
       initializeNotifications();
       expect(mockAdd).toHaveBeenCalledTimes(1);
@@ -88,8 +88,7 @@ describe("Notification Functions", () => {
     it("should remove the snooze listener", () => {
       const mockRemove = jest.fn();
       (
-        Notifications
-          .addNotificationResponseReceivedListener as jest.Mock
+        Notifications.addNotificationResponseReceivedListener as jest.Mock
       ).mockReturnValueOnce({ remove: mockRemove });
 
       initializeNotifications();
@@ -113,6 +112,7 @@ describe("Notification Functions", () => {
     });
 
     it("should use MAX priority on Android", async () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { Platform } = require("react-native");
       Platform.OS = "android";
 
@@ -151,47 +151,9 @@ describe("Notification Functions", () => {
     });
   });
 
-  describe("resolveScheduleDate", () => {
-    beforeEach(() => {
-      jest.useFakeTimers();
-    });
-
-    afterEach(() => {
-      jest.useRealTimers();
-    });
-
-    it("returns today when the time has not passed yet", () => {
-      jest.setSystemTime(new Date("2026-05-29T10:00:00"));
-      const result = resolveScheduleDate(14, 30);
-      expect(result.getDate()).toBe(29);
-      expect(result.getMonth()).toBe(4);
-      expect(result.getFullYear()).toBe(2026);
-      expect(result.getHours()).toBe(14);
-      expect(result.getMinutes()).toBe(30);
-    });
-
-    it("returns tomorrow when the time has already passed", () => {
-      jest.setSystemTime(new Date("2026-05-29T15:00:00"));
-      const result = resolveScheduleDate(14, 30);
-      expect(result.getDate()).toBe(30);
-      expect(result.getMonth()).toBe(4);
-      expect(result.getFullYear()).toBe(2026);
-      expect(result.getHours()).toBe(14);
-      expect(result.getMinutes()).toBe(30);
-    });
-
-    it("handles month boundary (May 31 to June 1)", () => {
-      jest.setSystemTime(new Date("2026-05-31T23:00:00"));
-      const result = resolveScheduleDate(9, 0);
-      expect(result.getDate()).toBe(1);
-      expect(result.getMonth()).toBe(5);
-      expect(result.getFullYear()).toBe(2026);
-    });
-  });
-
-  describe("resolveScheduleDateForDate", () => {
+  describe(resolveScheduleDate.name, () => {
     it("returns a date for the given date string and time", () => {
-      const result = resolveScheduleDateForDate("2026-06-04", 14, 30);
+      const result = resolveScheduleDate("2026-06-04", 14, 30);
       expect(result.getFullYear()).toBe(2026);
       expect(result.getMonth()).toBe(5);
       expect(result.getDate()).toBe(4);
@@ -200,7 +162,7 @@ describe("Notification Functions", () => {
     });
 
     it("handles month boundary date", () => {
-      const result = resolveScheduleDateForDate("2026-12-31", 9, 0);
+      const result = resolveScheduleDate("2026-12-31", 9, 0);
       expect(result.getFullYear()).toBe(2026);
       expect(result.getMonth()).toBe(11);
       expect(result.getDate()).toBe(31);

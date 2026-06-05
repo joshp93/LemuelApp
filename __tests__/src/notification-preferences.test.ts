@@ -1,20 +1,20 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
-  getNotificationsEnabled,
-  setNotificationsEnabled,
   getNotificationMode,
-  setNotificationMode,
-  getRandomWindowStart,
-  setRandomWindowStart,
-  getRandomWindowEnd,
-  setRandomWindowEnd,
-  getRandomWindowStartMinute,
-  setRandomWindowStartMinute,
+  getNotificationsEnabled,
   getRandomWindowEndMinute,
-  setRandomWindowEndMinute,
+  getRandomWindowHourEnd,
+  getRandomWindowHourStart,
+  getRandomWindowStartMinute,
   getScheduledTimeHour,
-  setScheduledTimeHour,
   getScheduledTimeMinute,
+  setNotificationMode,
+  setNotificationsEnabled,
+  setRandomWindowEndMinute,
+  setRandomWindowHourEnd,
+  setRandomWindowHourStart,
+  setRandomWindowStartMinute,
+  setScheduledTimeHour,
   setScheduledTimeMinute,
 } from "../../src/notifications/notification-preferences";
 
@@ -70,32 +70,32 @@ describe("notification-preferences", () => {
 
   describe("random window start", () => {
     it("returns default 9 when nothing stored", async () => {
-      const result = await getRandomWindowStart();
+      const result = await getRandomWindowHourStart();
       expect(result).toBe(9);
     });
 
     it("returns saved value", async () => {
-      await setRandomWindowStart(12);
-      const result = await getRandomWindowStart();
+      await setRandomWindowHourStart(12);
+      const result = await getRandomWindowHourStart();
       expect(result).toBe(12);
     });
 
     it("clamps to 0-23 range on save and retrieve", async () => {
       await AsyncStorage.setItem("random_window_start", "25");
-      const result = await getRandomWindowStart();
+      const result = await getRandomWindowHourStart();
       expect(result).toBe(9);
     });
   });
 
   describe("random window end", () => {
     it("returns default 19 when nothing stored", async () => {
-      const result = await getRandomWindowEnd();
+      const result = await getRandomWindowHourEnd();
       expect(result).toBe(19);
     });
 
     it("returns saved value", async () => {
-      await setRandomWindowEnd(14);
-      const result = await getRandomWindowEnd();
+      await setRandomWindowHourEnd(14);
+      const result = await getRandomWindowHourEnd();
       expect(result).toBe(14);
     });
   });

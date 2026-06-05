@@ -19,6 +19,9 @@ const DEFAULT_WINDOW_END_MINUTE = 0;
 const DEFAULT_SCHEDULED_HOUR = 9;
 const DEFAULT_SCHEDULED_MINUTE = 0;
 
+/**
+ * Determines if notifications are enabled by the user
+ */
 export const getNotificationsEnabled = async (): Promise<boolean> => {
   try {
     const value = await AsyncStorage.getItem(NOTIFICATIONS_ENABLED_KEY);
@@ -29,6 +32,10 @@ export const getNotificationsEnabled = async (): Promise<boolean> => {
   }
 };
 
+/**
+ * Sets the user's preference for enabling / disabling notifications
+ * @param enabled Whether they are enabled or not
+ */
 export const setNotificationsEnabled = async (
   enabled: boolean,
 ): Promise<void> => {
@@ -42,6 +49,9 @@ export const setNotificationsEnabled = async (
   }
 };
 
+/**
+ * Determines the user's selected {@link NotificationMode | notification mode}
+ */
 export const getNotificationMode = async (): Promise<NotificationMode> => {
   try {
     const value = await AsyncStorage.getItem(NOTIFICATION_MODE_KEY);
@@ -53,6 +63,9 @@ export const getNotificationMode = async (): Promise<NotificationMode> => {
   }
 };
 
+/**
+ * Sets the user's chosen {@link NotificationMode | notification mode}
+ */
 export const setNotificationMode = async (
   mode: NotificationMode,
 ): Promise<void> => {
@@ -63,7 +76,11 @@ export const setNotificationMode = async (
   }
 };
 
-export const getRandomWindowStart = async (): Promise<number> => {
+/**
+ * Get's the starting hour window for sending a random notification.
+ * Notifications should not be scheduled before this hour.
+ */
+export const getRandomWindowHourStart = async (): Promise<number> => {
   try {
     const value = await AsyncStorage.getItem(RANDOM_WINDOW_START_KEY);
     if (value !== null) {
@@ -77,7 +94,11 @@ export const getRandomWindowStart = async (): Promise<number> => {
   }
 };
 
-export const setRandomWindowStart = async (hour: number): Promise<void> => {
+/**
+ * Set's the starting hour window for sending a random notification.
+ * Notifications should not be scheduled before this hour.
+ */
+export const setRandomWindowHourStart = async (hour: number): Promise<void> => {
   try {
     await AsyncStorage.setItem(RANDOM_WINDOW_START_KEY, hour.toString());
   } catch (error) {
@@ -85,7 +106,11 @@ export const setRandomWindowStart = async (hour: number): Promise<void> => {
   }
 };
 
-export const getRandomWindowEnd = async (): Promise<number> => {
+/**
+ * Get's the ending hour window for sending a random notification.
+ * Notifications should not be scheduled after this hour.
+ */
+export const getRandomWindowHourEnd = async (): Promise<number> => {
   try {
     const value = await AsyncStorage.getItem(RANDOM_WINDOW_END_KEY);
     if (value !== null) {
@@ -99,7 +124,11 @@ export const getRandomWindowEnd = async (): Promise<number> => {
   }
 };
 
-export const setRandomWindowEnd = async (hour: number): Promise<void> => {
+/**
+ * Set's the ending hour window for sending a random notification.
+ * Notifications should not be scheduled after this hour.
+ */
+export const setRandomWindowHourEnd = async (hour: number): Promise<void> => {
   try {
     await AsyncStorage.setItem(RANDOM_WINDOW_END_KEY, hour.toString());
   } catch (error) {
@@ -107,6 +136,10 @@ export const setRandomWindowEnd = async (hour: number): Promise<void> => {
   }
 };
 
+/**
+ * Get's the starting minute window for sending a random notification, used in conjunction with the hour window.
+ * Notifications should not be scheduled before this minute of the hour.
+ */
 export const getRandomWindowStartMinute = async (): Promise<number> => {
   try {
     const value = await AsyncStorage.getItem(RANDOM_WINDOW_START_MINUTE_KEY);
@@ -121,6 +154,10 @@ export const getRandomWindowStartMinute = async (): Promise<number> => {
   }
 };
 
+/**
+ * Set's the starting minute window for sending a random notification, used in conjunction with the hour window.
+ * Notifications should not be scheduled before this minute of the hour.
+ */
 export const setRandomWindowStartMinute = async (
   minute: number,
 ): Promise<void> => {
@@ -134,6 +171,10 @@ export const setRandomWindowStartMinute = async (
   }
 };
 
+/**
+ * Get's the ending minute window for sending a random notification, used in conjunction with the hour window.
+ * Notifications should not be scheduled after this minute of the hour.
+ */
 export const getRandomWindowEndMinute = async (): Promise<number> => {
   try {
     const value = await AsyncStorage.getItem(RANDOM_WINDOW_END_MINUTE_KEY);
@@ -148,19 +189,24 @@ export const getRandomWindowEndMinute = async (): Promise<number> => {
   }
 };
 
+/**
+ * Set's the ending minute window for sending a random notification, used in conjunction with the hour window.
+ * Notifications should not be scheduled after this minute of the hour.
+ */
 export const setRandomWindowEndMinute = async (
   minute: number,
 ): Promise<void> => {
   try {
-    await AsyncStorage.setItem(
-      RANDOM_WINDOW_END_MINUTE_KEY,
-      minute.toString(),
-    );
+    await AsyncStorage.setItem(RANDOM_WINDOW_END_MINUTE_KEY, minute.toString());
   } catch (error) {
     console.error("Error saving random window end minute:", error);
   }
 };
 
+/**
+ * Gets the user's selected hour for scheduled notifications. Used when {@link getNotificationMode | notification mode} is "scheduled".
+ * Notifications should be scheduled at this hour of the day.
+ */
 export const getScheduledTimeHour = async (): Promise<number> => {
   try {
     const value = await AsyncStorage.getItem(SCHEDULED_TIME_HOUR_KEY);
@@ -175,6 +221,10 @@ export const getScheduledTimeHour = async (): Promise<number> => {
   }
 };
 
+/**
+ * Sets the user's selected hour for scheduled notifications. Used when {@link getNotificationMode | notification mode} is "scheduled".
+ * Notifications should be scheduled at this hour of the day.
+ */
 export const setScheduledTimeHour = async (hour: number): Promise<void> => {
   try {
     await AsyncStorage.setItem(SCHEDULED_TIME_HOUR_KEY, hour.toString());
@@ -183,6 +233,10 @@ export const setScheduledTimeHour = async (hour: number): Promise<void> => {
   }
 };
 
+/**
+ * Gets the user's selected minute for scheduled notifications. Used when {@link getNotificationMode | notification mode} is "scheduled".
+ * Notifications should be scheduled at this minute of the hour.
+ */
 export const getScheduledTimeMinute = async (): Promise<number> => {
   try {
     const value = await AsyncStorage.getItem(SCHEDULED_TIME_MINUTE_KEY);
@@ -197,12 +251,13 @@ export const getScheduledTimeMinute = async (): Promise<number> => {
   }
 };
 
+/**
+ * Sets the user's selected minute for scheduled notifications. Used when {@link getNotificationMode | notification mode} is "scheduled".
+ * Notifications should be scheduled at this minute of the hour.
+ */
 export const setScheduledTimeMinute = async (minute: number): Promise<void> => {
   try {
-    await AsyncStorage.setItem(
-      SCHEDULED_TIME_MINUTE_KEY,
-      minute.toString(),
-    );
+    await AsyncStorage.setItem(SCHEDULED_TIME_MINUTE_KEY, minute.toString());
   } catch (error) {
     console.error("Error saving scheduled time minute:", error);
   }
