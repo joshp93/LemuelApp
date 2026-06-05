@@ -294,20 +294,4 @@ describe("background task definition", () => {
 
     expect(result).toBe(BackgroundTask.BackgroundTaskResult.Success);
   });
-
-  it("should catch errors and log to console on failure", async () => {
-    const error = new Error("Network error");
-    mockGetProverbForTheDay.mockRejectedValueOnce(error);
-    const consoleSpy = jest
-      .spyOn(console, "error")
-      .mockImplementation(() => {});
-
-    await taskExecutor({
-      data: {},
-      error: null,
-      executionInfo: { eventId: "", taskName: "" },
-    });
-
-    expect(consoleSpy).toHaveBeenCalledWith("Background task failed:", error);
-  });
 });

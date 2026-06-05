@@ -1,5 +1,6 @@
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
+import { remoteLog } from "../api/remote-logger";
 import { COLORS } from "../constants/theme";
 import { ProverbSchema, type Proverb } from "../models/proverb";
 
@@ -51,7 +52,7 @@ export const scheduleProverbNotification = async (
 ) => {
   const { status } = await Notifications.requestPermissionsAsync();
   if (status !== "granted") {
-    console.warn("Notification permissions not granted.");
+    remoteLog("warn", "[Notifications] Notification permissions not granted");
     return;
   }
 
@@ -59,7 +60,10 @@ export const scheduleProverbNotification = async (
 
   await Notifications.cancelScheduledNotificationAsync(NOTIFICATION_ID);
 
-  console.debug("Scheduling notification", proverb, trigger);
+  remoteLog("debug", "[Notifications] Scheduling notification", {
+    proverb,
+    trigger,
+  });
   await Notifications.scheduleNotificationAsync({
     identifier: NOTIFICATION_ID,
     content: _createNotificationContent(proverb),
@@ -172,7 +176,7 @@ const _setupSnoozeListener = () => {
  * Handles all initial configuration required to send a notification
  */
 export const initializeNotifications = () => {
-  console.debug("Initializing notifications...");
+  remoteLog("debug", "[Notifications] Initializing notifications");
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
       shouldShowBanner: true,
@@ -203,7 +207,10 @@ export const sendProverbNotification = async (proverb: Proverb) => {
   try {
     const { status } = await Notifications.requestPermissionsAsync();
     if (status !== "granted") {
-      console.warn("Notification permissions not granted.");
+      remoteLog(
+        "warn",
+        "[Notifications] Notification permissions not granted (send)",
+      );
       return;
     }
 
@@ -215,6 +222,10 @@ export const sendProverbNotification = async (proverb: Proverb) => {
       trigger: null,
     });
   } catch (error) {
-    console.error("Failed to send daily proverb notification:", error);
+    remoteLog(
+      "error",
+      "[Notifications] Failed to send daily proverb notification",
+      { error },
+    );
   }
 };

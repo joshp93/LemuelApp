@@ -9,6 +9,7 @@ import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
 import * as TaskManager from "expo-task-manager";
 import { getProverbForTheDay } from "../api/proverbs";
+import { remoteLog } from "../api/remote-logger";
 import { getChosenVersion } from "../api/version-storage";
 import { Proverb } from "../models/proverb";
 import {
@@ -34,6 +35,7 @@ const INITIALIZED_KEY = "background_task_initialized";
 
 export const executeBackgroundTask = async () => {
   try {
+    remoteLog("info", "[ProverbTask] Executing background task");
     const storedVersion = await getChosenVersion();
     const version = storedVersion || "niv";
     const todayStr = new Date().toISOString().split("T")[0];
@@ -70,7 +72,7 @@ export const executeBackgroundTask = async () => {
       tomorrowProverb,
     );
   } catch (error) {
-    console.error("Background task failed:", error);
+    remoteLog("error", "[ProverbTask] Background task failed", { error });
   }
 };
 
@@ -82,7 +84,7 @@ const updateWidgetOnly = async () => {
     const proverb = await getProverbForTheDay(version, todayStr);
     await updateProverbWidget(proverb);
   } catch (error) {
-    console.error("Failed to update widget:", error);
+    remoteLog("error", "[ProverbTask] Failed to update widget", { error });
   }
 };
 
@@ -150,7 +152,10 @@ async function scheduleNotificationForModeAndDate(
 
   const targetDate = resolveScheduleDate(dateString, hour, minute);
   if (targetDate <= new Date()) {
-    console.debug("Target date is in the past, sending immediately");
+    remoteLog(
+      "debug",
+      "[ProverbTask] Target date is in the past, sending immediately",
+    );
     sendProverbNotification(proverb);
     return;
   }

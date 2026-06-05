@@ -1,5 +1,6 @@
 import { getValidIdToken } from "./auth";
 import { LEMUEL_API_BASE_URL } from "./constants";
+import { remoteLog } from "./remote-logger";
 
 export async function recordMeditationCompletion(
   uuid: string,
@@ -8,13 +9,11 @@ export async function recordMeditationCompletion(
   try {
     const token = await getValidIdToken();
     if (!token) {
-      console.warn("[Meditation] No valid ID token, skipping");
+      remoteLog("warn", "[Meditation] No valid ID token, skipping");
       return;
     }
 
-    console.debug(
-      `[Meditation] Recording completion for user ${uuid} on ${date}`,
-    );
+    remoteLog("debug", "[Meditation] Recording completion", { uuid, date });
     const response = await fetch(
       `${LEMUEL_API_BASE_URL}/accounts/${uuid}/meditations/${date}`,
       {
@@ -24,9 +23,11 @@ export async function recordMeditationCompletion(
     );
 
     if (!response.ok) {
-      console.warn(`[Meditation] API returned ${response.status}`);
+      remoteLog("warn", "[Meditation] API returned non-OK", {
+        status: response.status,
+      });
     }
   } catch (error) {
-    console.error("[Meditation] Failed to record:", error);
+    remoteLog("error", "[Meditation] Failed to record", { error });
   }
 }

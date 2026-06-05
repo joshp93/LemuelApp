@@ -1,4 +1,5 @@
 import { LEMUEL_API_BASE_URL } from "./constants";
+import { remoteLog } from "./remote-logger";
 
 /**
  * Fetches the list of available Bible versions from the backend.
@@ -6,16 +7,17 @@ import { LEMUEL_API_BASE_URL } from "./constants";
  */
 export const getAvailableVersions = async (): Promise<string[]> => {
   try {
-    const response = await fetch(
-      `${LEMUEL_API_BASE_URL}/available-versions`,
-      {
-        method: "GET",
-      },
-    );
+    const response = await fetch(`${LEMUEL_API_BASE_URL}/available-versions`, {
+      method: "GET",
+    });
     const data = (await response.json()) as string[];
     return data;
   } catch (error: any) {
-    console.error("Error fetching available versions:", error);
+    remoteLog(
+      "error",
+      "[AvailableVersions] Error fetching available versions",
+      { error },
+    );
     return [];
   }
 };

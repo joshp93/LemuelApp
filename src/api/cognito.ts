@@ -9,6 +9,7 @@ import {
   SignUpCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
 import { COGNITO_CONFIG } from "../../config/cognito";
+import { remoteLog } from "./remote-logger";
 
 const cognitoClient = new CognitoIdentityProviderClient({
   region: COGNITO_CONFIG.region,
@@ -128,7 +129,7 @@ export async function refreshTokens(refreshToken: string): Promise<{
 
     return null;
   } catch (error) {
-    console.error("[Cognito] Token refresh failed", error);
+    remoteLog("error", "[Cognito] Token refresh failed", { error });
     return null;
   }
 }
@@ -144,5 +145,3 @@ export async function signOut(accessToken: string) {
   });
   return cognitoClient.send(command);
 }
-
-// TODO: Implement refresh token and forgot password flows

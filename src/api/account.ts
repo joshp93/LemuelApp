@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { jwtDecode } from "jwt-decode";
 import { getValidIdToken } from "./auth";
 import { LEMUEL_API_BASE_URL } from "./constants";
+import { remoteLog } from "./remote-logger";
 
 const ACCOUNT_CREATED_KEY = "ACCOUNT_CREATED";
 
@@ -34,13 +35,10 @@ export async function getAccountDetails(
     throw new Error("Not authenticated");
   }
 
-  const response = await fetch(
-    `${LEMUEL_API_BASE_URL}/accounts/${uuid}`,
-    {
-      method: "GET",
-      headers: { Authorization: token },
-    },
-  );
+  const response = await fetch(`${LEMUEL_API_BASE_URL}/accounts/${uuid}`, {
+    method: "GET",
+    headers: { Authorization: token },
+  });
 
   if (response.status === 404) {
     return null;
@@ -67,13 +65,13 @@ export async function getAccountDetails(
 export async function createAccountRecord(): Promise<boolean> {
   const created = await AsyncStorage.getItem(ACCOUNT_CREATED_KEY);
   if (created === "true") {
-    console.log("[Account] Account record already created, skipping");
+    remoteLog("info", "[Account] Account record already created, skipping");
     return true;
   }
 
   const token = await getValidIdToken();
   if (!token) {
-    console.error("[Account] No valid ID token, cannot create account");
+    remoteLog("error", "[Account] No valid ID token, cannot create account");
     return false;
   }
 
@@ -90,15 +88,17 @@ export async function createAccountRecord(): Promise<boolean> {
     );
 
     if (!response.ok) {
-      console.error("[Account] Account creation API returned", response.status);
+      remoteLog("error", "[Account] Account creation API returned", {
+        status: response.status,
+      });
       return false;
     }
 
     await AsyncStorage.setItem(ACCOUNT_CREATED_KEY, "true");
-    console.log("[Account] Account record created successfully");
+    remoteLog("info", "[Account] Account record created successfully");
     return true;
   } catch (error) {
-    console.error("[Account] Account creation failed", error);
+    remoteLog("error", "[Account] Account creation failed", { error });
     return false;
   }
 }

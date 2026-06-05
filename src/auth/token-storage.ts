@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { remoteLog } from "../api/remote-logger";
 
 const ID_TOKEN_KEY = "cognito_id_token";
 const ACCESS_TOKEN_KEY = "cognito_access_token";
@@ -23,7 +24,7 @@ export async function saveTokens(tokens: AuthTokens): Promise<void> {
     await AsyncStorage.setItem(ACCESS_TOKEN_KEY, tokens.accessToken);
     await AsyncStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken);
   } catch (error) {
-    console.error("Error saving auth tokens", error);
+    remoteLog("error", "[TokenStorage] Error saving auth tokens", { error });
   }
 }
 
@@ -42,7 +43,7 @@ export async function getTokens(): Promise<AuthTokens | null> {
     }
     return null;
   } catch (error) {
-    console.error("Error getting auth tokens", error);
+    remoteLog("error", "[TokenStorage] Error getting auth tokens", { error });
     return null;
   }
 }
@@ -56,6 +57,6 @@ export async function clearTokens(): Promise<void> {
     await AsyncStorage.removeItem(ACCESS_TOKEN_KEY);
     await AsyncStorage.removeItem(REFRESH_TOKEN_KEY);
   } catch (error) {
-    console.error("Error clearing auth tokens", error);
+    remoteLog("error", "[TokenStorage] Error clearing auth tokens", { error });
   }
 }

@@ -3,6 +3,7 @@ import { clearTokens, getTokens, saveTokens } from "../auth/token-storage";
 import { isTokenExpired, isTokenExpiringSoon } from "../auth/token-utils";
 import * as cognito from "./cognito";
 import { LEMUEL_API_BASE_URL } from "./constants";
+import { remoteLog } from "./remote-logger";
 
 /**
  * A simplified user object for use within the application.
@@ -21,7 +22,7 @@ export interface AppAuthUser {
  */
 export async function checkUserExists(email: string): Promise<boolean> {
   try {
-    console.log("[Auth API] Checking if user exists:", email);
+    remoteLog("info", "[Auth API] Checking if user exists", { email });
     const response = await fetch(
       `${LEMUEL_API_BASE_URL}/auth/check-user-exists`,
       {
@@ -33,10 +34,10 @@ export async function checkUserExists(email: string): Promise<boolean> {
       },
     );
     const data = (await response.json()) as { exists: boolean };
-    console.log("[Auth API] User exists:", data.exists);
+    remoteLog("info", "[Auth API] User exists", { exists: data.exists });
     return data.exists === true;
   } catch (error) {
-    console.log("[Auth API] Error checking if user exists", error);
+    remoteLog("info", "[Auth API] Error checking if user exists", { error });
     return false;
   }
 }
@@ -53,14 +54,15 @@ export async function createAccount(
   password: string,
 ): Promise<{ success: boolean; message?: string }> {
   try {
-    console.log("[Auth API] Creating new account...");
+    remoteLog("info", "[Auth API] Creating new account");
     await cognito.signUp(email, password);
-    console.log(
+    remoteLog(
+      "info",
       "[Auth API] Account created successfully (confirmation email sent automatically)",
     );
     return { success: true };
   } catch (error: any) {
-    console.error("[Auth API] Account creation failed", error);
+    remoteLog("error", "[Auth API] Account creation failed", { error });
     return { success: false, message: error.message };
   }
 }
@@ -76,12 +78,12 @@ export async function verifyAccount(
   code: string,
 ): Promise<{ success: boolean; message?: string }> {
   try {
-    console.log("[Auth API] Verifying account...");
+    remoteLog("info", "[Auth API] Verifying account");
     await cognito.confirmSignUp(email, code);
-    console.log("[Auth API] Account verified successfully");
+    remoteLog("info", "[Auth API] Account verified successfully");
     return { success: true };
   } catch (error: any) {
-    console.error("[Auth API] Account verification failed", error);
+    remoteLog("error", "[Auth API] Account verification failed", { error });
     return { success: false, message: error.message };
   }
 }
@@ -90,12 +92,12 @@ export async function resendVerificationCode(
   email: string,
 ): Promise<{ success: boolean; message?: string }> {
   try {
-    console.log("[Auth API] Resending verification code...");
+    remoteLog("info", "[Auth API] Resending verification code");
     await cognito.resendConfirmationCode(email);
-    console.log("[Auth API] Verification code resent");
+    remoteLog("info", "[Auth API] Verification code resent");
     return { success: true };
   } catch (error: any) {
-    console.error("[Auth API] Resend verification code failed", error);
+    remoteLog("error", "[Auth API] Resend verification code failed", { error });
     return { success: false, message: error.message };
   }
 }
@@ -116,7 +118,7 @@ export async function signIn(
   requiresConfirmation?: boolean;
 }> {
   try {
-    console.log("[Auth API] Attempting sign in...");
+    remoteLog("info", "[Auth API] Attempting sign in");
     const response = await cognito.signIn(email, password);
     const { IdToken, AccessToken, RefreshToken } =
       response.AuthenticationResult || {};
@@ -127,19 +129,18 @@ export async function signIn(
         accessToken: AccessToken,
         refreshToken: RefreshToken,
       });
-      console.log("[Auth API] Sign in successful");
+      remoteLog("info", "[Auth API] Sign in successful");
       return { success: true };
     }
     return { success: false, message: "Sign in failed to return tokens." };
   } catch (error: any) {
-    console.error("[Auth API] Sign in failed", error);
+    remoteLog("error", "[Auth API] Sign in failed", { error });
 
-    // Check if the error is due to unconfirmed user account
     if (
       error.name === "UserNotConfirmedException" ||
       error.code === "UserNotConfirmedException"
     ) {
-      console.log("[Auth API] User account not confirmed yet");
+      remoteLog("info", "[Auth API] User account not confirmed yet");
       return {
         success: false,
         requiresConfirmation: true,
@@ -156,16 +157,16 @@ export async function signIn(
  */
 export async function signOut(): Promise<void> {
   try {
-    console.log("[Auth API] Logging out...");
+    remoteLog("info", "[Auth API] Logging out");
     const tokens = await getTokens();
     if (tokens?.accessToken) {
       await cognito.signOut(tokens.accessToken);
     }
   } catch (error) {
-    console.error("[Auth API] Error during sign out", error);
+    remoteLog("error", "[Auth API] Error during sign out", { error });
   } finally {
     await clearTokens();
-    console.log("[Auth API] Local tokens cleared");
+    remoteLog("info", "[Auth API] Local tokens cleared");
   }
 }
 
@@ -189,7 +190,9 @@ export async function getAuthenticatedUser(): Promise<AppAuthUser | null> {
       email: decoded.email,
     };
   } catch (error) {
-    console.error("[Auth API] Error getting authenticated user", error);
+    remoteLog("error", "[Auth API] Error getting authenticated user", {
+      error,
+    });
     await clearTokens();
     return null;
   }
@@ -202,16 +205,16 @@ export async function getAuthenticatedUser(): Promise<AppAuthUser | null> {
  */
 export async function refreshAccessToken(): Promise<boolean> {
   try {
-    console.log("[Auth API] Attempting to refresh access token...");
+    remoteLog("info", "[Auth API] Attempting to refresh access token");
     const tokens = await getTokens();
 
     if (!tokens?.refreshToken) {
-      console.log("[Auth API] No refresh token available");
+      remoteLog("info", "[Auth API] No refresh token available");
       return false;
     }
 
     if (isTokenExpired(tokens.refreshToken)) {
-      console.log("[Auth API] Refresh token is expired, clearing tokens");
+      remoteLog("info", "[Auth API] Refresh token is expired, clearing tokens");
       await clearTokens();
       return false;
     }
@@ -219,7 +222,8 @@ export async function refreshAccessToken(): Promise<boolean> {
     const newTokens = await cognito.refreshTokens(tokens.refreshToken);
 
     if (!newTokens) {
-      console.error(
+      remoteLog(
+        "error",
         "[Auth API] Refresh token call failed or returned no tokens",
       );
       await clearTokens();
@@ -232,10 +236,10 @@ export async function refreshAccessToken(): Promise<boolean> {
       refreshToken: tokens.refreshToken,
     });
 
-    console.log("[Auth API] Access token refreshed successfully");
+    remoteLog("info", "[Auth API] Access token refreshed successfully");
     return true;
   } catch (error) {
-    console.error("[Auth API] Error refreshing access token", error);
+    remoteLog("error", "[Auth API] Error refreshing access token", { error });
     await clearTokens();
     return false;
   }
@@ -253,12 +257,12 @@ export async function getValidAccessToken(): Promise<string | null> {
     const tokens = await getTokens();
 
     if (!tokens?.accessToken) {
-      console.log("[Auth API] No access token stored");
+      remoteLog("info", "[Auth API] No access token stored");
       return null;
     }
 
     if (isTokenExpired(tokens.accessToken)) {
-      console.log("[Auth API] Access token expired, attempting refresh...");
+      remoteLog("info", "[Auth API] Access token expired, attempting refresh");
       const refreshed = await refreshAccessToken();
       if (!refreshed) {
         return null;
@@ -268,8 +272,9 @@ export async function getValidAccessToken(): Promise<string | null> {
     }
 
     if (isTokenExpiringSoon(tokens.accessToken)) {
-      console.log(
-        "[Auth API] Access token expiring soon, proactively refreshing...",
+      remoteLog(
+        "info",
+        "[Auth API] Access token expiring soon, proactively refreshing",
       );
       const refreshed = await refreshAccessToken();
       if (!refreshed) {
@@ -281,7 +286,9 @@ export async function getValidAccessToken(): Promise<string | null> {
 
     return tokens.accessToken;
   } catch (error) {
-    console.error("[Auth API] Error getting valid access token", error);
+    remoteLog("error", "[Auth API] Error getting valid access token", {
+      error,
+    });
     return null;
   }
 }
@@ -306,12 +313,12 @@ export async function getValidIdToken(): Promise<string | null> {
     const tokens = await getTokens();
 
     if (!tokens?.idToken) {
-      console.log("[Auth API] No ID token stored");
+      remoteLog("info", "[Auth API] No ID token stored");
       return null;
     }
 
     if (isTokenExpired(tokens.idToken)) {
-      console.log("[Auth API] ID token expired, attempting refresh...");
+      remoteLog("info", "[Auth API] ID token expired, attempting refresh");
       const refreshed = await refreshAccessToken();
       if (!refreshed) {
         return null;
@@ -321,8 +328,9 @@ export async function getValidIdToken(): Promise<string | null> {
     }
 
     if (isTokenExpiringSoon(tokens.idToken)) {
-      console.log(
-        "[Auth API] ID token expiring soon, proactively refreshing...",
+      remoteLog(
+        "info",
+        "[Auth API] ID token expiring soon, proactively refreshing",
       );
       const refreshed = await refreshAccessToken();
       if (!refreshed) {
@@ -334,7 +342,7 @@ export async function getValidIdToken(): Promise<string | null> {
 
     return tokens.idToken;
   } catch (error) {
-    console.error("[Auth API] Error getting valid ID token", error);
+    remoteLog("error", "[Auth API] Error getting valid ID token", { error });
     return null;
   }
 }

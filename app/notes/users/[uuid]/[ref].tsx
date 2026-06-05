@@ -15,6 +15,7 @@ import {
   RichToolbar,
 } from "react-native-pell-rich-editor";
 import { getUserNote, saveUserNote } from "../../../../src/api/notes";
+import { remoteLog } from "../../../../src/api/remote-logger";
 import { withAuth, type WithAuthProps } from "../../../../src/auth/with-auth";
 import { LemuelButton } from "../../../../src/components/lemuel-button";
 import { ProverbCard } from "../../../../src/components/proverb-card";
@@ -61,7 +62,7 @@ function UserNotePage({ user }: WithAuthProps) {
         }
       })
       .catch((err) => {
-        console.error("Failed to load note:", err);
+        remoteLog("error", "[Notes] Failed to load note", { error: err });
       });
   }, [uuid, ref]);
 
@@ -71,7 +72,7 @@ function UserNotePage({ user }: WithAuthProps) {
       await saveUserNote(uuid!, ref!, editorContent);
       router.push("/");
     } catch (err) {
-      console.error("Failed to save note:", err);
+      remoteLog("error", "[Notes] Failed to save note", { error: err });
     } finally {
       setSaving(false);
     }
@@ -182,7 +183,6 @@ function UserNotePage({ user }: WithAuthProps) {
                 </View>
               )}
             </View>
-            {/* Save button — outside editor, still in the 50% container */}
             <LemuelButton
               style={styles.saveButton}
               onPress={handleSave}

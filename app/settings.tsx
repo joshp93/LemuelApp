@@ -15,6 +15,7 @@ import {
   View,
 } from "react-native";
 import { getProverbForTheDay } from "../src/api/proverbs";
+import { remoteLog } from "../src/api/remote-logger";
 import { getChosenVersion } from "../src/api/version-storage";
 import { LemuelButton } from "../src/components/lemuel-button";
 import { useSettingsPreferences } from "../src/hooks/useSettingsPreferences";
@@ -244,7 +245,9 @@ export default function SettingsScreen() {
       const proverb = await getProverbForTheDay(version);
       await sendProverbNotification(proverb);
     } catch (error) {
-      console.error("Failed to send example notification:", error);
+      remoteLog("error", "[Settings] Failed to send example notification", {
+        error,
+      });
     }
   };
 
