@@ -13,7 +13,7 @@
     },
     "android": {
       "package": "com.lemuel.app",
-      "softwareKeyboardLayoutMode": "adjustResize",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#000000"
@@ -62,14 +62,6 @@
                 "targetCellHeight": 2
               }
             ]
-          }
-        }
-      ],
-      [
-        "expo-background-task",
-        {
-          "android": {
-            "taskName": "daily-proverb-fetch"
           }
         }
       ],
