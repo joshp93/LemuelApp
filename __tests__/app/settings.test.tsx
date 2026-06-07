@@ -33,13 +33,6 @@ jest.mock("../../src/api/version-storage");
 jest.mock("../../src/settings/meditation-preferences");
 jest.mock("@react-native-community/datetimepicker", () => "DateTimePicker");
 
-jest.mock("../../src/utils/battery-optimization", () => ({
-  openBatteryOptimizationSettings: jest.fn(),
-  getBatteryOptimizationWarningText: jest.fn(
-    () => "To ensure timely notifications...",
-  ),
-}));
-
 const mockGetNotificationsEnabled =
   getNotificationsEnabled as jest.MockedFunction<
     typeof getNotificationsEnabled
@@ -192,19 +185,6 @@ describe("SettingsScreen", () => {
 
     await waitFor(() => {
       expect(mockSendProverbNotification).toHaveBeenCalled();
-    });
-  });
-
-  it("shows battery optimization info when enabled", async () => {
-    mockGetNotificationsEnabled.mockResolvedValue(true);
-
-    const { getByText } = render(<SettingsScreen />);
-    await act(async () => {
-      jest.advanceTimersByTime(300);
-    });
-
-    await waitFor(() => {
-      expect(getByText("To ensure timely notifications...")).toBeTruthy();
     });
   });
 });

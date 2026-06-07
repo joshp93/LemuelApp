@@ -34,30 +34,33 @@ The app displays a home screen widget showing today's proverb, automatically upd
 ## Architecture
 
 - **Voltra** - Provides Android widget support via Jetpack Compose Glance
-- **Background Task** - Scheduled daily updates via expo-background-task
+- **FCM Silent Push** - Widget updates triggered via FCM data messages from the backend
 - **Config** - Widget defined in app.json plugins
 
 ## Key Files
 
 - `src/widgets/proverb-widget.tsx` - Widget component
 - `src/widgets/index.tsx` - Widget registration
-- `src/background/proverb-task.ts` - Background update scheduling
+- `src/notifications/push-listener.ts` - FCM silent push handler (widget update + notification scheduling)
 - `app.json` - Voltra plugin configuration
 
 # Push Notifications
 
-The app uses `expo-notifications` to schedule daily push notifications. Users can configure when notifications are sent via two modes:
+The app uses FCM silent push (data messages) to trigger daily updates. When `choose-proverb` writes tomorrow's proverb in the backend DynamoDB table, a Lambda sends an FCM data message to all registered devices. The app's `NOTIFICATION_DATA_RECEIVED` background handler fetches the proverb, updates the home screen widget, and schedules local notifications at the user's configured time.
+
+Users can configure when notifications are sent via two modes:
 
 - **Random time within a window** — Choose a start and end hour; the notification fires at a random time within that window each day.
 - **Specific time** — Choose an exact hour and minute; the notification fires at that time every day.
 
-If the configured time has not yet passed for the current day, the notification schedules for today; otherwise it schedules for tomorrow. Preferences are persisted in AsyncStorage.
+Preferences are persisted in AsyncStorage. Push token registration is handled via `POST /push/register-token` on the backend.
 
 ## Key Files
 - `src/notifications/daily-proverb-notification.ts` — Scheduling logic (`scheduleProverbNotification`, `resolveScheduleDate`, `getRandomTimeInWindow`).
+- `src/notifications/push-listener.ts` — FCM background handler, `NOTIFICATION_DATA_RECEIVED` task, token change listener.
 - `src/notifications/notification-preferences.ts` — Preference storage (`notification_mode`, `random_window_start`, `random_window_end`, `scheduled_time_hour`, `scheduled_time_minute`).
-- `app/notifications.tsx` — Settings UI with animated accordion sections (ExpandableSection with vertical Animated.timing).
-- `src/utils/battery-optimization.ts` — Logic for disabling battery optimization to ensure notifications are delivered.
+- `src/api/push-token.ts` — Registers the FCM device token with the backend.
+- `app/settings.tsx` — Settings UI with animated accordion sections and notification toggle.
 
 # Daily Proverbs
 

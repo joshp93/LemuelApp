@@ -22,10 +22,7 @@
       "permissions": [
         "INTERNET",
         "RECEIVE_BOOT_COMPLETED",
-        "WAKE_LOCK",
-        "SCHEDULE_EXACT_ALARM",
-        "POST_NOTIFICATIONS",
-        "RECEIVE_EXACT_ALARM"
+        "POST_NOTIFICATIONS"
       ]
     },
     "web": {

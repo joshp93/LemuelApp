@@ -32,10 +32,6 @@ import {
   setScheduledTimeMinute,
 } from "../src/notifications/notification-preferences";
 import { setMeditationDuration } from "../src/settings/meditation-preferences";
-import {
-  getBatteryOptimizationWarningText,
-  openBatteryOptimizationSettings,
-} from "../src/utils/battery-optimization";
 
 function pad(n: number): string {
   return n.toString().padStart(2, "0");
@@ -251,10 +247,6 @@ export default function SettingsScreen() {
     }
   };
 
-  const handleOpenBatterySettings = async () => {
-    await openBatteryOptimizationSettings();
-  };
-
   const durationOptions = [
     { label: "5 seconds", value: 5000 },
     { label: "10 seconds", value: 10000 },
@@ -369,15 +361,6 @@ export default function SettingsScreen() {
             <View style={{ marginBottom: 16 }}>
               <LemuelButton onPress={handleSendExample}>
                 Send example notification
-              </LemuelButton>
-            </View>
-
-            <View style={styles.infoBox}>
-              <Text style={styles.infoText}>
-                {getBatteryOptimizationWarningText()}
-              </Text>
-              <LemuelButton onPress={handleOpenBatterySettings} size="sm">
-                Open battery settings
               </LemuelButton>
             </View>
           </View>
@@ -516,20 +499,6 @@ const styles = StyleSheet.create({
     color: "#dc3545",
     fontSize: 13,
     marginTop: 8,
-  },
-  infoBox: {
-    backgroundColor: "#E6F4FE",
-    borderLeftWidth: 4,
-    borderLeftColor: "black",
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 20,
-  },
-  infoText: {
-    fontSize: 13,
-    color: "#333",
-    lineHeight: 20,
-    marginBottom: 12,
   },
   durationCard: {
     backgroundColor: "white",

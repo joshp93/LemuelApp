@@ -16,9 +16,13 @@ import {
   View,
 } from "react-native";
 import { AuthProvider } from "../src/auth/auth-context";
-import { initializeBackgroundTask } from "../src/background/proverb-task";
+import { registerPushToken } from "../src/api/push-token";
 import { HeaderMenu } from "../src/components/header-menu";
 import { initializeNotifications } from "../src/notifications/daily-proverb-notification";
+import {
+  initializePushHandler,
+  setupTokenListener,
+} from "../src/notifications/push-listener";
 import { COLORS } from "../src/constants/theme";
 
 SplashScreen.preventAutoHideAsync();
@@ -32,8 +36,11 @@ function AppContent() {
   const router = useRouter();
 
   useEffect(() => {
-    initializeBackgroundTask();
+    initializePushHandler();
     initializeNotifications();
+    registerPushToken();
+    const subscription = setupTokenListener();
+    return () => subscription.remove();
   }, []);
 
   useEffect(() => {
