@@ -93,6 +93,21 @@ export function useProverbForTheDay() {
     }
   }, []);
 
+  const refresh = useCallback(async () => {
+    if (!selectedVersion) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getProverbForTheDay(selectedVersion);
+      setProverb(data);
+    } catch (err: any) {
+      setError(err.stack ?? err.message);
+      setProverb(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedVersion]);
+
   return {
     proverb,
     loading,
@@ -100,5 +115,6 @@ export function useProverbForTheDay() {
     selectedVersion,
     availableVersions,
     changeVersion,
+    refresh,
   };
 }

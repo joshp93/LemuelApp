@@ -14,6 +14,26 @@ export interface UserNoteResponse {
 }
 
 /**
+ * A single note entity as returned by the backend.
+ */
+export interface NoteEntity {
+  pk: string;
+  sk: string;
+  note: string;
+  dateCreated: string;
+  uuid: string;
+  ref: string;
+}
+
+/**
+ * Response shape for proverb notes endpoint.
+ */
+export interface ProverbNotesResponse {
+  items: NoteEntity[];
+  lastKey?: string;
+}
+
+/**
  * Fetches a single user note for a given proverb reference.
  *
  * Makes an authenticated GET request to `/notes/users/${uuid}/${ref}`.
@@ -76,6 +96,8 @@ export async function saveUserNote(
     throw new Error("Not authenticated");
   }
 
+  ref = ref.replace(" ", "");
+
   const response = await fetch(
     `${LEMUEL_API_BASE_URL}/notes/users/${uuid}/${ref}`,
     {
@@ -95,4 +117,41 @@ export async function saveUserNote(
   }
 
   return response.json() as Promise<UserNoteResponse>;
+}
+
+/**
+ * Fetches all notes for a given proverb reference.
+ *
+ * Makes an authenticated GET request to `/notes/proverbs/${ref}`.
+ * Returns a list of note entities from all users.
+ *
+ * @param ref - The proverb reference, e.g. `Proverbs3:5`.
+ * @returns A paginated response with note items.
+ * @throws If the request fails or if not authenticated.
+ */
+export async function getProverbNotes(
+  ref: string,
+): Promise<ProverbNotesResponse> {
+  const token = await getValidIdToken();
+  if (!token) {
+    throw new Error("Not authenticated");
+  }
+
+  ref = ref.replace(" ", "");
+
+  const response = await fetch(
+    `${LEMUEL_API_BASE_URL}/notes/proverbs/${ref}`,
+    {
+      method: "GET",
+      headers: { Authorization: token },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `Failed to get proverb notes: ${response.status} ${response.statusText}`,
+    );
+  }
+
+  return response.json() as Promise<ProverbNotesResponse>;
 }

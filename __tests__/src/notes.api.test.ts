@@ -1,5 +1,5 @@
 import * as Auth from "../../src/api/auth";
-import { getUserNote, saveUserNote } from "../../src/api/notes";
+import { getProverbNotes, getUserNote, saveUserNote } from "../../src/api/notes";
 
 const mockGetValidIdToken = jest.spyOn(Auth, "getValidIdToken");
 
@@ -136,5 +136,104 @@ describe("saveUserNote", () => {
     await expect(
       saveUserNote("uuid-123", "Proverbs3:5", "<p>note</p>"),
     ).rejects.toThrow("Not authenticated");
+  });
+});
+
+describe("getProverbNotes", () => {
+  const mockFetch = fetch as jest.MockedFunction<typeof fetch>;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should return notes on 200", async () => {
+    const mockResponse = {
+      items: [
+        {
+          pk: "uuid-1",
+          sk: "Proverbs3:5",
+          note: "<p>First note</p>",
+          dateCreated: "2026-06-02T12:00:00.000Z",
+          uuid: "uuid-1",
+          ref: "Proverbs3:5",
+        },
+        {
+          pk: "uuid-2",
+          sk: "Proverbs3:5",
+          note: "<p>Second note</p>",
+          dateCreated: "2026-06-03T12:00:00.000Z",
+          uuid: "uuid-2",
+          ref: "Proverbs3:5",
+        },
+      ],
+    };
+
+    mockGetValidIdToken.mockResolvedValue("valid-token");
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(mockResponse),
+    } as Response);
+
+    const result = await getProverbNotes("Proverbs3:5");
+
+    expect(result).toEqual(mockResponse);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(init.method).toBe("GET");
+    expect(url).toContain("/notes/proverbs/Proverbs3:5");
+    expect(init.headers).toEqual({ Authorization: "valid-token" });
+  });
+
+  it("should strip spaces from ref", async () => {
+    mockGetValidIdToken.mockResolvedValue("valid-token");
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ items: [], lastKey: undefined }),
+    } as Response);
+
+    await getProverbNotes("Proverbs 3:5");
+
+    const [url] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain("/notes/proverbs/Proverbs3:5");
+  });
+
+  it("should return empty items list in response", async () => {
+    const mockResponse = { items: [], lastKey: undefined };
+
+    mockGetValidIdToken.mockResolvedValue("valid-token");
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(mockResponse),
+    } as Response);
+
+    const result = await getProverbNotes("Proverbs3:5");
+
+    expect(result).toEqual(mockResponse);
+    expect(result.items).toHaveLength(0);
+  });
+
+  it("should throw on API failure", async () => {
+    mockGetValidIdToken.mockResolvedValue("valid-token");
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      statusText: "Internal Server Error",
+    } as Response);
+
+    await expect(getProverbNotes("Proverbs3:5")).rejects.toThrow(
+      "Failed to get proverb notes: 500 Internal Server Error",
+    );
+  });
+
+  it("should throw if not authenticated", async () => {
+    mockGetValidIdToken.mockResolvedValue(null);
+
+    await expect(getProverbNotes("Proverbs3:5")).rejects.toThrow(
+      "Not authenticated",
+    );
   });
 });
