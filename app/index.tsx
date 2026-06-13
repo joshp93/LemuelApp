@@ -231,7 +231,7 @@ export default function Index() {
                 {notes.length === 0 && (
                   <Text
                     style={{
-                      color: "white",
+                      color: "black",
                       textAlign: "center",
                       marginTop: 12,
                     }}
