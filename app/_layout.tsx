@@ -9,21 +9,16 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Stack, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
-import {
-  Alert,
-  Image,
-  StyleSheet,
-  View,
-} from "react-native";
-import { AuthProvider } from "../src/auth/auth-context";
+import { Alert, Image, StyleSheet, View } from "react-native";
 import { registerPushToken } from "../src/api/push-token";
+import { AuthProvider } from "../src/auth/auth-context";
 import { HeaderMenu } from "../src/components/header-menu";
+import { COLORS } from "../src/constants/theme";
 import { initializeNotifications } from "../src/notifications/daily-proverb-notification";
 import {
   initializePushHandler,
   setupTokenListener,
 } from "../src/notifications/push-listener";
-import { COLORS } from "../src/constants/theme";
 
 SplashScreen.preventAutoHideAsync();
 

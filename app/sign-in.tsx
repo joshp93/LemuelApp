@@ -6,7 +6,15 @@ import {
 } from "expo-router";
 import { StackActions } from "expo-router/build/react-navigation";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View, KeyboardAvoidingView, Platform } from "react-native";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { createAccountRecord } from "../src/api/account";
 import { signIn } from "../src/api/auth";
 import { useAuth } from "../src/auth/auth-context";
@@ -66,45 +74,45 @@ export default function SignIn() {
       >
         <View style={styles.container}>
           <Text style={styles.title}>Sign In</Text>
-        <Text style={styles.emailPreview}>{email}</Text>
+          <Text style={styles.emailPreview}>{email}</Text>
 
-        {formError ? <Text style={styles.formError}>{formError}</Text> : null}
+          {formError ? <Text style={styles.formError}>{formError}</Text> : null}
 
-        <View style={styles.passwordContainer}>
-          <TextInput
-            style={[
-              styles.input,
-              styles.passwordInput,
-              fieldError ? styles.inputError : null,
-            ]}
-            placeholder="Password"
-            value={password}
-            onChangeText={setPassword}
-            onBlur={() => {
-              if (!password) setFieldError("Password is required");
-            }}
-            secureTextEntry={!showPassword}
-          />
-          <Pressable
-            style={styles.showPasswordButton}
-            onPress={() => setShowPassword(!showPassword)}
-          >
-            <Text style={styles.showPasswordText}>
-              {showPassword ? "Hide" : "Show"}
-            </Text>
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={[
+                styles.input,
+                styles.passwordInput,
+                fieldError ? styles.inputError : null,
+              ]}
+              placeholder="Password"
+              value={password}
+              onChangeText={setPassword}
+              onBlur={() => {
+                if (!password) setFieldError("Password is required");
+              }}
+              secureTextEntry={!showPassword}
+            />
+            <Pressable
+              style={styles.showPasswordButton}
+              onPress={() => setShowPassword(!showPassword)}
+            >
+              <Text style={styles.showPasswordText}>
+                {showPassword ? "Hide" : "Show"}
+              </Text>
+            </Pressable>
+          </View>
+          {fieldError ? (
+            <Text style={styles.fieldError}>{fieldError}</Text>
+          ) : null}
+
+          <LemuelButton onPress={handleSignIn} disabled={loading}>
+            {loading ? "Signing in..." : "Sign In"}
+          </LemuelButton>
+
+          <Pressable style={styles.backButton} onPress={handleBack}>
+            <Text style={styles.backButtonText}>Back to Email</Text>
           </Pressable>
-        </View>
-        {fieldError ? (
-          <Text style={styles.fieldError}>{fieldError}</Text>
-        ) : null}
-
-        <LemuelButton onPress={handleSignIn} disabled={loading}>
-          {loading ? "Signing in..." : "Sign In"}
-        </LemuelButton>
-
-        <Pressable style={styles.backButton} onPress={handleBack}>
-          <Text style={styles.backButtonText}>Back to Email</Text>
-        </Pressable>
         </View>
       </KeyboardAvoidingView>
     </>

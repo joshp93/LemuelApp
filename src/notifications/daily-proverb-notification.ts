@@ -2,7 +2,7 @@ import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { remoteLog } from "../api/remote-logger";
 import { COLORS } from "../constants/theme";
-import { ProverbSchema, type Proverb } from "../models/proverb";
+import { type Proverb, ProverbSchema } from "../models/proverb";
 
 const NOTIFICATION_ID = "daily-proverb-meditation";
 const SNOOZE_NOTIFICATION_ID = "daily-proverb-snoozed";

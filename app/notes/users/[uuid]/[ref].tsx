@@ -2,7 +2,7 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
-  LayoutChangeEvent,
+  type LayoutChangeEvent,
   Platform,
   Pressable,
   ScrollView,
@@ -16,7 +16,7 @@ import {
 } from "react-native-pell-rich-editor";
 import { getUserNote, saveUserNote } from "../../../../src/api/notes";
 import { remoteLog } from "../../../../src/api/remote-logger";
-import { withAuth, type WithAuthProps } from "../../../../src/auth/with-auth";
+import { type WithAuthProps, withAuth } from "../../../../src/auth/with-auth";
 import { LemuelButton } from "../../../../src/components/lemuel-button";
 import { ProverbCard } from "../../../../src/components/proverb-card";
 import { Text } from "../../../../src/components/themed-text";
@@ -26,7 +26,7 @@ import { useProverbForTheDay } from "../../../../src/hooks/useProverbForTheDay";
 
 const FONT_SIZES = [40, 28, 18];
 
-function UserNotePage({ user }: WithAuthProps) {
+function UserNotePage({ user: _user }: WithAuthProps) {
   const router = useRouter();
   const { uuid, ref } = useLocalSearchParams<{ uuid: string; ref: string }>();
 

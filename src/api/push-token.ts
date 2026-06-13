@@ -1,7 +1,7 @@
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
-import { remoteLog } from "./remote-logger";
 import { LEMUEL_API_BASE_URL } from "./constants";
+import { remoteLog } from "./remote-logger";
 
 /**
  * Retrieves the device's FCM push token via expo-notifications and registers it

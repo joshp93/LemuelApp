@@ -4,13 +4,18 @@ import {
   Path,
   Shader,
   Skia,
+  type Uniforms,
   useCanvasSize,
   useClock,
-  type Uniforms,
 } from "@shopify/react-native-skia";
 import { Stack, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LayoutChangeEvent, ScrollView, StyleSheet, View } from "react-native";
+import {
+  type LayoutChangeEvent,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
 import Animated, {
   useAnimatedStyle,
   useDerivedValue,

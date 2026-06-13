@@ -1,6 +1,6 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import ConfirmSignUp from "../../app/confirm-sign-up";
-import { verifyAccount, resendVerificationCode } from "../../src/api/auth";
+import { resendVerificationCode, verifyAccount } from "../../src/api/auth";
 
 jest.mock("expo-router", () => ({
   useRouter: () => ({
@@ -20,9 +20,8 @@ jest.mock("../../src/api/auth", () => ({
 const mockVerifyAccount = verifyAccount as jest.MockedFunction<
   typeof verifyAccount
 >;
-const mockResendVerificationCode = resendVerificationCode as jest.MockedFunction<
-  typeof resendVerificationCode
->;
+const mockResendVerificationCode =
+  resendVerificationCode as jest.MockedFunction<typeof resendVerificationCode>;
 
 describe("ConfirmSignUp", () => {
   beforeEach(() => {

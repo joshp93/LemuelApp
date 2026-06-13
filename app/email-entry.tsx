@@ -65,27 +65,27 @@ export default function EmailEntry() {
       >
         <View style={styles.container}>
           <Text style={styles.title}>Welcome</Text>
-        <Text style={styles.subtitle}>Enter your email to continue</Text>
+          <Text style={styles.subtitle}>Enter your email to continue</Text>
 
-        {fieldError ? (
-          <Text style={styles.fieldError}>{fieldError}</Text>
-        ) : null}
+          {fieldError ? (
+            <Text style={styles.fieldError}>{fieldError}</Text>
+          ) : null}
 
-        <TextInput
-          style={[styles.input, fieldError ? styles.inputError : null]}
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-          onBlur={() => validateField(email)}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          autoComplete="email"
-        />
+          <TextInput
+            style={[styles.input, fieldError ? styles.inputError : null]}
+            placeholder="Email"
+            value={email}
+            onChangeText={setEmail}
+            onBlur={() => validateField(email)}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            autoComplete="email"
+          />
 
-        <LemuelButton onPress={handleContinue} disabled={loading}>
-          {loading ? "" : "Continue"}
-        </LemuelButton>
-        {loading && <ActivityIndicator style={styles.loader} />}
+          <LemuelButton onPress={handleContinue} disabled={loading}>
+            {loading ? "" : "Continue"}
+          </LemuelButton>
+          {loading && <ActivityIndicator style={styles.loader} />}
         </View>
       </KeyboardAvoidingView>
     </>

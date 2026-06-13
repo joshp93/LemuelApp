@@ -1,7 +1,7 @@
 import { render } from "@testing-library/react-native";
 import { Text } from "react-native";
 import * as AuthContext from "../../src/auth/auth-context";
-import { withAuth, type WithAuthProps } from "../../src/auth/with-auth";
+import { type WithAuthProps, withAuth } from "../../src/auth/with-auth";
 
 jest.mock("../../src/auth/auth-context", () => ({
   useAuth: jest.fn(),

@@ -7,11 +7,8 @@ import {
   Text,
   View,
 } from "react-native";
-import {
-  getAccountDetails,
-  type AccountDetails,
-} from "../src/api/account";
-import { withAuth, type WithAuthProps } from "../src/auth/with-auth";
+import { type AccountDetails, getAccountDetails } from "../src/api/account";
+import { type WithAuthProps, withAuth } from "../src/auth/with-auth";
 
 /**
  * Account screen showing the authenticated user's profile details.

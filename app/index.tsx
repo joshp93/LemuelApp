@@ -2,12 +2,12 @@ import { Stack, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
   AppState,
+  type AppStateStatus,
   RefreshControl,
   ScrollView,
   TouchableOpacity,
   useWindowDimensions,
   View,
-  type AppStateStatus,
 } from "react-native";
 import RenderHtml from "react-native-render-html";
 import { getProverbNotes, type NoteEntity } from "../src/api/notes";

@@ -1,6 +1,6 @@
 import { render } from "@testing-library/react-native";
 import { ProverbCard } from "../../src/components/proverb-card";
-import { Proverb } from "../../src/models/proverb";
+import type { Proverb } from "../../src/models/proverb";
 
 describe("ProverbCard", () => {
   const mockProverb: Proverb = {
@@ -15,7 +15,9 @@ describe("ProverbCard", () => {
   });
 
   it("should render with custom fontSize", () => {
-    const { getByText } = render(<ProverbCard proverb={mockProverb} fontSize={32} />);
+    const { getByText } = render(
+      <ProverbCard proverb={mockProverb} fontSize={32} />,
+    );
 
     const textElement = getByText("Trust in the LORD with all your heart");
     expect(textElement).toBeTruthy();

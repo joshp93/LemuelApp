@@ -74,7 +74,8 @@ describe("Proverb Schema", () => {
     };
 
     const parsed = ProverbSchema.parse(validProverb);
-    const inferred: { ref: string; proverb: string; citation?: string } = parsed;
+    const inferred: { ref: string; proverb: string; citation?: string } =
+      parsed;
     expect(inferred.ref).toBe(validProverb.ref);
     expect(inferred.proverb).toBe(validProverb.proverb);
   });

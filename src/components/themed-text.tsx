@@ -1,4 +1,4 @@
-import { Text as RNText, StyleSheet, TextProps } from "react-native";
+import { Text as RNText, StyleSheet, type TextProps } from "react-native";
 
 export function Text(props: TextProps) {
   const { style, ...otherProps } = props;
@@ -7,7 +7,10 @@ export function Text(props: TextProps) {
   const styleArray = Array.isArray(style) ? style : [style];
   const hasItalic = styleArray.some(
     (s) =>
-      s && typeof s === "object" && "fontStyle" in s && s.fontStyle === "italic"
+      s &&
+      typeof s === "object" &&
+      "fontStyle" in s &&
+      s.fontStyle === "italic",
   );
 
   return (

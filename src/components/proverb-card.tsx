@@ -1,10 +1,10 @@
 import {
   StyleSheet,
-  TextLayoutEvent,
+  type TextLayoutEvent,
   View,
-  ViewProps,
+  type ViewProps,
 } from "react-native";
-import { Proverb } from "../../src/models/proverb";
+import type { Proverb } from "../../src/models/proverb";
 import { Text } from "./themed-text";
 
 export interface ProverbCardProps extends ViewProps {

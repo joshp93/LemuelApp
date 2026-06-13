@@ -139,13 +139,10 @@ export async function getProverbNotes(
 
   ref = ref.replace(" ", "");
 
-  const response = await fetch(
-    `${LEMUEL_API_BASE_URL}/notes/proverbs/${ref}`,
-    {
-      method: "GET",
-      headers: { Authorization: token },
-    },
-  );
+  const response = await fetch(`${LEMUEL_API_BASE_URL}/notes/proverbs/${ref}`, {
+    method: "GET",
+    headers: { Authorization: token },
+  });
 
   if (!response.ok) {
     throw new Error(

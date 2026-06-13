@@ -1,5 +1,8 @@
-import { getMeditationDuration, setMeditationDuration } from "../../src/settings/meditation-preferences";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  getMeditationDuration,
+  setMeditationDuration,
+} from "../../src/settings/meditation-preferences";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   getItem: jest.fn(),

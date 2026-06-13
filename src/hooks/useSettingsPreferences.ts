@@ -72,7 +72,17 @@ type Action =
   | { type: "SET"; field: "enabled"; value: boolean }
   | { type: "SET"; field: "mode"; value: NotificationMode }
   | { type: "SET"; field: "meditationDuration"; value: number }
-  | { type: "SET"; field: "windowStartHour" | "windowStartMinute" | "windowEndHour" | "windowEndMinute" | "scheduledHour" | "scheduledMinute"; value: string }
+  | {
+      type: "SET";
+      field:
+        | "windowStartHour"
+        | "windowStartMinute"
+        | "windowEndHour"
+        | "windowEndMinute"
+        | "scheduledHour"
+        | "scheduledMinute";
+      value: string;
+    }
   | { type: "SYNC_SNAPSHOT" };
 
 const initialSaved: Saved = {
@@ -212,11 +222,13 @@ export function useSettingsPreferences(): SettingsPreferences {
     [],
   );
   const setWindowStartHour = useCallback(
-    (v: string) => dispatch({ type: "SET", field: "windowStartHour", value: v }),
+    (v: string) =>
+      dispatch({ type: "SET", field: "windowStartHour", value: v }),
     [],
   );
   const setWindowStartMinute = useCallback(
-    (v: string) => dispatch({ type: "SET", field: "windowStartMinute", value: v }),
+    (v: string) =>
+      dispatch({ type: "SET", field: "windowStartMinute", value: v }),
     [],
   );
   const setWindowEndHour = useCallback(
@@ -224,7 +236,8 @@ export function useSettingsPreferences(): SettingsPreferences {
     [],
   );
   const setWindowEndMinute = useCallback(
-    (v: string) => dispatch({ type: "SET", field: "windowEndMinute", value: v }),
+    (v: string) =>
+      dispatch({ type: "SET", field: "windowEndMinute", value: v }),
     [],
   );
   const setScheduledHour = useCallback(
@@ -232,19 +245,18 @@ export function useSettingsPreferences(): SettingsPreferences {
     [],
   );
   const setScheduledMinute = useCallback(
-    (v: string) => dispatch({ type: "SET", field: "scheduledMinute", value: v }),
+    (v: string) =>
+      dispatch({ type: "SET", field: "scheduledMinute", value: v }),
     [],
   );
   const setMeditationDuration = useCallback(
-    (v: number) => dispatch({ type: "SET", field: "meditationDuration", value: v }),
+    (v: number) =>
+      dispatch({ type: "SET", field: "meditationDuration", value: v }),
     [],
   );
-  const setIsDirty = useCallback(
-    (v: boolean) => {
-      if (!v) dispatch({ type: "SYNC_SNAPSHOT" });
-    },
-    [],
-  );
+  const setIsDirty = useCallback((v: boolean) => {
+    if (!v) dispatch({ type: "SYNC_SNAPSHOT" });
+  }, []);
 
   return {
     loading: state.loading,

@@ -85,7 +85,7 @@ export const getRandomWindowHourStart = async (): Promise<number> => {
     const value = await AsyncStorage.getItem(RANDOM_WINDOW_START_KEY);
     if (value !== null) {
       const num = parseInt(value, 10);
-      if (!isNaN(num) && num >= 0 && num <= 23) return num;
+      if (!Number.isNaN(num) && num >= 0 && num <= 23) return num;
     }
     return DEFAULT_WINDOW_START;
   } catch (error) {
@@ -115,7 +115,7 @@ export const getRandomWindowHourEnd = async (): Promise<number> => {
     const value = await AsyncStorage.getItem(RANDOM_WINDOW_END_KEY);
     if (value !== null) {
       const num = parseInt(value, 10);
-      if (!isNaN(num) && num >= 0 && num <= 23) return num;
+      if (!Number.isNaN(num) && num >= 0 && num <= 23) return num;
     }
     return DEFAULT_WINDOW_END;
   } catch (error) {
@@ -145,7 +145,7 @@ export const getRandomWindowStartMinute = async (): Promise<number> => {
     const value = await AsyncStorage.getItem(RANDOM_WINDOW_START_MINUTE_KEY);
     if (value !== null) {
       const num = parseInt(value, 10);
-      if (!isNaN(num) && num >= 0 && num <= 59) return num;
+      if (!Number.isNaN(num) && num >= 0 && num <= 59) return num;
     }
     return DEFAULT_WINDOW_START_MINUTE;
   } catch (error) {
@@ -180,7 +180,7 @@ export const getRandomWindowEndMinute = async (): Promise<number> => {
     const value = await AsyncStorage.getItem(RANDOM_WINDOW_END_MINUTE_KEY);
     if (value !== null) {
       const num = parseInt(value, 10);
-      if (!isNaN(num) && num >= 0 && num <= 59) return num;
+      if (!Number.isNaN(num) && num >= 0 && num <= 59) return num;
     }
     return DEFAULT_WINDOW_END_MINUTE;
   } catch (error) {
@@ -212,7 +212,7 @@ export const getScheduledTimeHour = async (): Promise<number> => {
     const value = await AsyncStorage.getItem(SCHEDULED_TIME_HOUR_KEY);
     if (value !== null) {
       const num = parseInt(value, 10);
-      if (!isNaN(num) && num >= 0 && num <= 23) return num;
+      if (!Number.isNaN(num) && num >= 0 && num <= 23) return num;
     }
     return DEFAULT_SCHEDULED_HOUR;
   } catch (error) {
@@ -242,7 +242,7 @@ export const getScheduledTimeMinute = async (): Promise<number> => {
     const value = await AsyncStorage.getItem(SCHEDULED_TIME_MINUTE_KEY);
     if (value !== null) {
       const num = parseInt(value, 10);
-      if (!isNaN(num) && num >= 0 && num <= 59) return num;
+      if (!Number.isNaN(num) && num >= 0 && num <= 59) return num;
     }
     return DEFAULT_SCHEDULED_MINUTE;
   } catch (error) {

@@ -1,8 +1,8 @@
 import {
   StyleSheet,
   Text,
-  TouchableOpacity,
   type TextStyle,
+  TouchableOpacity,
   type TouchableOpacityProps,
 } from "react-native";
 

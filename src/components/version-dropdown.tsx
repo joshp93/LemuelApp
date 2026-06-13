@@ -1,4 +1,3 @@
-import { COLORS } from "../constants/theme";
 import { useState } from "react";
 import {
   FlatList,
@@ -9,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { COLORS } from "../constants/theme";
 
 interface VersionDropdownProps {
   versions: string[];

@@ -8,7 +8,7 @@ export const getMeditationDuration = async (): Promise<number> => {
     const value = await AsyncStorage.getItem(MEDITATION_DURATION_KEY);
     if (value !== null) {
       const num = parseInt(value, 10);
-      if (!isNaN(num) && num >= 5000 && num <= 600000) return num;
+      if (!Number.isNaN(num) && num >= 5000 && num <= 600000) return num;
     }
     return DEFAULT_DURATION_MS;
   } catch (error) {

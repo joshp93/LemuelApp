@@ -1,6 +1,6 @@
 import { Redirect } from "expo-router";
-import { ComponentType } from "react";
-import { AuthUser, useAuth } from "./auth-context";
+import type { ComponentType } from "react";
+import { type AuthUser, useAuth } from "./auth-context";
 
 /**
  * Props injected by the `withAuth` HOC into the wrapped component.

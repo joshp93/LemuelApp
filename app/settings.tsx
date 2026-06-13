@@ -21,7 +21,7 @@ import { LemuelButton } from "../src/components/lemuel-button";
 import { useSettingsPreferences } from "../src/hooks/useSettingsPreferences";
 import { sendProverbNotification } from "../src/notifications/daily-proverb-notification";
 import {
-  NotificationMode,
+  type NotificationMode,
   setNotificationMode,
   setNotificationsEnabled,
   setRandomWindowEndMinute,

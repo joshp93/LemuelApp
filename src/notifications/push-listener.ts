@@ -6,7 +6,7 @@ import { LEMUEL_API_BASE_URL } from "../api/constants";
 import { getProverbForTheDay } from "../api/proverbs";
 import { remoteLog } from "../api/remote-logger";
 import { getChosenVersion } from "../api/version-storage";
-import { Proverb } from "../models/proverb";
+import type { Proverb } from "../models/proverb";
 import { updateProverbWidget } from "../widgets";
 import {
   getRandomTimeInWindow,

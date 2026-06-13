@@ -1,5 +1,5 @@
 import {
-  ChallengeNameType,
+  type ChallengeNameType,
   CognitoIdentityProviderClient,
   ConfirmSignUpCommand,
   GlobalSignOutCommand,

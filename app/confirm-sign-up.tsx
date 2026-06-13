@@ -1,6 +1,14 @@
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View, KeyboardAvoidingView, Platform } from "react-native";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { resendVerificationCode, verifyAccount } from "../src/api/auth";
 import { LemuelButton } from "../src/components/lemuel-button";
 
@@ -69,49 +77,49 @@ export default function ConfirmSignUp() {
       >
         <View style={styles.container}>
           <Text style={styles.title}>Confirm Sign Up</Text>
-        <Text style={styles.subtitle}>
-          Enter the 6-digit code sent to your email
-        </Text>
-
-        {formError ? <Text style={styles.formError}>{formError}</Text> : null}
-        {successMessage ? (
-          <Text style={styles.success}>{successMessage}</Text>
-        ) : null}
-
-        <Text style={styles.emailPreview}>{email}</Text>
-
-        <TextInput
-          style={[styles.input, fieldError ? styles.inputError : null]}
-          placeholder="Verification Code"
-          value={code}
-          onChangeText={setCode}
-          onBlur={() => {
-            if (!code) setFieldError("Verification code is required");
-          }}
-          keyboardType="number-pad"
-          maxLength={6}
-        />
-        {fieldError ? (
-          <Text style={styles.fieldError}>{fieldError}</Text>
-        ) : null}
-
-        <LemuelButton onPress={handleConfirm} disabled={loading}>
-          {loading ? "Verifying..." : "Verify"}
-        </LemuelButton>
-
-        {resendMessage ? (
-          <Text style={styles.resendMessage}>{resendMessage}</Text>
-        ) : null}
-
-        <Pressable
-          style={[styles.resendButton, resending && styles.buttonDisabled]}
-          onPress={handleResend}
-          disabled={resending}
-        >
-          <Text style={styles.resendButtonText}>
-            {resending ? "Sending..." : "Resend Code"}
+          <Text style={styles.subtitle}>
+            Enter the 6-digit code sent to your email
           </Text>
-        </Pressable>
+
+          {formError ? <Text style={styles.formError}>{formError}</Text> : null}
+          {successMessage ? (
+            <Text style={styles.success}>{successMessage}</Text>
+          ) : null}
+
+          <Text style={styles.emailPreview}>{email}</Text>
+
+          <TextInput
+            style={[styles.input, fieldError ? styles.inputError : null]}
+            placeholder="Verification Code"
+            value={code}
+            onChangeText={setCode}
+            onBlur={() => {
+              if (!code) setFieldError("Verification code is required");
+            }}
+            keyboardType="number-pad"
+            maxLength={6}
+          />
+          {fieldError ? (
+            <Text style={styles.fieldError}>{fieldError}</Text>
+          ) : null}
+
+          <LemuelButton onPress={handleConfirm} disabled={loading}>
+            {loading ? "Verifying..." : "Verify"}
+          </LemuelButton>
+
+          {resendMessage ? (
+            <Text style={styles.resendMessage}>{resendMessage}</Text>
+          ) : null}
+
+          <Pressable
+            style={[styles.resendButton, resending && styles.buttonDisabled]}
+            onPress={handleResend}
+            disabled={resending}
+          >
+            <Text style={styles.resendButtonText}>
+              {resending ? "Sending..." : "Resend Code"}
+            </Text>
+          </Pressable>
         </View>
       </KeyboardAvoidingView>
     </>

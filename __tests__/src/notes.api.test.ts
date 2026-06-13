@@ -1,5 +1,9 @@
 import * as Auth from "../../src/api/auth";
-import { getProverbNotes, getUserNote, saveUserNote } from "../../src/api/notes";
+import {
+  getProverbNotes,
+  getUserNote,
+  saveUserNote,
+} from "../../src/api/notes";
 
 const mockGetValidIdToken = jest.spyOn(Auth, "getValidIdToken");
 

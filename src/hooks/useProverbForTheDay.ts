@@ -6,7 +6,7 @@ import {
   removeChosenVersion,
   saveChosenVersion,
 } from "../api/version-storage";
-import { Proverb } from "../models/proverb";
+import type { Proverb } from "../models/proverb";
 
 const DEFAULT_VERSION = "niv";
 
