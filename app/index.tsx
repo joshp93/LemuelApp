@@ -12,6 +12,7 @@ import {
 import RenderHtml from "react-native-render-html";
 import { getProverbNotes, type NoteEntity } from "../src/api/notes";
 import { useAuth } from "../src/auth/auth-context";
+import { FadeInDown } from "../src/components/fade-in-down";
 import { LemuelButton } from "../src/components/lemuel-button";
 import { ProverbCard } from "../src/components/proverb-card";
 import { Text } from "../src/components/themed-text";
@@ -198,19 +199,21 @@ export default function Index() {
         {error && <Text>{error}</Text>}
         {proverb && !loading && !error && (
           <>
-            <ProverbCard
-              proverb={proverb}
-              fontSize={fontSize}
-              onTextLayout={onTextLayout}
-            />
-            <LemuelButton
-              onPress={() => router.push("/meditation")}
-              style={{ marginTop: 16 }}
-            >
-              Start Meditation
-            </LemuelButton>
+            <FadeInDown key={proverb.ref}>
+              <ProverbCard
+                proverb={proverb}
+                fontSize={fontSize}
+                onTextLayout={onTextLayout}
+              />
+              <LemuelButton
+                onPress={() => router.push("/meditation")}
+                style={{ marginTop: 16 }}
+              >
+                Start Meditation
+              </LemuelButton>
+            </FadeInDown>
             {user && (
-              <>
+              <FadeInDown key={`notes-${refreshCount}`}>
                 <View
                   style={{
                     height: 1,
@@ -246,7 +249,7 @@ export default function Index() {
                     contentWidth={windowWidth - 56}
                   />
                 ))}
-              </>
+              </FadeInDown>
             )}
           </>
         )}

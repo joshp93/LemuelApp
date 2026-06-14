@@ -135,16 +135,43 @@ function UserNotePage({ user: _user }: WithAuthProps) {
           </View>
 
           <View style={isFullScreen ? styles.editorFullScreen : styles.half}>
-            {isFullScreen && (
-              <Pressable
-                style={styles.closeFullScreen}
-                onPress={() => setIsFullScreen(false)}
-              >
-                <Text style={styles.closeFullScreenText}>Close</Text>
-              </Pressable>
-            )}
             <View style={isFullScreen ? { flex: 1 } : styles.editorSection}>
+              {isFullScreen && (
+                <View style={styles.fullScreenHeader}>
+                  <View style={styles.toolbarFlex}>
+                    <RichToolbar
+                      editor={richTextRef}
+                      actions={[
+                        actions.setBold,
+                        actions.setItalic,
+                        actions.setUnderline,
+                        actions.insertBulletsList,
+                        actions.insertOrderedList,
+                      ]}
+                      iconSize={24}
+                      iconTint="white"
+                      selectedIconTint="#ccc"
+                      style={styles.toolbarInner}
+                    />
+                  </View>
+                  <Pressable
+                    style={styles.closeFullScreenInline}
+                    onPress={() => {
+                      try {
+                        setIsFullScreen(false);
+                      } catch (err) {
+                        remoteLog("error", "[FullScreen] Failed to close", {
+                          error: err,
+                        });
+                      }
+                    }}
+                  >
+                    <Text style={styles.closeFullScreenText}>✕</Text>
+                  </Pressable>
+                </View>
+              )}
               <RichEditor
+                key={isFullScreen ? "full" : "split"}
                 ref={richTextRef}
                 onChange={setEditorContent}
                 placeholder="Capture your thoughts..."
@@ -171,6 +198,9 @@ function UserNotePage({ user: _user }: WithAuthProps) {
                         actions.insertOrderedList,
                       ]}
                       iconSize={24}
+                      iconTint="white"
+                      selectedIconTint="#ccc"
+                      style={styles.toolbarInner}
                     />
                   </View>
                   <LemuelButton
@@ -235,20 +265,27 @@ const styles = StyleSheet.create({
     zIndex: 10,
     backgroundColor: "#fff",
   },
-  closeFullScreen: {
+  toolbarInner: {
     backgroundColor: "black",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    alignSelf: "flex-end",
-    marginRight: 8,
-    marginTop: 8,
-    borderRadius: 6,
+  },
+  fullScreenHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 8,
+    marginTop: 4,
+    marginBottom: 8,
+    paddingRight: 8,
+    backgroundColor: "black",
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  closeFullScreenInline: {
+    padding: 8,
+    marginLeft: 4,
   },
   closeFullScreenText: {
     color: "white",
-    fontSize: 14,
-    fontWeight: "600",
-    fontFamily: "Nunito_400Regular",
+    fontSize: 20,
   },
   toolbarRow: {
     flexDirection: "row",
@@ -256,6 +293,10 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
     marginTop: 4,
     marginBottom: 8,
+    paddingRight: 8,
+    backgroundColor: "black",
+    borderRadius: 8,
+    overflow: "hidden",
   },
   toolbarFlex: {
     flex: 1,
@@ -263,14 +304,14 @@ const styles = StyleSheet.create({
   fullScreenButton: {
     padding: 8,
     marginLeft: 4,
-    backgroundColor: "#eee",
+    backgroundColor: "black",
     borderRadius: 0,
     alignItems: "center",
     justifyContent: "center",
   },
   fullScreenButtonText: {
     fontSize: 20,
-    color: "#333",
+    color: "white",
   },
   saveButton: {
     backgroundColor: "black",
