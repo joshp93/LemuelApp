@@ -42,6 +42,7 @@ function UserNotePage({ user: _user }: WithAuthProps) {
   const [saving, setSaving] = useState(false);
   const [editorContent, setEditorContent] = useState("");
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [notesLoading, setNotesLoading] = useState(true);
   const richTextRef = useRef<RichEditor>(null);
   const [topHalfHeight, setTopHalfHeight] = useState(0);
 
@@ -54,15 +55,18 @@ function UserNotePage({ user: _user }: WithAuthProps) {
 
   useEffect(() => {
     if (!uuid || !ref) return;
+    setNotesLoading(true);
     getUserNote(uuid, ref)
       .then((data) => {
         if (data) {
           setEditorContent(data.note);
-          richTextRef.current?.setContentHTML(data.note);
         }
       })
       .catch((err) => {
         remoteLog("error", "[Notes] Failed to load note", { error: err });
+      })
+      .finally(() => {
+        setNotesLoading(false);
       });
   }, [uuid, ref]);
 
@@ -170,22 +174,28 @@ function UserNotePage({ user: _user }: WithAuthProps) {
                   </Pressable>
                 </View>
               )}
-              <RichEditor
-                key={isFullScreen ? "full" : "split"}
-                ref={richTextRef}
-                onChange={setEditorContent}
-                placeholder="Capture your thoughts..."
-                editorStyle={{
-                  backgroundColor: "#fff",
-                  color: "#333",
-                  placeholderColor: "#999",
-                  contentCSSText:
-                    "font-size: 16px; font-family: Nunito; padding: 8px;",
-                }}
-                initialContentHTML={editorContent}
-                useContainer={false}
-              />
-              {!isFullScreen && (
+              {notesLoading ? (
+                <View style={styles.loadingContainer}>
+                  <Text style={styles.loadingText}>Loading note...</Text>
+                </View>
+              ) : (
+                <RichEditor
+                  key={isFullScreen ? "full" : "split"}
+                  ref={richTextRef}
+                  onChange={setEditorContent}
+                  placeholder="Capture your thoughts..."
+                  editorStyle={{
+                    backgroundColor: "#fff",
+                    color: "#333",
+                    placeholderColor: "#999",
+                    contentCSSText:
+                      "font-size: 16px; font-family: Nunito; padding: 8px;",
+                  }}
+                  initialContentHTML={editorContent}
+                  useContainer={false}
+                />
+              )}
+              {!isFullScreen && !notesLoading && (
                 <View style={styles.toolbarRow}>
                   <View style={styles.toolbarFlex}>
                     <RichToolbar
@@ -216,7 +226,7 @@ function UserNotePage({ user: _user }: WithAuthProps) {
             <LemuelButton
               style={styles.saveButton}
               onPress={handleSave}
-              disabled={saving}
+              disabled={saving || notesLoading}
             >
               {saving ? "Saving..." : "Save"}
             </LemuelButton>
@@ -297,6 +307,16 @@ const styles = StyleSheet.create({
     backgroundColor: "black",
     borderRadius: 8,
     overflow: "hidden",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    color: "#999",
+    fontSize: 16,
+    fontFamily: "Nunito_400Regular",
   },
   toolbarFlex: {
     flex: 1,

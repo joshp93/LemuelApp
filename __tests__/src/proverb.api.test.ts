@@ -20,20 +20,19 @@ describe("getProverbForTheDay", () => {
       json: () => Promise.resolve(mockProverb),
     } as Response);
 
-    const result = await getProverbForTheDay();
+    const result = await getProverbForTheDay("niv");
 
     expect(result).toEqual(mockProverb);
     expect(mockFetch).toHaveBeenCalledTimes(1);
-    expect(mockFetch).toHaveBeenCalledWith(
-      expect.stringContaining(LEMUEL_API_BASE_URL),
-      { method: "GET" },
-    );
+    expect(mockFetch).toHaveBeenCalledWith(`${LEMUEL_API_BASE_URL}/niv`, {
+      method: "GET",
+    });
   });
 
   it("should throw an error on network failure", async () => {
     mockFetch.mockRejectedValueOnce(new Error("Network error"));
 
-    await expect(getProverbForTheDay()).rejects.toThrow("Network error");
+    await expect(getProverbForTheDay("niv")).rejects.toThrow("Network error");
   });
 
   it("should throw an error on invalid response data", async () => {
@@ -41,7 +40,7 @@ describe("getProverbForTheDay", () => {
       json: () => Promise.resolve({ invalid: "data" }),
     } as Response);
 
-    await expect(getProverbForTheDay()).rejects.toThrow();
+    await expect(getProverbForTheDay("niv")).rejects.toThrow();
   });
 
   it("should use the correct API endpoint", async () => {
@@ -54,11 +53,10 @@ describe("getProverbForTheDay", () => {
       json: () => Promise.resolve(mockProverb),
     } as Response);
 
-    await getProverbForTheDay();
+    await getProverbForTheDay("niv");
 
-    expect(mockFetch).toHaveBeenCalledWith(
-      expect.stringContaining(LEMUEL_API_BASE_URL),
-      { method: "GET" },
-    );
+    expect(mockFetch).toHaveBeenCalledWith(`${LEMUEL_API_BASE_URL}/niv`, {
+      method: "GET",
+    });
   });
 });

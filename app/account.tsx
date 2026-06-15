@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { type AccountDetails, getAccountDetails } from "../src/api/account";
 import { type WithAuthProps, withAuth } from "../src/auth/with-auth";
+import { formatDate } from "../src/utils/date";
 
 /**
  * Account screen showing the authenticated user's profile details.
@@ -31,18 +32,6 @@ function Account({ user }: WithAuthProps) {
         setLoading(false);
       });
   }, [user.userId]);
-
-  const formatDate = (iso: string) => {
-    try {
-      return new Date(iso).toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      });
-    } catch {
-      return iso;
-    }
-  };
 
   return (
     <>

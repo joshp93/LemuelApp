@@ -11,11 +11,7 @@ import {
 } from "react-native";
 import { checkUserExists } from "../src/api/auth";
 import { LemuelButton } from "../src/components/lemuel-button";
-
-const isValidEmail = (email: string) => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-};
+import { isValidEmail } from "../src/utils/email";
 
 export default function EmailEntry() {
   const router = useRouter();

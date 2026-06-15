@@ -16,6 +16,7 @@ export function useProverbForTheDay() {
   const [error, setError] = useState<string | null>(null);
   const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
   const [availableVersions, setAvailableVersions] = useState<string[]>([]);
+  const [date, setDate] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     let cancelled = false;
@@ -75,38 +76,46 @@ export function useProverbForTheDay() {
     };
   }, []);
 
-  const changeVersion = useCallback(async (version: string) => {
-    setSelectedVersion(version);
-    setLoading(true);
-    setError(null);
-    try {
-      const [data] = await Promise.all([
-        getProverbForTheDay(version),
-        saveChosenVersion(version),
-      ]);
-      setProverb(data);
-    } catch (err: any) {
-      setError(err.stack ?? err.message);
-      setProverb(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchProverb = useCallback(
+    async (version: string, d: string | undefined) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await getProverbForTheDay(version, d);
+        setProverb(data);
+      } catch (err: any) {
+        setError(err.stack ?? err.message);
+        setProverb(null);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
+
+  const changeVersion = useCallback(
+    async (version: string) => {
+      setSelectedVersion(version);
+      await saveChosenVersion(version);
+      await fetchProverb(version, date);
+    },
+    [fetchProverb, date],
+  );
 
   const refresh = useCallback(async () => {
     if (!selectedVersion) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await getProverbForTheDay(selectedVersion);
-      setProverb(data);
-    } catch (err: any) {
-      setError(err.stack ?? err.message);
-      setProverb(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedVersion]);
+    await fetchProverb(selectedVersion, undefined);
+    setDate(undefined);
+  }, [selectedVersion, fetchProverb]);
+
+  const goToDate = useCallback(
+    async (d: string | undefined) => {
+      if (!selectedVersion) return;
+      setDate(d);
+      await fetchProverb(selectedVersion, d);
+    },
+    [selectedVersion, fetchProverb],
+  );
 
   return {
     proverb,
@@ -114,7 +123,9 @@ export function useProverbForTheDay() {
     error,
     selectedVersion,
     availableVersions,
+    date,
     changeVersion,
     refresh,
+    goToDate,
   };
 }

@@ -1,3 +1,4 @@
+import { convertDisplayProverbToProverbKey } from "../utils/convertDisplayProverbToProverbKey";
 import { getValidIdToken } from "./auth";
 import { LEMUEL_API_BASE_URL } from "./constants";
 
@@ -54,7 +55,7 @@ export async function getUserNote(
   }
 
   const response = await fetch(
-    `${LEMUEL_API_BASE_URL}/notes/users/${uuid}/${ref}`,
+    `${LEMUEL_API_BASE_URL}/notes/users/${uuid}/${convertDisplayProverbToProverbKey(ref)}`,
     {
       method: "GET",
       headers: { Authorization: token },
@@ -96,10 +97,8 @@ export async function saveUserNote(
     throw new Error("Not authenticated");
   }
 
-  ref = ref.replace(" ", "");
-
   const response = await fetch(
-    `${LEMUEL_API_BASE_URL}/notes/users/${uuid}/${ref}`,
+    `${LEMUEL_API_BASE_URL}/notes/users/${uuid}/${convertDisplayProverbToProverbKey(ref)}`,
     {
       method: "POST",
       headers: {
@@ -137,12 +136,13 @@ export async function getProverbNotes(
     throw new Error("Not authenticated");
   }
 
-  ref = ref.replace(" ", "");
-
-  const response = await fetch(`${LEMUEL_API_BASE_URL}/notes/proverbs/${ref}`, {
-    method: "GET",
-    headers: { Authorization: token },
-  });
+  const response = await fetch(
+    `${LEMUEL_API_BASE_URL}/notes/proverbs/${convertDisplayProverbToProverbKey(ref)}`,
+    {
+      method: "GET",
+      headers: { Authorization: token },
+    },
+  );
 
   if (!response.ok) {
     throw new Error(

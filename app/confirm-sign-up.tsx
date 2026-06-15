@@ -112,7 +112,10 @@ export default function ConfirmSignUp() {
           ) : null}
 
           <Pressable
-            style={[styles.resendButton, resending && styles.buttonDisabled]}
+            style={[
+              styles.resendButton,
+              resending && styles.resendButtonDisabled,
+            ]}
             onPress={handleResend}
             disabled={resending}
           >
@@ -192,6 +195,9 @@ const styles = StyleSheet.create({
   resendButton: {
     marginTop: 15,
     padding: 10,
+  },
+  resendButtonDisabled: {
+    opacity: 0.6,
   },
   resendButtonText: {
     color: "#007AFF",

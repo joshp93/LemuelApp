@@ -2,10 +2,9 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
 import * as Notifications from "expo-notifications";
 import { Stack, useNavigation } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
-  Animated,
   Platform,
   ScrollView,
   StyleSheet,
@@ -17,6 +16,7 @@ import {
 import { getProverbForTheDay } from "../src/api/proverbs";
 import { remoteLog } from "../src/api/remote-logger";
 import { getChosenVersion } from "../src/api/version-storage";
+import { ExpandableSection } from "../src/components/expandable-section";
 import { LemuelButton } from "../src/components/lemuel-button";
 import { useSettingsPreferences } from "../src/hooks/useSettingsPreferences";
 import { sendProverbNotification } from "../src/notifications/daily-proverb-notification";
@@ -32,60 +32,7 @@ import {
   setScheduledTimeMinute,
 } from "../src/notifications/notification-preferences";
 import { setMeditationDuration } from "../src/settings/meditation-preferences";
-
-function pad(n: number): string {
-  return n.toString().padStart(2, "0");
-}
-
-function ExpandableSection({
-  selected,
-  onSelect,
-  label,
-  children,
-}: {
-  selected: boolean;
-  onSelect: () => void;
-  label: string;
-  children: React.ReactNode;
-}) {
-  const [animValue] = useState(() => new Animated.Value(selected ? 1 : 0));
-
-  const bodyMaxHeight = useMemo(
-    () =>
-      animValue.interpolate({
-        inputRange: [0, 1],
-        outputRange: [0, 300],
-      }),
-    [animValue],
-  );
-
-  useEffect(() => {
-    Animated.timing(animValue, {
-      toValue: selected ? 1 : 0,
-      duration: 300,
-      useNativeDriver: false,
-    }).start();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected]);
-
-  return (
-    <View style={styles.sectionCard}>
-      <TouchableOpacity
-        style={styles.radioRow}
-        onPress={onSelect}
-        activeOpacity={0.7}
-      >
-        <View style={styles.radioOuter}>
-          {selected && <View style={styles.radioInner} />}
-        </View>
-        <Text style={styles.radioLabel}>{label}</Text>
-      </TouchableOpacity>
-      <Animated.View style={{ maxHeight: bodyMaxHeight, overflow: "hidden" }}>
-        <View style={styles.configContent}>{children}</View>
-      </Animated.View>
-    </View>
-  );
-}
+import { pad } from "../src/utils/format";
 
 export default function SettingsScreen() {
   const navigation = useNavigation();
@@ -425,42 +372,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "500",
     color: "#333",
-  },
-  sectionCard: {
-    backgroundColor: "white",
-    borderRadius: 8,
-    marginBottom: 12,
-  },
-  radioRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-  },
-  radioOuter: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "black",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  radioInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: "black",
-  },
-  radioLabel: {
-    fontSize: 16,
-    color: "#333",
-    fontWeight: "500",
-  },
-  configContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
   },
   timeFormatNote: {
     fontSize: 12,

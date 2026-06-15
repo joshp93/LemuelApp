@@ -1,12 +1,56 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import { act, render, waitFor } from "@testing-library/react-native";
-import { AppState } from "react-native";
+import {
+  AppState,
+  type AppStateEvent,
+  type AppStateStatus,
+  type NativeEventSubscription,
+} from "react-native";
 import Index from "../../app/index";
 import { getProverbNotes } from "../../src/api/notes";
 import { useProverbForTheDay } from "../../src/hooks/useProverbForTheDay";
 import { updateProverbWidget } from "../../src/widgets";
 
-let appStateCallback: ((state: string) => void) | null = null;
+let appStateCallback: ((state: AppStateStatus) => void) | null = null;
+
+jest.mock("react-native-reanimated", () => {
+  const { View } = require("react-native");
+  const Reanimated = {
+    View,
+    Text: require("react-native").Text,
+    Image: require("react-native").Image,
+    ScrollView: require("react-native").ScrollView,
+    FlatList: require("react-native").FlatList,
+  };
+  return {
+    __esModule: true,
+    default: {
+      ...Reanimated,
+      createAnimatedComponent: (comp: any) => comp,
+    },
+    ...Reanimated,
+    createAnimatedComponent: (comp: any) => comp,
+    useAnimatedStyle: () => ({}),
+    useDerivedValue: (fn: any) => ({ value: fn() }),
+    useSharedValue: (initial: any) => ({ value: initial }),
+    useClock: () => ({ value: 0 }),
+    useCanvasSize: () => ({ ref: { current: null } }),
+    withTiming: (_toValue: any, _config?: any, callback?: any) => {
+      callback?.(true);
+      return _toValue;
+    },
+    withSpring: (toValue: any) => toValue,
+    withDecay: () => 0,
+    runOnJS: (fn: any) => fn,
+    runOnUI: (fn: any) => fn,
+    measure: () => ({ x: 0, y: 0, width: 0, height: 0 }),
+    interpolate: (_val: any, _input: any[], output: any[]) => output[0],
+    Extrapolate: { CLAMP: "clamp" },
+    Easing: { in: (e: any) => e, out: (e: any) => e, inOut: (e: any) => e },
+    Transition: { Together: "Together", Out: "Out", In: "In" },
+    processColor: (c: any) => c,
+  };
+});
 
 jest.mock("../../src/hooks/useProverbForTheDay");
 jest.mock("../../src/widgets", () => ({
@@ -55,8 +99,10 @@ const defaultHookReturn = {
   error: null as string | null,
   selectedVersion: null as string | null,
   availableVersions: [] as string[],
+  date: undefined as string | undefined,
   changeVersion: jest.fn(),
   refresh: jest.fn(),
+  goToDate: jest.fn(),
 };
 
 describe("Index", () => {
@@ -68,7 +114,10 @@ describe("Index", () => {
     jest
       .spyOn(AppState, "addEventListener")
       .mockImplementation(
-        (event: string, callback: (state: string) => void) => {
+        (
+          event: AppStateEvent,
+          callback: (state: AppStateStatus) => void,
+        ): NativeEventSubscription => {
           if (event === "change") appStateCallback = callback;
           return { remove: jest.fn() };
         },
@@ -95,7 +144,7 @@ describe("Index", () => {
     expect(getByText("Failed to load proverb")).toBeTruthy();
   });
 
-  it("should render proverb card when loaded", () => {
+  it("should render proverb card when loaded", async () => {
     mockUseProverbForTheDay.mockReturnValue({
       ...defaultHookReturn,
       loading: false,
@@ -104,10 +153,12 @@ describe("Index", () => {
 
     const { getByText } = render(<Index />);
 
-    expect(getByText("Trust in the LORD with all your heart")).toBeTruthy();
+    await waitFor(() => {
+      expect(getByText("Trust in the LORD with all your heart")).toBeTruthy();
+    });
   });
 
-  it("should render citation when provided", () => {
+  it("should render citation when provided", async () => {
     mockUseProverbForTheDay.mockReturnValue({
       ...defaultHookReturn,
       loading: false,
@@ -119,7 +170,9 @@ describe("Index", () => {
 
     const { getByText } = render(<Index />);
 
-    expect(getByText("King James Version (KJV)")).toBeTruthy();
+    await waitFor(() => {
+      expect(getByText("King James Version (KJV)")).toBeTruthy();
+    });
   });
 
   it("should update widget when proverb loads", () => {
@@ -154,7 +207,7 @@ describe("Index", () => {
     expect(mockUpdateProverbWidget).not.toHaveBeenCalled();
   });
 
-  it("should render Start Meditation button when proverb is loaded", () => {
+  it("should render Start Meditation button when proverb is loaded", async () => {
     mockUseProverbForTheDay.mockReturnValue({
       ...defaultHookReturn,
       loading: false,
@@ -163,7 +216,9 @@ describe("Index", () => {
 
     const { getByText } = render(<Index />);
 
-    expect(getByText("Start Meditation")).toBeTruthy();
+    await waitFor(() => {
+      expect(getByText("Start Meditation")).toBeTruthy();
+    });
   });
 
   it("should not show meditations section when user is not logged in", () => {
@@ -238,8 +293,16 @@ describe("Index", () => {
   });
 
   it("should refresh proverb and notes on foreground", async () => {
-    const mockRefresh = jest.fn();
     mockUseAuth.mockReturnValue({ user: { userId: "user-1" } });
+    const mockRefresh = jest.fn().mockImplementation(() => {
+      mockUseProverbForTheDay.mockReturnValue({
+        ...defaultHookReturn,
+        loading: false,
+        proverb: { ...mockProverb, ref: "Proverbs 4:7" },
+        refresh: mockRefresh,
+        date: "2026-06-16",
+      });
+    });
     mockUseProverbForTheDay.mockReturnValue({
       ...defaultHookReturn,
       loading: false,
@@ -247,7 +310,7 @@ describe("Index", () => {
       refresh: mockRefresh,
     });
 
-    render(<Index />);
+    const { rerender } = render(<Index />);
 
     await waitFor(() => {
       expect(mockGetProverbNotes).toHaveBeenCalledTimes(1);
@@ -258,6 +321,9 @@ describe("Index", () => {
     });
 
     expect(mockRefresh).toHaveBeenCalledTimes(1);
+
+    rerender(<Index />);
+
     await waitFor(() => {
       expect(mockGetProverbNotes).toHaveBeenCalledTimes(2);
     });
@@ -278,8 +344,11 @@ describe("Index", () => {
     );
     expect(appStateCallback).toBeTruthy();
 
-    const listener = (AppState.addEventListener as jest.Mock).mock.results[0]
-      .value;
+    const listener = (
+      AppState.addEventListener as jest.MockedFunction<
+        typeof AppState.addEventListener
+      >
+    ).mock.results[0].value;
     unmount();
 
     expect(listener.remove).toHaveBeenCalled();

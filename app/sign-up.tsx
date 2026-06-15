@@ -11,22 +11,8 @@ import {
 } from "react-native";
 import { createAccount } from "../src/api/auth";
 import { LemuelButton } from "../src/components/lemuel-button";
-
-const isValidEmail = (email: string) => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-};
-
-const getPasswordError = (password: string): string | null => {
-  if (password.length === 0) return null;
-  if (password.length < 8) return "Password must be at least 8 characters";
-  if (!/[0-9]/.test(password)) return "Password must contain at least 1 number";
-  if (!/[A-Z]/.test(password))
-    return "Password must contain at least 1 uppercase letter";
-  if (!/[a-z]/.test(password))
-    return "Password must contain at least 1 lowercase letter";
-  return null;
-};
+import { isValidEmail } from "../src/utils/email";
+import { getPasswordError } from "../src/utils/password";
 
 export default function SignUp() {
   const router = useRouter();

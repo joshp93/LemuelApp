@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { useAuth } from "../auth/auth-context";
+import { DividingLine } from "./dividing-line";
 import { LemuelButton } from "./lemuel-button";
 
 /**
@@ -97,7 +98,7 @@ export function HeaderMenu() {
               </View>
 
               <View style={styles.bottomSection}>
-                <View style={styles.divider} />
+                <DividingLine />
                 {user ? (
                   <TouchableOpacity
                     style={styles.menuItem}
@@ -171,11 +172,6 @@ const styles = StyleSheet.create({
   },
   bottomSection: {
     flexShrink: 0,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: "#ddd",
-    marginBottom: 8,
   },
   signOutText: {
     fontSize: 16,
