@@ -4,10 +4,21 @@ import { remoteLog } from "../api/remote-logger";
 import { COLORS } from "../constants/theme";
 import { type Proverb, ProverbSchema } from "../models/proverb";
 
-const NOTIFICATION_ID = "daily-proverb-meditation";
+const NOTIFICATION_ID_PREFIX = "daily-proverb-meditation";
 const SNOOZE_NOTIFICATION_ID = "daily-proverb-snoozed";
 const CATEGORY_ID = "proverb-meditation";
 const SNOOZE_ACTION_ID = "snooze";
+
+export const getNotificationIdForDate = (dateString: string): string =>
+  `${NOTIFICATION_ID_PREFIX}-${dateString}`;
+
+/**
+ * A notification trigger that guarantees a schedulable (non-null) value.
+ * Excludes the `null` and `ChannelAwareTriggerInput` variants of
+ * {@link Notifications.NotificationTriggerInput}.
+ */
+export type NonNullNotificationTrigger =
+  Notifications.SchedulableNotificationTriggerInput;
 
 /**
  * Creates an object to be used as the payload of a notification
@@ -42,13 +53,15 @@ const _createAndroidChannel = async () => {
 
 /**
  * Schedules a notification, using @link _createNotificationContent to create the content and the provided trigger for scheduling.
- * If a notification with the same ID already exists, it will be replaced.
+ * Does NOT cancel any existing notification — call @link cancelProverbNotification first if replacement is needed.
  * @param proverb The proverb to include in the notification.
  * @param trigger The trigger for scheduling the notification.
+ * @param dateString The ISO date string (YYYY-MM-DD) this notification is for, used as the notification identifier.
  */
 export const scheduleProverbNotification = async (
   proverb: Proverb,
-  trigger: Notifications.NotificationTriggerInput,
+  trigger: NonNullNotificationTrigger,
+  dateString: string,
 ) => {
   const { status } = await Notifications.requestPermissionsAsync();
   if (status !== "granted") {
@@ -58,16 +71,21 @@ export const scheduleProverbNotification = async (
 
   await _createAndroidChannel();
 
-  await Notifications.cancelScheduledNotificationAsync(NOTIFICATION_ID);
+  const notificationId = getNotificationIdForDate(dateString);
 
   remoteLog("debug", "[Notifications] Scheduling notification", {
-    proverb,
-    trigger,
+    notificationId,
+    triggerType: trigger.type,
+    dateString,
   });
   await Notifications.scheduleNotificationAsync({
-    identifier: NOTIFICATION_ID,
+    identifier: notificationId,
     content: _createNotificationContent(proverb),
     trigger,
+  });
+  remoteLog("debug", "[Notifications] Notification scheduled", {
+    notificationId,
+    dateString,
   });
 };
 
@@ -154,7 +172,9 @@ const _handleSnooze = async (notification: Notifications.Notification) => {
   });
 
   if (Platform.OS === "android") {
-    await Notifications.dismissNotificationAsync(NOTIFICATION_ID);
+    await Notifications.dismissNotificationAsync(
+      notification.request.identifier,
+    );
   }
 };
 
@@ -199,11 +219,25 @@ export const cleanupNotifications = () => {
   }
 };
 
+export const cancelProverbNotification = async (dateString: string) => {
+  const notificationId = getNotificationIdForDate(dateString);
+  remoteLog("debug", "[Notifications] Cancelling notification", {
+    notificationId,
+    dateString,
+  });
+  await Notifications.cancelScheduledNotificationAsync(notificationId);
+};
+
 /**
- * Immediately sends a proverb notification, by scheduling one with a null trigger
+ * Sends a notification immediately without any scheduled trigger.
+ * Uses the dateString (or today's date if not provided) for the notification identifier.
  * @param proverb The proverb to include in the notification
+ * @param dateString Optional ISO date string (YYYY-MM-DD), defaults to today
  */
-export const sendProverbNotification = async (proverb: Proverb) => {
+export const sendProverbNotification = async (
+  proverb: Proverb,
+  dateString?: string,
+) => {
   try {
     const { status } = await Notifications.requestPermissionsAsync();
     if (status !== "granted") {
@@ -216,10 +250,20 @@ export const sendProverbNotification = async (proverb: Proverb) => {
 
     await _createAndroidChannel();
 
+    const ds = dateString || new Date().toISOString().split("T")[0];
+    const notificationId = getNotificationIdForDate(ds);
+
+    remoteLog("debug", "[Notifications] Sending immediate notification", {
+      notificationId,
+      dateString: ds,
+    });
     await Notifications.scheduleNotificationAsync({
-      identifier: NOTIFICATION_ID,
+      identifier: notificationId,
       content: _createNotificationContent(proverb),
       trigger: null,
+    });
+    remoteLog("debug", "[Notifications] Immediate notification sent", {
+      notificationId,
     });
   } catch (error) {
     remoteLog(

@@ -1,10 +1,13 @@
 import * as Notifications from "expo-notifications";
 import type { Proverb } from "../../src/models/proverb";
 import {
+  cancelProverbNotification,
   cleanupNotifications,
+  getNotificationIdForDate,
   getRandomTimeInWindow,
   initializeNotifications,
   resolveScheduleDate,
+  scheduleProverbNotification,
   sendProverbNotification,
 } from "../../src/notifications/daily-proverb-notification";
 
@@ -98,28 +101,177 @@ describe("Notification Functions", () => {
     });
   });
 
-  describe("sendProverbNotification", () => {
-    it("should send a notification immediately (null trigger) without cancelling all", async () => {
-      await sendProverbNotification(mockProverb);
+  describe("getNotificationIdForDate", () => {
+    it("should return the correct ID for a given date string", () => {
+      const id = getNotificationIdForDate("2026-06-16");
+      expect(id).toBe("daily-proverb-meditation-2026-06-16");
+    });
+
+    it("should produce different IDs for different dates", () => {
+      const id1 = getNotificationIdForDate("2026-06-16");
+      const id2 = getNotificationIdForDate("2026-06-17");
+      expect(id1).not.toBe(id2);
+    });
+  });
+
+  describe("cancelProverbNotification", () => {
+    it("should cancel with the correct date-specific ID", async () => {
+      await cancelProverbNotification("2026-06-16");
       expect(
-        Notifications.cancelAllScheduledNotificationsAsync,
-      ).not.toHaveBeenCalled();
+        Notifications.cancelScheduledNotificationAsync,
+      ).toHaveBeenCalledWith("daily-proverb-meditation-2026-06-16");
+    });
+
+    it("should cancel a different ID for a different date", async () => {
+      await cancelProverbNotification("2026-06-17");
+      expect(
+        Notifications.cancelScheduledNotificationAsync,
+      ).toHaveBeenCalledWith("daily-proverb-meditation-2026-06-17");
+    });
+  });
+
+  describe("scheduleProverbNotification", () => {
+    it("should schedule with a date-specific identifier", async () => {
+      const trigger = {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: new Date("2026-06-16T09:00:00"),
+      };
+      await scheduleProverbNotification(mockProverb, trigger, "2026-06-16");
+
       expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith(
         expect.objectContaining({
+          identifier: "daily-proverb-meditation-2026-06-16",
+          trigger,
+        }),
+      );
+    });
+
+    it("should NOT cancel existing scheduled notifications (split from scheduling)", async () => {
+      const trigger = {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: new Date("2026-06-16T09:00:00"),
+      };
+      await scheduleProverbNotification(mockProverb, trigger, "2026-06-16");
+
+      expect(
+        Notifications.cancelScheduledNotificationAsync,
+      ).not.toHaveBeenCalled();
+    });
+
+    it("should not schedule if permissions are not granted", async () => {
+      (Notifications.requestPermissionsAsync as jest.Mock).mockResolvedValue({
+        status: "denied",
+      });
+
+      const trigger = {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: new Date("2026-06-16T09:00:00"),
+      };
+      await scheduleProverbNotification(mockProverb, trigger, "2026-06-16");
+
+      expect(Notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
+    });
+
+    it("should use MAX priority on Android", async () => {
+      const { Platform } = require("react-native");
+      Platform.OS = "android";
+
+      const trigger = {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: new Date("2026-06-16T09:00:00"),
+      };
+      await scheduleProverbNotification(mockProverb, trigger, "2026-06-16");
+
+      const call = (Notifications.scheduleNotificationAsync as jest.Mock).mock
+        .calls[0][0];
+      expect(call.content.priorityAndroid).toBe("max");
+    });
+
+    it("should use different identifiers for different dates", async () => {
+      const trigger = {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: new Date("2026-06-16T09:00:00"),
+      };
+      const trigger2 = {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: new Date("2026-06-17T09:00:00"),
+      };
+
+      await scheduleProverbNotification(mockProverb, trigger, "2026-06-16");
+      await scheduleProverbNotification(mockProverb, trigger2, "2026-06-17");
+
+      const calls = (
+        Notifications.scheduleNotificationAsync as jest.Mock
+      ).mock.calls.map(
+        (c: unknown[]) => (c[0] as { identifier: string }).identifier,
+      );
+      expect(calls).toEqual([
+        "daily-proverb-meditation-2026-06-16",
+        "daily-proverb-meditation-2026-06-17",
+      ]);
+    });
+
+    it("should create Android channel before scheduling", async () => {
+      const trigger = {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: new Date("2026-06-16T09:00:00"),
+      };
+      await scheduleProverbNotification(mockProverb, trigger, "2026-06-16");
+
+      expect(Notifications.setNotificationChannelAsync).toHaveBeenCalledWith(
+        "daily-proverb",
+        expect.objectContaining({ name: "Daily Proverb" }),
+      );
+    });
+  });
+
+  describe("sendProverbNotification", () => {
+    it("should send immediately with null trigger", async () => {
+      await sendProverbNotification(mockProverb, "2026-06-16");
+      expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          identifier: "daily-proverb-meditation-2026-06-16",
+          trigger: null,
+        }),
+      );
+    });
+
+    it("should use today's date when no dateString is provided", async () => {
+      const todayStr = new Date().toISOString().split("T")[0];
+      await sendProverbNotification(mockProverb);
+
+      expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          identifier: `daily-proverb-meditation-${todayStr}`,
           trigger: null,
         }),
       );
     });
 
     it("should use MAX priority on Android", async () => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { Platform } = require("react-native");
       Platform.OS = "android";
 
-      await sendProverbNotification(mockProverb);
+      await sendProverbNotification(mockProverb, "2026-06-16");
       const call = (Notifications.scheduleNotificationAsync as jest.Mock).mock
         .calls[0][0];
       expect(call.content.priorityAndroid).toBe("max");
+    });
+
+    it("should not cancel all scheduled notifications", async () => {
+      await sendProverbNotification(mockProverb, "2026-06-16");
+      expect(
+        Notifications.cancelAllScheduledNotificationsAsync,
+      ).not.toHaveBeenCalled();
+    });
+
+    it("should not send if permissions are not granted", async () => {
+      (Notifications.requestPermissionsAsync as jest.Mock).mockResolvedValue({
+        status: "denied",
+      });
+
+      await sendProverbNotification(mockProverb, "2026-06-16");
+      expect(Notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
     });
   });
 

@@ -9,6 +9,8 @@ import { getChosenVersion } from "../api/version-storage";
 import type { Proverb } from "../models/proverb";
 import { updateProverbWidget } from "../widgets";
 import {
+  cancelProverbNotification,
+  getNotificationIdForDate,
   getRandomTimeInWindow,
   resolveScheduleDate,
   scheduleProverbNotification,
@@ -131,17 +133,19 @@ TaskManager.defineTask(
  * Fetches today's proverb from the API, updates the home screen widget,
  * and schedules local notifications for today and tomorrow at the user's
  * configured time (if notifications are enabled).
+ *
+ * @internal Exported for testing only.
  */
-async function handleDailyProverbPush() {
+export async function handleDailyProverbPush() {
   try {
     remoteLog("debug", "[PushListener] Handling daily proverb push");
 
     const storedVersion = await getChosenVersion();
     const version = storedVersion || "niv";
     const todayStr = new Date().toISOString().split("T")[0];
-    const tomorrowStr = new Date(Date.now() + 86400000)
-      .toISOString()
-      .split("T")[0];
+    const tomorrowDate = new Date();
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    const tomorrowStr = tomorrowDate.toISOString().split("T")[0];
 
     remoteLog("debug", "[PushListener] Fetching today's proverb", {
       date: todayStr,
@@ -159,7 +163,9 @@ async function handleDailyProverbPush() {
     }
 
     const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    const expectedTodayId = getNotificationIdForDate(todayStr);
     const hasTodayNotification = scheduled.some((n) => {
+      if (n.identifier !== expectedTodayId) return false;
       if (!n.trigger || typeof n.trigger !== "object") return false;
       const trigger = n.trigger as Record<string, unknown>;
       if (trigger.type === Notifications.SchedulableTriggerInputTypes.DATE) {
@@ -172,13 +178,18 @@ async function handleDailyProverbPush() {
       return false;
     });
 
+    remoteLog("debug", "[PushListener] Existing today notification found", {
+      hasTodayNotification,
+    });
+
     const mode = await getNotificationMode();
 
     if (!hasTodayNotification) {
-      remoteLog("debug", "[PushListener] Scheduling notification for today", {
+      remoteLog("debug", "[PushListener] Cancelling and scheduling today", {
         mode,
         date: todayStr,
       });
+      await cancelProverbNotification(todayStr);
       await scheduleNotificationForModeAndDate(mode, todayStr, todayProverb);
     } else {
       remoteLog(
@@ -192,10 +203,11 @@ async function handleDailyProverbPush() {
     });
     const tomorrowProverb = await getProverbForTheDay(version, tomorrowStr);
 
-    remoteLog("debug", "[PushListener] Scheduling notification for tomorrow", {
+    remoteLog("debug", "[PushListener] Cancelling and scheduling tomorrow", {
       mode,
       date: tomorrowStr,
     });
+    await cancelProverbNotification(tomorrowStr);
     await scheduleNotificationForModeAndDate(
       mode,
       tomorrowStr,
@@ -216,8 +228,10 @@ async function handleDailyProverbPush() {
  * @param mode - The notification mode (`"random"` or `"scheduled"`)
  * @param dateString - ISO date string (`YYYY-MM-DD`) for the target day
  * @param proverb - The proverb to include in the notification content
+ *
+ * @internal Exported for testing only.
  */
-async function scheduleNotificationForModeAndDate(
+export async function scheduleNotificationForModeAndDate(
   mode: string,
   dateString: string,
   proverb: Proverb,
@@ -229,8 +243,12 @@ async function scheduleNotificationForModeAndDate(
     const startMinute = await getRandomWindowStartMinute();
     const endHour = await getRandomWindowHourEnd();
     const endMinute = await getRandomWindowEndMinute();
+
+    const [y, m, d] = dateString.split("-").map(Number);
+    const seedDate = new Date(y, m - 1, d);
+
     const randomDate = getRandomTimeInWindow(
-      new Date(Date.now() + 86400000),
+      seedDate,
       startHour,
       startMinute,
       endHour,
@@ -259,14 +277,19 @@ async function scheduleNotificationForModeAndDate(
       "debug",
       "[PushListener] Target date is in the past, sending immediately",
     );
-    await sendProverbNotification(proverb);
+    await sendProverbNotification(proverb, dateString);
     return;
   }
-  await scheduleProverbNotification(proverb, {
-    type: Notifications.SchedulableTriggerInputTypes.DATE,
-    date: targetDate,
-  });
+  await scheduleProverbNotification(
+    proverb,
+    {
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
+      date: targetDate,
+    },
+    dateString,
+  );
   remoteLog("debug", "[PushListener] Notification scheduled", {
     targetDate: targetDate.toISOString(),
+    dateString,
   });
 }
