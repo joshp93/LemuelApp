@@ -28,7 +28,11 @@ const FONT_SIZES = [40, 28, 18];
 
 function UserNotePage({ user: _user }: WithAuthProps) {
   const router = useRouter();
-  const { uuid, ref } = useLocalSearchParams<{ uuid: string; ref: string }>();
+  const { uuid, ref, date } = useLocalSearchParams<{
+    uuid: string;
+    ref: string;
+    date?: string;
+  }>();
 
   const {
     proverb,
@@ -37,7 +41,8 @@ function UserNotePage({ user: _user }: WithAuthProps) {
     selectedVersion,
     availableVersions,
     changeVersion,
-  } = useProverbForTheDay();
+    goToDate,
+  } = useProverbForTheDay(date);
 
   const [saving, setSaving] = useState(false);
   const [editorContent, setEditorContent] = useState("");
@@ -73,14 +78,14 @@ function UserNotePage({ user: _user }: WithAuthProps) {
   const handleSave = useCallback(async () => {
     setSaving(true);
     try {
-      await saveUserNote(uuid!, ref!, editorContent);
+      await saveUserNote(uuid!, ref!, editorContent, date!);
       router.push("/");
     } catch (err) {
       remoteLog("error", "[Notes] Failed to save note", { error: err });
     } finally {
       setSaving(false);
     }
-  }, [uuid, ref, editorContent, router]);
+  }, [uuid, ref, editorContent, date, router]);
 
   const handleTopHalfLayout = useCallback((e: LayoutChangeEvent) => {
     setTopHalfHeight(e.nativeEvent.layout.height);

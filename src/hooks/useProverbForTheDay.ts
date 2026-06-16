@@ -10,13 +10,13 @@ import type { Proverb } from "../models/proverb";
 
 const DEFAULT_VERSION = "niv";
 
-export function useProverbForTheDay() {
+export function useProverbForTheDay(initialDate?: string) {
   const [proverb, setProverb] = useState<Proverb | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
   const [availableVersions, setAvailableVersions] = useState<string[]>([]);
-  const [date, setDate] = useState<string | undefined>(undefined);
+  const [date, setDate] = useState<string | undefined>(initialDate);
 
   useEffect(() => {
     let cancelled = false;
@@ -49,7 +49,7 @@ export function useProverbForTheDay() {
 
         if (effectiveVersion) {
           setSelectedVersion(effectiveVersion);
-          const data = await getProverbForTheDay(effectiveVersion);
+          const data = await getProverbForTheDay(effectiveVersion, initialDate);
           if (!cancelled) {
             setProverb(data);
             setError(null);
@@ -74,7 +74,7 @@ export function useProverbForTheDay() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialDate]);
 
   const fetchProverb = useCallback(
     async (version: string, d: string | undefined) => {

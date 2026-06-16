@@ -1,4 +1,5 @@
 import { useRouter } from "expo-router";
+import type React from "react";
 import { useState } from "react";
 import {
   Animated,
@@ -9,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { remoteLog } from "../api/remote-logger";
 import { useAuth } from "../auth/auth-context";
 import { DividingLine } from "./dividing-line";
 import { LemuelButton } from "./lemuel-button";
@@ -18,13 +20,16 @@ import { LemuelButton } from "./lemuel-button";
  * Shows navigation items and an email button for the account page
  * when the user is authenticated.
  */
-export function HeaderMenu() {
+export function HeaderMenu({ children }: { children?: React.ReactNode }) {
   const [visible, setVisible] = useState(false);
   const [slideAnimation] = useState(new Animated.Value(300));
   const router = useRouter();
   const { user, signOut } = useAuth();
 
   const openMenu = () => {
+    remoteLog("debug", "[HeaderMenu] Menu opened", {
+      authenticated: !!user,
+    });
     setVisible(true);
     Animated.timing(slideAnimation, {
       toValue: 0,
@@ -44,11 +49,13 @@ export function HeaderMenu() {
   };
 
   const navigateTo = (path: string) => {
+    remoteLog("debug", "[HeaderMenu] Navigating", { path });
     closeMenu();
     router.push(path as any);
   };
 
   const handleSignOut = () => {
+    remoteLog("info", "[HeaderMenu] Signing out");
     closeMenu();
     signOut();
   };
@@ -60,9 +67,12 @@ export function HeaderMenu() {
         style={styles.burger}
         testID="burger-button"
       >
-        <View style={styles.burgerLine} />
-        <View style={styles.burgerLine} />
-        <View style={styles.burgerLine} />
+        {children}
+        <View style={styles.burgerIcon}>
+          <View style={styles.burgerLine} />
+          <View style={styles.burgerLine} />
+          <View style={styles.burgerLine} />
+        </View>
       </Pressable>
 
       <Modal
@@ -81,13 +91,30 @@ export function HeaderMenu() {
             <View style={styles.menuContent}>
               <View style={styles.topItems}>
                 {user && (
-                  <LemuelButton
-                    onPress={() => navigateTo("/account")}
-                    style={styles.emailButton}
-                    size="sm"
+                  <>
+                    <LemuelButton
+                      onPress={() => navigateTo("/account")}
+                      style={styles.emailButton}
+                      size="sm"
+                    >
+                      {user.email}
+                    </LemuelButton>
+                    <DividingLine />
+                  </>
+                )}
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => navigateTo("/")}
+                >
+                  <Text style={styles.menuText}>Home</Text>
+                </TouchableOpacity>
+                {user && (
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => navigateTo(`/notes/users/${user.userId}`)}
                   >
-                    {user.email}
-                  </LemuelButton>
+                    <Text style={styles.menuText}>Meditations</Text>
+                  </TouchableOpacity>
                 )}
                 <TouchableOpacity
                   style={styles.menuItem}
@@ -125,10 +152,20 @@ export function HeaderMenu() {
 
 const styles = StyleSheet.create({
   burger: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+    gap: 8,
+    height: 40,
+    borderWidth: 1,
+    borderColor: "white",
+    borderRadius: 30,
+  },
+  burgerIcon: {
     padding: 8,
     justifyContent: "center",
     alignItems: "center",
-    height: "100%",
   },
   burgerLine: {
     width: 20,

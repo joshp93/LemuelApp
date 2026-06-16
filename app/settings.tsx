@@ -1,16 +1,13 @@
-import DateTimePicker from "@react-native-community/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
 import * as Notifications from "expo-notifications";
 import { Stack, useNavigation } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
   Alert,
-  Platform,
   ScrollView,
   StyleSheet,
   Switch,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { getProverbForTheDay } from "../src/api/proverbs";
@@ -18,6 +15,7 @@ import { remoteLog } from "../src/api/remote-logger";
 import { getChosenVersion } from "../src/api/version-storage";
 import { ExpandableSection } from "../src/components/expandable-section";
 import { LemuelButton } from "../src/components/lemuel-button";
+import { TimePicker } from "../src/components/time-picker";
 import { useSettingsPreferences } from "../src/hooks/useSettingsPreferences";
 import { sendProverbNotification } from "../src/notifications/daily-proverb-notification";
 import {
@@ -32,13 +30,8 @@ import {
   setScheduledTimeMinute,
 } from "../src/notifications/notification-preferences";
 import { setMeditationDuration } from "../src/settings/meditation-preferences";
-import { pad } from "../src/utils/format";
-
 export default function SettingsScreen() {
   const navigation = useNavigation();
-  const [picking, setPicking] = useState<
-    "windowStart" | "windowEnd" | "scheduled" | null
-  >(null);
   const {
     loading,
     enabled,
@@ -127,60 +120,6 @@ export default function SettingsScreen() {
     setMode(newMode);
   };
 
-  const getPickerDate = (): Date => {
-    const d = new Date();
-    if (picking === "windowStart") {
-      d.setHours(
-        parseInt(windowStartHour, 10) || 9,
-        parseInt(windowStartMinute, 10) || 0,
-        0,
-        0,
-      );
-    } else if (picking === "windowEnd") {
-      d.setHours(
-        parseInt(windowEndHour, 10) || 19,
-        parseInt(windowEndMinute, 10) || 0,
-        0,
-        0,
-      );
-    } else if (picking === "scheduled") {
-      d.setHours(
-        parseInt(scheduledHour, 10) || 9,
-        parseInt(scheduledMinute, 10) || 0,
-        0,
-        0,
-      );
-    }
-    return d;
-  };
-
-  const handleValueChange = (_event: any, selectedDate?: Date) => {
-    if (Platform.OS === "android") {
-      setPicking(null);
-    }
-    if (!selectedDate) return;
-    const hours = selectedDate.getHours();
-    const minutes = selectedDate.getMinutes();
-    if (picking === "windowStart") {
-      setWindowStartHour(hours.toString());
-      setWindowStartMinute(minutes.toString());
-    } else if (picking === "windowEnd") {
-      setWindowEndHour(hours.toString());
-      setWindowEndMinute(minutes.toString());
-    } else if (picking === "scheduled") {
-      setScheduledHour(hours.toString());
-      setScheduledMinute(minutes.toString());
-    }
-  };
-
-  const handleDismiss = () => {
-    setPicking(null);
-  };
-
-  const openPicker = (field: "windowStart" | "windowEnd" | "scheduled") => {
-    setPicking(field);
-  };
-
   const handleSendExample = async () => {
     try {
       const storedVersion = await getChosenVersion();
@@ -237,40 +176,17 @@ export default function SettingsScreen() {
               onSelect={() => handleModeChange("random")}
               label="Send at a random time"
             >
-              <Text style={styles.timeFormatNote}>
-                Times are in 24-hour format
-              </Text>
-              <View style={styles.timeRow}>
-                <Text style={styles.timeLabel}>From:</Text>
-                <TouchableOpacity
-                  style={styles.timeDisplay}
-                  onPress={() => openPicker("windowStart")}
-                >
-                  <Text style={styles.timeDisplayText}>
-                    {pad(parseInt(windowStartHour, 10))}:
-                    {pad(parseInt(windowStartMinute, 10))}
-                  </Text>
-                </TouchableOpacity>
-                <View style={styles.timeSpacer} />
-                <Text style={styles.timeLabel}>To:</Text>
-                <TouchableOpacity
-                  style={styles.timeDisplay}
-                  onPress={() => openPicker("windowEnd")}
-                >
-                  <Text style={styles.timeDisplayText}>
-                    {pad(parseInt(windowEndHour, 10))}:
-                    {pad(parseInt(windowEndMinute, 10))}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              {parseInt(windowStartHour, 10) * 60 +
-                parseInt(windowStartMinute, 10) >=
-                parseInt(windowEndHour, 10) * 60 +
-                  parseInt(windowEndMinute, 10) && (
-                <Text style={styles.validationText}>
-                  Start time must be before end time
-                </Text>
-              )}
+              <TimePicker
+                mode="random"
+                hour={windowStartHour}
+                minute={windowStartMinute}
+                endHour={windowEndHour}
+                endMinute={windowEndMinute}
+                onHourChange={setWindowStartHour}
+                onMinuteChange={setWindowStartMinute}
+                onEndHourChange={setWindowEndHour}
+                onEndMinuteChange={setWindowEndMinute}
+              />
             </ExpandableSection>
 
             <ExpandableSection
@@ -278,32 +194,14 @@ export default function SettingsScreen() {
               onSelect={() => handleModeChange("scheduled")}
               label="Send at a specific time"
             >
-              <Text style={styles.timeFormatNote}>
-                Times are in 24-hour format
-              </Text>
-              <View style={styles.timeRow}>
-                <Text style={styles.timeLabel}>Time:</Text>
-                <TouchableOpacity
-                  style={styles.timeDisplay}
-                  onPress={() => openPicker("scheduled")}
-                >
-                  <Text style={styles.timeDisplayText}>
-                    {pad(parseInt(scheduledHour, 10))}:
-                    {pad(parseInt(scheduledMinute, 10))}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </ExpandableSection>
-
-            {picking && (
-              <DateTimePicker
-                value={getPickerDate()}
-                mode="time"
-                display="default"
-                onValueChange={handleValueChange}
-                onDismiss={handleDismiss}
+              <TimePicker
+                mode="scheduled"
+                hour={scheduledHour}
+                minute={scheduledMinute}
+                onHourChange={setScheduledHour}
+                onMinuteChange={setScheduledMinute}
               />
-            )}
+            </ExpandableSection>
 
             <View style={{ marginBottom: 16 }}>
               <LemuelButton onPress={handleSendExample}>
@@ -372,44 +270,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "500",
     color: "#333",
-  },
-  timeFormatNote: {
-    fontSize: 12,
-    color: "#999",
-    marginBottom: 8,
-  },
-  timeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  timeLabel: {
-    fontSize: 16,
-    color: "#333",
-    marginRight: 4,
-  },
-  timeDisplay: {
-    backgroundColor: "#F0F8FF",
-    borderRadius: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    minWidth: 70,
-    alignItems: "center",
-  },
-  timeDisplayText: {
-    fontSize: 16,
-    color: "#333",
-    fontWeight: "500",
-    fontVariant: ["tabular-nums"],
-  },
-  timeSpacer: {
-    width: 20,
-  },
-  validationText: {
-    color: "#dc3545",
-    fontSize: 13,
-    marginTop: 8,
   },
   durationCard: {
     backgroundColor: "white",

@@ -15,6 +15,7 @@ import {
   type NoteEntity,
   type UserNoteResponse,
 } from "../src/api/notes";
+import { remoteLog } from "../src/api/remote-logger";
 import { useAuth } from "../src/auth/auth-context";
 import { DividingLine } from "../src/components/dividing-line";
 import { FadeInDown } from "../src/components/fade-in-down";
@@ -56,6 +57,10 @@ export default function Index() {
 
   const loadPageData = useCallback(async () => {
     if (!proverb?.ref) return;
+    remoteLog("debug", "[Index] Loading page data", {
+      ref: proverb.ref,
+      authenticated: !!user,
+    });
     const promises: Promise<void>[] = [];
 
     if (user) {
@@ -75,6 +80,7 @@ export default function Index() {
     }
 
     await Promise.all(promises);
+    remoteLog("info", "[Index] Page data loaded", { ref: proverb.ref });
     setDataReady(true);
   }, [proverb, user]);
 
@@ -85,6 +91,7 @@ export default function Index() {
   }, [proverb, loading, loadPageData]);
 
   const onRefresh = useCallback(async () => {
+    remoteLog("debug", "[Index] Pull-to-refresh triggered");
     setRefreshing(true);
     await refresh();
     setRefreshing(false);
@@ -93,6 +100,7 @@ export default function Index() {
   useEffect(() => {
     const sub = AppState.addEventListener("change", (state: AppStateStatus) => {
       if (state === "active") {
+        remoteLog("debug", "[Index] App returned to foreground, refreshing");
         refresh();
       }
     });
@@ -117,6 +125,7 @@ export default function Index() {
 
   const handleSelectDay = useCallback(
     (day: string) => {
+      remoteLog("debug", "[Index] Date selected from picker", { day });
       setShowDatePicker(false);
       setDataReady(false);
       goToDate(day);
@@ -146,6 +155,9 @@ export default function Index() {
                     versions={availableVersions}
                     selectedVersion={selectedVersion}
                     onSelect={(v) => {
+                      remoteLog("info", "[Index] Version changed", {
+                        version: v,
+                      });
                       setDataReady(false);
                       changeVersion(v);
                     }}

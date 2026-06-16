@@ -94,7 +94,7 @@ const ProverbNoteCard = memo(function ProverbNoteCard({
               onPress={() => setExpanded(!expanded)}
             >
               <MaterialIcons
-                name={expanded ? "keyboard-arrow-down" : "keyboard-arrow-up"}
+                name={expanded ? "keyboard-arrow-up" : "keyboard-arrow-down"}
                 size={16}
                 color="white"
               />

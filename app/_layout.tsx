@@ -83,13 +83,12 @@ function AppContent() {
           },
           headerTintColor: "white",
           headerRight: () => (
-            <View style={styles.headerLogoContainer}>
+            <HeaderMenu>
               <Image
                 source={require("../assets/images/app-logo.png")}
                 style={{ width: 40, height: 40, resizeMode: "contain" }}
               />
-              <HeaderMenu />
-            </View>
+            </HeaderMenu>
           ),
         }}
       >
@@ -119,17 +118,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.lightBackground,
-  },
-  headerLogoContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "white",
-    borderRadius: 30,
-    paddingHorizontal: 8,
-    marginBottom: 2,
-    height: 40,
   },
   defaultText: {
     fontFamily: "Nunito_400Regular",

@@ -2,6 +2,7 @@ import * as Auth from "../../src/api/auth";
 import {
   getProverbNotes,
   getUserNote,
+  getUserNotes,
   saveUserNote,
 } from "../../src/api/notes";
 
@@ -91,6 +92,7 @@ describe("saveUserNote", () => {
       sk: "Proverbs3:5",
       note: "<p>Updated note</p>",
       dateCreated: "2026-06-02T12:05:00.000Z",
+      date: "2026-06-02",
       uuid: "uuid-123",
       ref: "Proverbs3:5",
     };
@@ -106,6 +108,7 @@ describe("saveUserNote", () => {
       "uuid-123",
       "Proverbs3:5",
       "<p>Updated note</p>",
+      "2026-06-02",
     );
 
     expect(result).toEqual(mockResponse);
@@ -118,7 +121,9 @@ describe("saveUserNote", () => {
       Authorization: "valid-token",
       "Content-Type": "application/json",
     });
-    expect(init.body).toBe(JSON.stringify({ note: "<p>Updated note</p>" }));
+    expect(init.body).toBe(
+      JSON.stringify({ note: "<p>Updated note</p>", date: "2026-06-02" }),
+    );
   });
 
   it("should throw on API failure", async () => {
@@ -130,7 +135,7 @@ describe("saveUserNote", () => {
     } as Response);
 
     await expect(
-      saveUserNote("uuid-123", "Proverbs3:5", "<p>note</p>"),
+      saveUserNote("uuid-123", "Proverbs3:5", "<p>note</p>", "2026-06-02"),
     ).rejects.toThrow("Failed to save user note: 500 Internal Server Error");
   });
 
@@ -138,7 +143,7 @@ describe("saveUserNote", () => {
     mockGetValidIdToken.mockResolvedValue(null);
 
     await expect(
-      saveUserNote("uuid-123", "Proverbs3:5", "<p>note</p>"),
+      saveUserNote("uuid-123", "Proverbs3:5", "<p>note</p>", "2026-06-02"),
     ).rejects.toThrow("Not authenticated");
   });
 });
@@ -239,5 +244,85 @@ describe("getProverbNotes", () => {
     await expect(getProverbNotes("Proverbs3:5")).rejects.toThrow(
       "Not authenticated",
     );
+  });
+});
+
+describe("getUserNotes", () => {
+  const mockFetch = fetch as jest.MockedFunction<typeof fetch>;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should return all notes for the user on 200", async () => {
+    const mockResponse = {
+      items: [
+        {
+          pk: "uuid-1",
+          sk: "Proverbs3:5",
+          note: "<p>First note</p>",
+          dateCreated: "2026-06-02T12:00:00.000Z",
+          uuid: "uuid-1",
+          ref: "Proverbs3:5",
+        },
+        {
+          pk: "uuid-1",
+          sk: "Proverbs4:7",
+          note: "<p>Second note</p>",
+          dateCreated: "2026-06-03T12:00:00.000Z",
+          uuid: "uuid-1",
+          ref: "Proverbs4:7",
+        },
+      ],
+    };
+
+    mockGetValidIdToken.mockResolvedValue("valid-token");
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(mockResponse),
+    } as Response);
+
+    const result = await getUserNotes("uuid-1");
+
+    expect(result).toEqual(mockResponse);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(init.method).toBe("GET");
+    expect(url).toContain("/notes/users/uuid-1");
+    expect(init.headers).toEqual({ Authorization: "valid-token" });
+  });
+
+  it("should return empty items when user has no notes", async () => {
+    const mockResponse = { items: [] };
+
+    mockGetValidIdToken.mockResolvedValue("valid-token");
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(mockResponse),
+    } as Response);
+
+    const result = await getUserNotes("uuid-1");
+    expect(result.items).toHaveLength(0);
+  });
+
+  it("should throw on API failure", async () => {
+    mockGetValidIdToken.mockResolvedValue("valid-token");
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      statusText: "Internal Server Error",
+    } as Response);
+
+    await expect(getUserNotes("uuid-1")).rejects.toThrow(
+      "Failed to get user notes: 500 Internal Server Error",
+    );
+  });
+
+  it("should throw if not authenticated", async () => {
+    mockGetValidIdToken.mockResolvedValue(null);
+
+    await expect(getUserNotes("uuid-1")).rejects.toThrow("Not authenticated");
   });
 });

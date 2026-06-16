@@ -84,6 +84,7 @@ export async function getUserNote(
  * @param uuid - The user's Cognito sub (userId).
  * @param ref  - The proverb reference, e.g. `Proverbs3:5`.
  * @param note - The HTML content of the note to save.
+ * @param date - The date of the daily proverb this note is for, e.g. "2026-06-16".
  * @returns The saved note entity on success.
  * @throws If the request fails or if not authenticated.
  */
@@ -91,6 +92,7 @@ export async function saveUserNote(
   uuid: string,
   ref: string,
   note: string,
+  date: string,
 ): Promise<UserNoteResponse> {
   const token = await getValidIdToken();
   if (!token) {
@@ -105,7 +107,7 @@ export async function saveUserNote(
         Authorization: token,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ note }),
+      body: JSON.stringify({ note, date }),
     },
   );
 
@@ -116,6 +118,38 @@ export async function saveUserNote(
   }
 
   return response.json() as Promise<UserNoteResponse>;
+}
+
+/**
+ * Fetches all notes for a given user.
+ *
+ * Makes an authenticated GET request to `/notes/users/${uuid}`.
+ * Returns all notes belonging to the user, paginated.
+ *
+ * @param uuid - The user's Cognito sub (userId).
+ * @returns A paginated response with note items.
+ * @throws If the request fails or if not authenticated.
+ */
+export async function getUserNotes(
+  uuid: string,
+): Promise<ProverbNotesResponse> {
+  const token = await getValidIdToken();
+  if (!token) {
+    throw new Error("Not authenticated");
+  }
+
+  const response = await fetch(`${LEMUEL_API_BASE_URL}/notes/users/${uuid}`, {
+    method: "GET",
+    headers: { Authorization: token },
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `Failed to get user notes: ${response.status} ${response.statusText}`,
+    );
+  }
+
+  return response.json() as Promise<ProverbNotesResponse>;
 }
 
 /**

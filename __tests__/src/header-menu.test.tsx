@@ -6,12 +6,12 @@ const mockSignOut = jest.fn();
 
 const mockAuthUser: {
   value: {
-    user: { email: string } | null;
+    user: { userId: string; email: string } | null;
     signOut: jest.Mock;
   };
 } = {
   value: {
-    user: { email: "user@example.com" },
+    user: { userId: "test-user-id", email: "user@example.com" },
     signOut: mockSignOut,
   },
 };
@@ -40,7 +40,7 @@ describe("HeaderMenu", () => {
     jest.useFakeTimers();
     jest.clearAllMocks();
     mockAuthUser.value = {
-      user: { email: "user@example.com" },
+      user: { userId: "test-user-id", email: "user@example.com" },
       signOut: mockSignOut,
     };
   });
@@ -92,5 +92,47 @@ describe("HeaderMenu", () => {
       jest.advanceTimersByTime(300);
     });
     expect(mockPush).toHaveBeenCalledWith("/settings");
+  });
+
+  it("should render Meditations menu item when authenticated", () => {
+    const { getByText } = openMenu();
+    expect(getByText("Meditations")).toBeTruthy();
+  });
+
+  it("should navigate to meditations list when pressed", () => {
+    const { getByText } = openMenu();
+    act(() => {
+      fireEvent.press(getByText("Meditations"));
+      jest.advanceTimersByTime(300);
+    });
+    expect(mockPush).toHaveBeenCalledWith("/notes/users/test-user-id");
+  });
+
+  it("should not show Meditations when not authenticated", () => {
+    mockAuthUser.value = { user: null, signOut: mockSignOut };
+
+    const { queryByText } = openMenu();
+    expect(queryByText("Meditations")).toBeNull();
+  });
+
+  it("should render Home menu item", () => {
+    const { getByText } = openMenu();
+    expect(getByText("Home")).toBeTruthy();
+  });
+
+  it("should navigate to index when Home is pressed", () => {
+    const { getByText } = openMenu();
+    act(() => {
+      fireEvent.press(getByText("Home"));
+      jest.advanceTimersByTime(300);
+    });
+    expect(mockPush).toHaveBeenCalledWith("/");
+  });
+
+  it("should show Home even when not authenticated", () => {
+    mockAuthUser.value = { user: null, signOut: mockSignOut };
+
+    const { getByText } = openMenu();
+    expect(getByText("Home")).toBeTruthy();
   });
 });
