@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   type LayoutChangeEvent,
   type TextLayoutEvent,
@@ -30,17 +30,17 @@ export function ProverbReferenceHeaderText({
   style,
   ...props
 }: ProverbReferenceHeaderTextProps & ViewProps) {
-  const [fullTextWidth, setFullTextWidth] = useState(0);
+  const [variantWidths, setVariantWidths] = useState<number[]>([]);
   const [availableWidth, setAvailableWidth] = useState(0);
 
   useEffect(() => {
-    setFullTextWidth(0);
+    setVariantWidths([]);
   }, [proverbRef]);
 
-  const handleFullTextLayout = useCallback((e: TextLayoutEvent) => {
-    const w = e.nativeEvent.lines[0]?.width ?? 0;
-    if (w > 0) {
-      setFullTextWidth(w);
+  const handleTextLayout = useCallback((e: TextLayoutEvent) => {
+    const widths = e.nativeEvent.lines.map((l) => l.width);
+    if (widths.length >= 3 && widths.every((w) => w > 0)) {
+      setVariantWidths(widths);
     }
   }, []);
 
@@ -54,21 +54,31 @@ export function ProverbReferenceHeaderText({
   const showVersionDropdown =
     availableVersions && availableVersions.length > 0 && selectedVersion;
 
-  const needsAbbrev =
-    availableWidth > 0 &&
-    fullTextWidth > 0 &&
-    fullTextWidth + (showVersionDropdown ? APPROX_DROPDOWN_WIDTH : 0) >
-      availableWidth;
+  const variants = useMemo(() => {
+    if (!proverbRef) return [];
+    return [
+      proverbRef,
+      abbreviateProverbRef(proverbRef),
+      proverbRef.replace(/^Proverbs\s+/, ""),
+    ];
+  }, [proverbRef]);
 
-  const title =
-    proverbRef && !loading && !error
-      ? needsAbbrev
-        ? abbreviateProverbRef(proverbRef)
-        : proverbRef
-      : "Daily Proverb";
+  const title = useMemo(() => {
+    if (!proverbRef || loading || error) return "Daily Proverb";
+    if (variantWidths.length < 3 || availableWidth <= 0) return proverbRef;
+
+    const dropdownWidth = showVersionDropdown ? APPROX_DROPDOWN_WIDTH : 0;
+    for (let i = 0; i < variants.length; i++) {
+      if (variantWidths[i] + dropdownWidth <= availableWidth) {
+        return variants[i];
+      }
+    }
+    return variants[2];
+  }, [proverbRef, loading, error, variantWidths, availableWidth, showVersionDropdown, variants]);
 
   return (
     <View
+      testID="header-root"
       onLayout={handleParentLayout}
       style={[{ flexDirection: "row", alignItems: "center" }, style]}
       {...props}
@@ -76,17 +86,19 @@ export function ProverbReferenceHeaderText({
       {proverbRef && !loading && !error && (
         <View style={{ position: "absolute", opacity: 0 }}>
           <Text
+            testID="measurement-text"
             style={{
               fontSize: 18,
               fontFamily: "Nunito_400Regular",
             }}
-            onTextLayout={handleFullTextLayout}
+            onTextLayout={handleTextLayout}
           >
-            {proverbRef}
+            {variants.join("\n")}
           </Text>
         </View>
       )}
       <Text
+        testID="header-title"
         style={{
           color: "white",
           fontSize: 18,
