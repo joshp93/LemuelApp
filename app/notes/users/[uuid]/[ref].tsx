@@ -1,7 +1,6 @@
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Keyboard,
   KeyboardAvoidingView,
   type LayoutChangeEvent,
   ScrollView,
@@ -22,7 +21,9 @@ import { ProverbCard } from "../../../../src/components/proverb-card";
 import { ProverbReferenceHeaderText } from "../../../../src/components/proverb-reference-header-text";
 import { Text } from "../../../../src/components/themed-text";
 import { useFitFontSize } from "../../../../src/hooks/useFitFontSize";
+import { useKeyboardHeight } from "../../../../src/hooks/useKeyboardHeight";
 import { useProverbForTheDay } from "../../../../src/hooks/useProverbForTheDay";
+import { useUnsavedChanges } from "../../../../src/hooks/useUnsavedChanges";
 
 const FONT_SIZES = [56, 40, 24];
 
@@ -48,9 +49,11 @@ function UserNotePage({ user: _user }: WithAuthProps) {
   const [editorContent, setEditorContent] = useState("");
   const [notesLoading, setNotesLoading] = useState(true);
   const [saveButtonHeight, setSaveButtonHeight] = useState(0);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [isDirty, setIsDirty] = useState(false);
   const richTextRef = useRef<RichEditor>(null);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  const keyboardHeight = useKeyboardHeight();
 
   const textBoxHeight = windowHeight * 0.6;
   const bottomPadding = saveButtonHeight + 15;
@@ -67,6 +70,7 @@ function UserNotePage({ user: _user }: WithAuthProps) {
       .then((data) => {
         if (data) {
           setEditorContent(data.note);
+          setIsDirty(false);
         }
       })
       .catch((err) => {
@@ -77,17 +81,29 @@ function UserNotePage({ user: _user }: WithAuthProps) {
       });
   }, [uuid, ref]);
 
-  const handleSave = useCallback(async () => {
+  const handleEditorChange = useCallback((html: string) => {
+    setEditorContent(html);
+    setIsDirty(true);
+  }, []);
+
+  const persistNote = useCallback(async () => {
     setSaving(true);
     try {
       await saveUserNote(uuid!, ref!, editorContent, date!);
-      router.push("/");
+      setIsDirty(false);
     } catch (err) {
       remoteLog("error", "[Notes] Failed to save note", { error: err });
     } finally {
       setSaving(false);
     }
-  }, [uuid, ref, editorContent, date, router]);
+  }, [uuid, ref, editorContent, date]);
+
+  const handleSave = useCallback(async () => {
+    await persistNote();
+    router.push("/");
+  }, [persistNote, router]);
+
+  useUnsavedChanges(isDirty, persistNote);
 
   const handleSaveButtonLayout = useCallback((e: LayoutChangeEvent) => {
     const h = e.nativeEvent.layout.height;
@@ -99,19 +115,6 @@ function UserNotePage({ user: _user }: WithAuthProps) {
   const allLoaded = !notesLoading && !proverbLoading && proverb;
 
   const hasInitiallyScrolled = useRef(false);
-
-  useEffect(() => {
-    const show = Keyboard.addListener("keyboardDidShow", (e) => {
-      setKeyboardHeight(e.endCoordinates.height);
-    });
-    const hide = Keyboard.addListener("keyboardDidHide", () => {
-      setKeyboardHeight(0);
-    });
-    return () => {
-      show.remove();
-      hide.remove();
-    };
-  }, []);
 
   useEffect(() => {
     if (!allLoaded) return;
@@ -195,7 +198,7 @@ function UserNotePage({ user: _user }: WithAuthProps) {
             ) : (
               <RichEditor
                 ref={richTextRef}
-                onChange={setEditorContent}
+                onChange={handleEditorChange}
                 placeholder="Capture your thoughts..."
                 editorStyle={{
                   backgroundColor: "#fff",
@@ -207,7 +210,6 @@ function UserNotePage({ user: _user }: WithAuthProps) {
                 initialContentHTML={editorContent}
                 autoCapitalize="sentences"
                 autoCorrect
-                spellCheck
                 style={{ minHeight: 150 }}
               />
             )}
