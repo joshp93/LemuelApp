@@ -53,25 +53,40 @@ const _createAndroidChannel = async () => {
 
 /**
  * Schedules a notification, using @link _createNotificationContent to create the content and the provided trigger for scheduling.
+ * Skips scheduling if a notification with the same date-specific ID already exists.
  * Does NOT cancel any existing notification — call @link cancelProverbNotification first if replacement is needed.
  * @param proverb The proverb to include in the notification.
  * @param trigger The trigger for scheduling the notification.
  * @param dateString The ISO date string (YYYY-MM-DD) this notification is for, used as the notification identifier.
+ * @returns The notification ID if scheduled, or null if skipped because one already exists.
  */
 export const scheduleProverbNotification = async (
   proverb: Proverb,
   trigger: NonNullNotificationTrigger,
   dateString: string,
-) => {
+): Promise<string | null> => {
   const { status } = await Notifications.requestPermissionsAsync();
   if (status !== "granted") {
     remoteLog("warn", "[Notifications] Notification permissions not granted");
-    return;
+    return null;
+  }
+
+  const notificationId = getNotificationIdForDate(dateString);
+
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+  if (scheduled.some((n) => n.identifier === notificationId)) {
+    remoteLog(
+      "debug",
+      "[Notifications] Notification already scheduled, skipping",
+      {
+        notificationId,
+        dateString,
+      },
+    );
+    return null;
   }
 
   await _createAndroidChannel();
-
-  const notificationId = getNotificationIdForDate(dateString);
 
   remoteLog("debug", "[Notifications] Scheduling notification", {
     notificationId,
@@ -87,6 +102,7 @@ export const scheduleProverbNotification = async (
     notificationId,
     dateString,
   });
+  return notificationId;
 };
 
 /**

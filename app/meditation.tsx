@@ -8,6 +8,7 @@ import {
   useCanvasSize,
   useClock,
 } from "@shopify/react-native-skia";
+import { getCornerRadius } from "expo-device-corner-radius";
 import { Stack, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -32,7 +33,8 @@ import { useProverbForTheDay } from "../src/hooks/useProverbForTheDay";
 import { getMeditationDuration } from "../src/settings/meditation-preferences";
 
 const INSET = 20;
-const CORNER_RADIUS = 30;
+const cornerRadius = getCornerRadius();
+const CORNER_RADIUS = cornerRadius <= 0 ? 30 : cornerRadius;
 const STROKE_WIDTH = 8;
 const ACCENT_COLOR = "rgb(25, 51, 179)";
 const FONT_SIZES = [40, 28, 18];

@@ -12,3 +12,7 @@ global.console = {
 };
 
 jest.mock("./src/api/remote-logger");
+
+jest.mock("expo-device-corner-radius", () => ({
+  getCornerRadius: jest.fn(() => 0),
+}));

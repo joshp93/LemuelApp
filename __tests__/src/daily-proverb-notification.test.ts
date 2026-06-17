@@ -27,6 +27,7 @@ jest.mock("expo-notifications", () => ({
   setNotificationChannelAsync: jest.fn(),
   cancelScheduledNotificationAsync: jest.fn(),
   cancelAllScheduledNotificationsAsync: jest.fn(),
+  getAllScheduledNotificationsAsync: jest.fn(),
   scheduleNotificationAsync: jest.fn(),
   setNotificationCategoryAsync: jest.fn(),
   addNotificationResponseReceivedListener: jest.fn(() => ({
@@ -46,6 +47,9 @@ describe("Notification Functions", () => {
     (Notifications.requestPermissionsAsync as jest.Mock).mockResolvedValue({
       status: "granted",
     });
+    (
+      Notifications.getAllScheduledNotificationsAsync as jest.Mock
+    ).mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -222,6 +226,48 @@ describe("Notification Functions", () => {
         "daily-proverb",
         expect.objectContaining({ name: "Daily Proverb" }),
       );
+    });
+
+    it("should skip scheduling when notification for that date already exists", async () => {
+      (
+        Notifications.getAllScheduledNotificationsAsync as jest.Mock
+      ).mockResolvedValue([
+        { identifier: "daily-proverb-meditation-2026-06-16" },
+      ]);
+
+      const trigger = {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: new Date("2026-06-16T09:00:00"),
+      };
+      const result = await scheduleProverbNotification(
+        mockProverb,
+        trigger,
+        "2026-06-16",
+      );
+
+      expect(Notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
+      expect(result).toBeNull();
+    });
+
+    it("should still schedule when notification for a different date exists", async () => {
+      (
+        Notifications.getAllScheduledNotificationsAsync as jest.Mock
+      ).mockResolvedValue([
+        { identifier: "daily-proverb-meditation-2026-06-15" },
+      ]);
+
+      const trigger = {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: new Date("2026-06-16T09:00:00"),
+      };
+      const result = await scheduleProverbNotification(
+        mockProverb,
+        trigger,
+        "2026-06-16",
+      );
+
+      expect(Notifications.scheduleNotificationAsync).toHaveBeenCalled();
+      expect(result).toBe("daily-proverb-meditation-2026-06-16");
     });
   });
 

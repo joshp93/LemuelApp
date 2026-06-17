@@ -73,6 +73,9 @@ describe("push-listener", () => {
     (getProverbForTheDay as jest.Mock).mockResolvedValue(mockProverb);
     (updateProverbWidget as jest.Mock).mockResolvedValue(undefined);
     (getNotificationsEnabled as jest.Mock).mockResolvedValue(true);
+    (
+      Notifications.getAllScheduledNotificationsAsync as jest.Mock
+    ).mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -234,11 +237,13 @@ describe("push-listener", () => {
 
     it("should skip today's scheduling when today notification already exists (matches by ID)", async () => {
       const todayStr = new Date().toISOString().split("T")[0];
+      const todayAt10am = new Date();
+      todayAt10am.setHours(10, 0, 0, 0);
       const existingNotification = {
         identifier: `daily-proverb-meditation-${todayStr}`,
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DATE,
-          date: new Date(Date.now() + 3600000),
+          date: todayAt10am,
         },
       };
       (

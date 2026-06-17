@@ -74,7 +74,15 @@ export function ProverbReferenceHeaderText({
       }
     }
     return variants[2];
-  }, [proverbRef, loading, error, variantWidths, availableWidth, showVersionDropdown, variants]);
+  }, [
+    proverbRef,
+    loading,
+    error,
+    variantWidths,
+    availableWidth,
+    showVersionDropdown,
+    variants,
+  ]);
 
   return (
     <View

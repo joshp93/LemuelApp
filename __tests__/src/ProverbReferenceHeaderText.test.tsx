@@ -49,20 +49,14 @@ describe("ProverbReferenceHeaderText", () => {
 
   it("shows full proverbRef when no measurement taken yet", () => {
     const { getByTestId } = render(
-      <ProverbReferenceHeaderText
-        {...baseProps}
-        proverbRef="Proverbs 3:5"
-      />,
+      <ProverbReferenceHeaderText {...baseProps} proverbRef="Proverbs 3:5" />,
     );
     expect(getByTestId("header-title").props.children).toBe("Proverbs 3:5");
   });
 
   it("uses full reference when all variants fit", () => {
     const r = render(
-      <ProverbReferenceHeaderText
-        {...baseProps}
-        proverbRef="Proverbs 3:5"
-      />,
+      <ProverbReferenceHeaderText {...baseProps} proverbRef="Proverbs 3:5" />,
     );
     fireLayout(r, 300);
     fireMeasurement(r, [150, 100, 50]);
@@ -72,10 +66,7 @@ describe("ProverbReferenceHeaderText", () => {
 
   it("uses abbreviated 'Prov' when full reference does not fit", () => {
     const r = render(
-      <ProverbReferenceHeaderText
-        {...baseProps}
-        proverbRef="Proverbs 3:5"
-      />,
+      <ProverbReferenceHeaderText {...baseProps} proverbRef="Proverbs 3:5" />,
     );
     fireLayout(r, 120);
     fireMeasurement(r, [150, 100, 50]);
@@ -85,10 +76,7 @@ describe("ProverbReferenceHeaderText", () => {
 
   it("uses ref-only when neither full nor abbreviated fits", () => {
     const r = render(
-      <ProverbReferenceHeaderText
-        {...baseProps}
-        proverbRef="Proverbs 3:5"
-      />,
+      <ProverbReferenceHeaderText {...baseProps} proverbRef="Proverbs 3:5" />,
     );
     fireLayout(r, 70);
     fireMeasurement(r, [150, 100, 50]);
@@ -98,10 +86,7 @@ describe("ProverbReferenceHeaderText", () => {
 
   it("uses ref-only as fallback when even the shortest variant overflows", () => {
     const r = render(
-      <ProverbReferenceHeaderText
-        {...baseProps}
-        proverbRef="Proverbs 3:5"
-      />,
+      <ProverbReferenceHeaderText {...baseProps} proverbRef="Proverbs 3:5" />,
     );
     fireLayout(r, 20);
     fireMeasurement(r, [150, 100, 50]);
@@ -144,10 +129,7 @@ describe("ProverbReferenceHeaderText", () => {
 
   it("does not render version dropdown when no versions", () => {
     const r = render(
-      <ProverbReferenceHeaderText
-        {...baseProps}
-        proverbRef="Proverbs 3:5"
-      />,
+      <ProverbReferenceHeaderText {...baseProps} proverbRef="Proverbs 3:5" />,
     );
     fireLayout(r, 300);
     fireMeasurement(r, [150, 100, 50]);
@@ -157,10 +139,7 @@ describe("ProverbReferenceHeaderText", () => {
 
   it("shows reference as-is when not a 'Proverbs' reference", () => {
     const r = render(
-      <ProverbReferenceHeaderText
-        {...baseProps}
-        proverbRef="Psalm 23:1"
-      />,
+      <ProverbReferenceHeaderText {...baseProps} proverbRef="Psalm 23:1" />,
     );
     fireLayout(r, 300);
     fireMeasurement(r, [150, 150, 150]);
@@ -170,10 +149,7 @@ describe("ProverbReferenceHeaderText", () => {
 
   it("shows full ref after proverbRef changes", () => {
     const r = render(
-      <ProverbReferenceHeaderText
-        {...baseProps}
-        proverbRef="Proverbs 3:5"
-      />,
+      <ProverbReferenceHeaderText {...baseProps} proverbRef="Proverbs 3:5" />,
     );
     fireLayout(r, 120);
     fireMeasurement(r, [150, 100, 50]);
@@ -181,22 +157,14 @@ describe("ProverbReferenceHeaderText", () => {
     expect(r.getByTestId("header-title").props.children).toBe("Prov 3:5");
 
     r.rerender(
-      <ProverbReferenceHeaderText
-        {...baseProps}
-        proverbRef="Proverbs 10:5"
-      />,
+      <ProverbReferenceHeaderText {...baseProps} proverbRef="Proverbs 10:5" />,
     );
-    expect(r.getByTestId("header-title").props.children).toBe(
-      "Proverbs 10:5",
-    );
+    expect(r.getByTestId("header-title").props.children).toBe("Proverbs 10:5");
   });
 
   it("renders without crashing when no style prop is given", () => {
     const { getByTestId } = render(
-      <ProverbReferenceHeaderText
-        {...baseProps}
-        proverbRef="Proverbs 3:5"
-      />,
+      <ProverbReferenceHeaderText {...baseProps} proverbRef="Proverbs 3:5" />,
     );
     expect(getByTestId("header-title")).toBeTruthy();
   });
