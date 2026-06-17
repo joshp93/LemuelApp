@@ -12,8 +12,8 @@ import type { NoteEntity } from "../../../src/api/notes";
 import { getUserNotes } from "../../../src/api/notes";
 import { remoteLog } from "../../../src/api/remote-logger";
 import { type WithAuthProps, withAuth } from "../../../src/auth/with-auth";
-import { convertProverbKeyToDisplayProverb } from "../../../src/utils/convertProverbKeyToDisplayProverb";
 import { formatDate } from "../../../src/utils/date";
+import { convertProverbKeyToDisplayProverb } from "../../../src/utils/proverb-helper";
 
 interface NoteRow {
   ref: string;

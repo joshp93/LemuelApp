@@ -274,12 +274,17 @@ export default function MeditationScreen() {
         {isComplete && (
           <LemuelButton
             style={styles.captureButton}
-            onPress={() =>
+            onPress={() => {
+              const today = new Date().toISOString().split("T")[0];
               router.replace({
                 pathname: "/notes/users/[uuid]/[ref]",
-                params: { uuid: user?.userId ?? "", ref: proverb!.ref },
-              })
-            }
+                params: {
+                  uuid: user?.userId ?? "",
+                  ref: proverb!.ref,
+                  date: today,
+                },
+              });
+            }}
           >
             Capture your thoughts...
           </LemuelButton>

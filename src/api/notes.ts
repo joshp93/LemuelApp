@@ -1,4 +1,4 @@
-import { convertDisplayProverbToProverbKey } from "../utils/convertDisplayProverbToProverbKey";
+import { convertDisplayProverbToProverbKey } from "../utils/proverb-helper";
 import { getValidIdToken } from "./auth";
 import { LEMUEL_API_BASE_URL } from "./constants";
 

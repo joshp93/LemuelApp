@@ -9,8 +9,8 @@ import {
   View,
 } from "react-native";
 import { getDailyProverbsForMonth } from "../api/daily-proverbs";
-import { convertProverbKeyToDisplayProverb } from "../utils/convertProverbKeyToDisplayProverb";
 import { pad } from "../utils/format";
+import { convertProverbKeyToDisplayProverb } from "../utils/proverb-helper";
 import { Text } from "./themed-text";
 
 interface MonthPickerProps {

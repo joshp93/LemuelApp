@@ -18,7 +18,11 @@
     "typecheck": "tsc --noEmit",
     "pretest": "pnpm typecheck && pnpm lint && pnpm lint:eslint",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "emulator": "D:\\android_sdk\\emulator\\emulator.exe -avd %npm_package_config_emulatorDevice% -use-keycode-forwarding"
+  },
+  "config": {
+    "emulatorDevice": "Nexus_5_API_33"
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.1053.0",

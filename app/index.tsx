@@ -23,8 +23,8 @@ import { LemuelButton } from "../src/components/lemuel-button";
 import { MonthPicker } from "../src/components/month-picker";
 import { ProverbCard } from "../src/components/proverb-card";
 import ProverbNoteCard from "../src/components/proverb-note-card";
+import { ProverbReferenceHeaderText } from "../src/components/proverb-reference-header-text";
 import { Text } from "../src/components/themed-text";
-import { VersionDropdown } from "../src/components/version-dropdown";
 import { useFitFontSize } from "../src/hooks/useFitFontSize";
 import { useProverbForTheDay } from "../src/hooks/useProverbForTheDay";
 import { updateProverbWidget } from "../src/widgets";
@@ -121,8 +121,6 @@ export default function Index() {
     FONT_SIZES,
   );
 
-  const title = proverb && !loading && !error ? proverb.ref : "Daily Proverb";
-
   const handleSelectDay = useCallback(
     (day: string) => {
       remoteLog("debug", "[Index] Date selected from picker", { day });
@@ -138,32 +136,20 @@ export default function Index() {
       <Stack.Screen
         options={{
           headerTitle: () => (
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <Text
-                style={{
-                  color: "white",
-                  fontSize: 18,
-                  fontFamily: "Nunito_400Regular",
-                }}
-              >
-                {title}
-              </Text>
-              {availableVersions &&
-                availableVersions.length > 0 &&
-                selectedVersion && (
-                  <VersionDropdown
-                    versions={availableVersions}
-                    selectedVersion={selectedVersion}
-                    onSelect={(v) => {
-                      remoteLog("info", "[Index] Version changed", {
-                        version: v,
-                      });
-                      setDataReady(false);
-                      changeVersion(v);
-                    }}
-                  />
-                )}
-            </View>
+            <ProverbReferenceHeaderText
+              proverbRef={proverb?.ref}
+              loading={loading}
+              error={error}
+              selectedVersion={selectedVersion}
+              availableVersions={availableVersions}
+              onVersionChange={(v) => {
+                remoteLog("info", "[Index] Version changed", {
+                  version: v,
+                });
+                setDataReady(false);
+                changeVersion(v);
+              }}
+            />
           ),
         }}
       />
@@ -243,7 +229,7 @@ export default function Index() {
                       note.uuid === user?.userId
                         ? () =>
                             router.push(
-                              `/notes/users/${user!.userId}/${note.ref}`,
+                              `/notes/users/${user!.userId}/${note.ref}?date=${note.date}`,
                             )
                         : undefined
                     }
