@@ -1,6 +1,7 @@
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  Keyboard,
   KeyboardAvoidingView,
   type LayoutChangeEvent,
   ScrollView,
@@ -47,11 +48,12 @@ function UserNotePage({ user: _user }: WithAuthProps) {
   const [editorContent, setEditorContent] = useState("");
   const [notesLoading, setNotesLoading] = useState(true);
   const [saveButtonHeight, setSaveButtonHeight] = useState(0);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const richTextRef = useRef<RichEditor>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
   const textBoxHeight = windowHeight * 0.6;
-  const bottomPadding = Math.max(36, saveButtonHeight + 8);
+  const bottomPadding = saveButtonHeight + 15;
   const { fontSize, onTextLayout } = useFitFontSize(
     proverb?.proverb,
     textBoxHeight,
@@ -96,16 +98,42 @@ function UserNotePage({ user: _user }: WithAuthProps) {
 
   const allLoaded = !notesLoading && !proverbLoading && proverb;
 
+  const hasInitiallyScrolled = useRef(false);
+
+  useEffect(() => {
+    const show = Keyboard.addListener("keyboardDidShow", (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hide = Keyboard.addListener("keyboardDidHide", () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+
   useEffect(() => {
     if (!allLoaded) return;
 
     const timer = setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
       richTextRef.current?.focusContentEditor();
     }, 300);
 
     return () => clearTimeout(timer);
   }, [allLoaded]);
+
+  useEffect(() => {
+    if (!allLoaded || keyboardHeight === 0 || hasInitiallyScrolled.current)
+      return;
+    hasInitiallyScrolled.current = true;
+
+    const timer = setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [keyboardHeight, allLoaded]);
 
   return (
     <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
@@ -174,10 +202,12 @@ function UserNotePage({ user: _user }: WithAuthProps) {
                   color: "#333",
                   placeholderColor: "#999",
                   contentCSSText:
-                    "font-size: 16px; font-family: Nunito; padding: 8px;",
+                    "font-size: 16px; font-family: Nunito; padding: 8px; overflow: hidden;",
                 }}
                 initialContentHTML={editorContent}
-                useContainer={false}
+                autoCapitalize="sentences"
+                autoCorrect
+                spellCheck
                 style={{ minHeight: 150 }}
               />
             )}

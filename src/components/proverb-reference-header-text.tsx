@@ -15,7 +15,7 @@ interface ProverbReferenceHeaderTextProps {
   proverbRef?: string;
   loading?: boolean;
   error?: unknown;
-  selectedVersion?: string;
+  selectedVersion: string | null;
   availableVersions?: string[];
   onVersionChange?: (version: string) => void;
 }
