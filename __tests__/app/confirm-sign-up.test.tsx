@@ -2,11 +2,14 @@ import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import ConfirmSignUp from "../../app/confirm-sign-up";
 import { resendVerificationCode, verifyAccount } from "../../src/api/auth";
 
+const mockReplace = jest.fn();
+let mockParams: Record<string, string> = {};
+
 jest.mock("expo-router", () => ({
   useRouter: () => ({
-    replace: jest.fn(),
+    replace: mockReplace,
   }),
-  useLocalSearchParams: () => ({ email: "test@example.com" }),
+  useLocalSearchParams: () => mockParams,
   Stack: {
     Screen: () => null,
   },
@@ -27,6 +30,7 @@ describe("ConfirmSignUp", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
+    mockParams = { email: "test@example.com" };
   });
 
   afterEach(() => {
@@ -88,19 +92,54 @@ describe("ConfirmSignUp", () => {
     });
   });
 
-  it("should navigate to sign in on success", async () => {
+  it("should navigate to sign-in on success with no redirect", async () => {
     mockVerifyAccount.mockResolvedValueOnce({ success: true });
 
     const { getByPlaceholderText, getByText } = render(<ConfirmSignUp />);
 
     fireEvent.changeText(getByPlaceholderText("Verification Code"), "123456");
-
     fireEvent.press(getByText("Verify"));
 
     await waitFor(() => {
       expect(
         getByText("Your email has been verified. You can now sign in."),
       ).toBeTruthy();
+    });
+
+    jest.advanceTimersByTime(2000);
+
+    expect(mockReplace).toHaveBeenCalledWith({
+      pathname: "/sign-in",
+      params: { email: "test@example.com" },
+    });
+  });
+
+  it("should forward redirect param to sign-in on success", async () => {
+    mockParams = {
+      email: "test@example.com",
+      redirect: "/notes/users/abc-123/ref-456",
+    };
+    mockVerifyAccount.mockResolvedValueOnce({ success: true });
+
+    const { getByPlaceholderText, getByText } = render(<ConfirmSignUp />);
+
+    fireEvent.changeText(getByPlaceholderText("Verification Code"), "123456");
+    fireEvent.press(getByText("Verify"));
+
+    await waitFor(() => {
+      expect(
+        getByText("Your email has been verified. You can now sign in."),
+      ).toBeTruthy();
+    });
+
+    jest.advanceTimersByTime(2000);
+
+    expect(mockReplace).toHaveBeenCalledWith({
+      pathname: "/sign-in",
+      params: {
+        email: "test@example.com",
+        redirect: "/notes/users/abc-123/ref-456",
+      },
     });
   });
 

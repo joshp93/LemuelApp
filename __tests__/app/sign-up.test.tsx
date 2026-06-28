@@ -3,12 +3,13 @@ import SignUp from "../../app/sign-up";
 import { createAccount } from "../../src/api/auth";
 
 const mockReplace = jest.fn();
+let mockParams: Record<string, string> = {};
 
 jest.mock("expo-router", () => ({
   useRouter: () => ({
     replace: mockReplace,
   }),
-  useLocalSearchParams: () => ({}),
+  useLocalSearchParams: () => mockParams,
   Stack: {
     Screen: () => null,
   },
@@ -25,6 +26,7 @@ const mockCreateAccount = createAccount as jest.MockedFunction<
 describe("SignUp", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockParams = {};
   });
 
   it("should render email, password, and confirm password inputs", () => {
@@ -138,6 +140,35 @@ describe("SignUp", () => {
     expect(mockReplace).toHaveBeenCalledWith({
       pathname: "/confirm-sign-up",
       params: { email: "test@example.com" },
+    });
+  });
+
+  it("should forward redirect param to confirm-sign-up when present", async () => {
+    mockParams = { redirect: "/notes/users/abc-123/ref-456" };
+    mockCreateAccount.mockResolvedValueOnce({ success: true });
+
+    const { getByPlaceholderText, getAllByText } = render(<SignUp />);
+
+    fireEvent.changeText(getByPlaceholderText("Email"), "test@example.com");
+    fireEvent.changeText(getByPlaceholderText("Password"), "Password1");
+    fireEvent.changeText(getByPlaceholderText("Confirm Password"), "Password1");
+
+    const signUpButton = getAllByText("Sign Up");
+    fireEvent.press(signUpButton[1]);
+
+    await waitFor(() => {
+      expect(mockCreateAccount).toHaveBeenCalledWith(
+        "test@example.com",
+        "Password1",
+      );
+    });
+
+    expect(mockReplace).toHaveBeenCalledWith({
+      pathname: "/confirm-sign-up",
+      params: {
+        email: "test@example.com",
+        redirect: "/notes/users/abc-123/ref-456",
+      },
     });
   });
 

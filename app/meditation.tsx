@@ -281,7 +281,7 @@ export default function MeditationScreen() {
               router.replace({
                 pathname: "/notes/users/[uuid]/[ref]",
                 params: {
-                  uuid: user?.userId ?? "",
+                  uuid: user?.userId ?? "{{uuid}}",
                   ref: proverb!.ref,
                   date: today,
                 },

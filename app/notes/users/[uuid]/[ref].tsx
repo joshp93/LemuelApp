@@ -208,6 +208,7 @@ function UserNotePage({ user: _user }: WithAuthProps) {
                     "font-size: 16px; font-family: Nunito; padding: 8px; overflow: hidden;",
                 }}
                 initialContentHTML={editorContent}
+                initialHeight={150}
                 autoCapitalize="sentences"
                 autoCorrect
                 style={{ minHeight: 150 }}

@@ -16,16 +16,17 @@ import {
   View,
 } from "react-native";
 import { createAccountRecord } from "../src/api/account";
-import { signIn } from "../src/api/auth";
+import { getAuthenticatedUser, signIn } from "../src/api/auth";
 import { useAuth } from "../src/auth/auth-context";
 import { LemuelButton } from "../src/components/lemuel-button";
 
 export default function SignIn() {
   const router = useRouter();
   const navigation = useNavigation();
-  const params = useLocalSearchParams<{ email?: string }>();
+  const params = useLocalSearchParams<{ email?: string; redirect?: string }>();
   const { refreshUser } = useAuth();
   const email = params.email || "";
+  const redirect = params.redirect;
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -49,7 +50,10 @@ export default function SignIn() {
       await refreshUser();
       await createAccountRecord();
       navigation.dispatch(StackActions.popToTop());
-      router.replace("/");
+      const authenticatedUser = await getAuthenticatedUser();
+      const resolvedRedirect =
+        redirect?.replace("{{uuid}}", authenticatedUser?.userId ?? "") || "/";
+      router.replace(resolvedRedirect);
     } else if (result.requiresConfirmation) {
       // User account not confirmed yet, redirect to confirmation screen
       router.replace({

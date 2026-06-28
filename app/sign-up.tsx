@@ -16,8 +16,9 @@ import { getPasswordError } from "../src/utils/password";
 
 export default function SignUp() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ email?: string }>();
+  const params = useLocalSearchParams<{ email?: string; redirect?: string }>();
   const [email, setEmail] = useState(params.email || "");
+  const redirect = params.redirect;
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -78,7 +79,7 @@ export default function SignUp() {
       setSuccessMessage("Check your email for a verification code");
       router.replace({
         pathname: "/confirm-sign-up",
-        params: { email },
+        params: { email, ...(redirect && { redirect }) },
       });
     } else {
       setFormError(result.message || "Sign up failed. Please try again.");

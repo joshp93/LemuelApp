@@ -1,4 +1,4 @@
-import { Stack, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -15,6 +15,7 @@ import { isValidEmail } from "../src/utils/email";
 
 export default function EmailEntry() {
   const router = useRouter();
+  const { redirect } = useLocalSearchParams<{ redirect?: string }>();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [fieldError, setFieldError] = useState<string | undefined>();
@@ -41,9 +42,15 @@ export default function EmailEntry() {
     try {
       const userExists = await checkUserExists(email);
       if (userExists) {
-        router.replace({ pathname: "/sign-in", params: { email } });
+        router.replace({
+          pathname: "/sign-in",
+          params: { email, ...(redirect && { redirect }) },
+        });
       } else {
-        router.replace({ pathname: "/sign-up", params: { email } });
+        router.replace({
+          pathname: "/sign-up",
+          params: { email, ...(redirect && { redirect }) },
+        });
       }
     } catch {
       setFieldError("Something went wrong. Please try again.");

@@ -3,12 +3,13 @@ import EmailEntry from "../../app/email-entry";
 import { checkUserExists } from "../../src/api/auth";
 
 const mockReplace = jest.fn();
+let mockParams: Record<string, string> = {};
 
 jest.mock("expo-router", () => ({
   useRouter: () => ({
     replace: mockReplace,
   }),
-  useLocalSearchParams: () => ({}),
+  useLocalSearchParams: () => mockParams,
   Stack: {
     Screen: () => null,
   },
@@ -25,6 +26,7 @@ const mockCheckUserExists = checkUserExists as jest.MockedFunction<
 describe("EmailEntry", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockParams = {};
   });
 
   it("should render email input", () => {
@@ -95,6 +97,49 @@ describe("EmailEntry", () => {
     expect(mockReplace).toHaveBeenCalledWith({
       pathname: "/sign-up",
       params: { email: "new@example.com" },
+    });
+  });
+
+  it("should forward redirect param to sign-in when present", async () => {
+    mockParams = { redirect: "/notes/users/abc-123/ref-456" };
+    mockCheckUserExists.mockResolvedValueOnce(true);
+
+    const { getByPlaceholderText, getByText } = render(<EmailEntry />);
+    const emailInput = getByPlaceholderText("Email");
+
+    fireEvent.changeText(emailInput, "test@example.com");
+
+    const continueButton = getByText("Continue");
+    fireEvent.press(continueButton);
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith({
+        pathname: "/sign-in",
+        params: {
+          email: "test@example.com",
+          redirect: "/notes/users/abc-123/ref-456",
+        },
+      });
+    });
+  });
+
+  it("should forward redirect param to sign-up when present", async () => {
+    mockParams = { redirect: "/settings" };
+    mockCheckUserExists.mockResolvedValueOnce(false);
+
+    const { getByPlaceholderText, getByText } = render(<EmailEntry />);
+    const emailInput = getByPlaceholderText("Email");
+
+    fireEvent.changeText(emailInput, "new@example.com");
+
+    const continueButton = getByText("Continue");
+    fireEvent.press(continueButton);
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith({
+        pathname: "/sign-up",
+        params: { email: "new@example.com", redirect: "/settings" },
+      });
     });
   });
 

@@ -38,6 +38,8 @@ jest.mock("expo-router", () => ({
     mockRedirect(props);
     return null;
   },
+  usePathname: () => "/notes/users/uuid-123",
+  useNavigation: () => ({ getState: () => ({ routes: [], index: 0 }) }),
   Stack: {
     Screen: () => null,
   },
@@ -71,7 +73,9 @@ describe("MyMeditations", () => {
   it("should redirect to email-entry if not authenticated", () => {
     render(<MyMeditations />);
 
-    expect(mockRedirect).toHaveBeenCalledWith({ href: "/email-entry" });
+    expect(mockRedirect).toHaveBeenCalledWith({
+      href: "/email-entry?redirect=%2Fnotes%2Fusers%2F%7B%7Buuid%7D%7D",
+    });
   });
 
   it("should not redirect while auth is loading", () => {

@@ -14,8 +14,9 @@ import { LemuelButton } from "../src/components/lemuel-button";
 
 export default function ConfirmSignUp() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ email?: string }>();
+  const params = useLocalSearchParams<{ email?: string; redirect?: string }>();
   const email = params.email || "";
+  const redirect = params.redirect;
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
@@ -45,7 +46,11 @@ export default function ConfirmSignUp() {
     if (result.success) {
       setSuccessMessage("Your email has been verified. You can now sign in.");
       setTimeout(
-        () => router.replace({ pathname: "/sign-in", params: { email } }),
+        () =>
+          router.replace({
+            pathname: "/sign-in",
+            params: { email, ...(redirect && { redirect }) },
+          }),
         2000,
       );
     } else {

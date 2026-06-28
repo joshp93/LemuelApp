@@ -6,6 +6,7 @@ const mockRefreshUser = jest.fn();
 const mockBack = jest.fn();
 const mockReplace = jest.fn();
 const mockDispatch = jest.fn();
+let mockParams: Record<string, string> = {};
 
 jest.mock("../../src/api/cognito", () => {
   return {
@@ -18,7 +19,7 @@ jest.mock("expo-router", () => ({
     back: mockBack,
     replace: mockReplace,
   }),
-  useLocalSearchParams: () => ({}),
+  useLocalSearchParams: () => mockParams,
   useNavigation: () => ({
     dispatch: mockDispatch,
   }),
@@ -35,6 +36,7 @@ jest.mock("../../src/auth/auth-context", () => ({
 
 jest.mock("../../src/api/auth", () => ({
   signIn: jest.fn(),
+  getAuthenticatedUser: jest.fn(),
 }));
 
 jest.mock("../../src/api/account", () => ({
@@ -49,6 +51,7 @@ const { createAccountRecord: mockCreateAccountRecord } = jest.requireMock(
 describe("SignIn", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockParams = {};
   });
 
   it("should render email preview and password input", () => {
@@ -68,7 +71,7 @@ describe("SignIn", () => {
     });
   });
 
-  it("should pass email from route params to sign-in function", async () => {
+  it("should sign in and navigate to home when no redirect param", async () => {
     mockSignIn.mockResolvedValueOnce({ success: true });
 
     const { getByPlaceholderText, getAllByText } = render(<SignIn />);
@@ -87,7 +90,8 @@ describe("SignIn", () => {
     expect(mockReplace).toHaveBeenCalledWith("/");
   });
 
-  it("should sign in successfully with email param", async () => {
+  it("should sign in and navigate to redirect param when present", async () => {
+    mockParams = { redirect: "/notes/users/abc-123/ref-456" };
     mockSignIn.mockResolvedValueOnce({ success: true });
 
     const { getByPlaceholderText, getAllByText } = render(<SignIn />);
@@ -103,6 +107,41 @@ describe("SignIn", () => {
 
     expect(mockRefreshUser).toHaveBeenCalled();
     expect(mockCreateAccountRecord).toHaveBeenCalled();
+    expect(mockReplace).toHaveBeenCalledWith("/notes/users/abc-123/ref-456");
+  });
+
+  it("should sign in and navigate to home when redirect param is empty", async () => {
+    mockParams = { redirect: "" };
+    mockSignIn.mockResolvedValueOnce({ success: true });
+
+    const { getByPlaceholderText, getAllByText } = render(<SignIn />);
+
+    fireEvent.changeText(getByPlaceholderText("Password"), "password123");
+
+    const signInButtons = getAllByText("Sign In");
+    fireEvent.press(signInButtons[1]);
+
+    await waitFor(() => {
+      expect(mockSignIn).toHaveBeenCalledWith("", "password123");
+    });
+
+    expect(mockReplace).toHaveBeenCalledWith("/");
+  });
+
+  it("should dispatch popToTop on successful sign in", async () => {
+    mockSignIn.mockResolvedValueOnce({ success: true });
+
+    const { getByPlaceholderText, getAllByText } = render(<SignIn />);
+
+    fireEvent.changeText(getByPlaceholderText("Password"), "password123");
+
+    const signInButtons = getAllByText("Sign In");
+    fireEvent.press(signInButtons[1]);
+
+    await waitFor(() => {
+      expect(mockSignIn).toHaveBeenCalledWith("", "password123");
+    });
+
     expect(mockDispatch).toHaveBeenCalled();
   });
 

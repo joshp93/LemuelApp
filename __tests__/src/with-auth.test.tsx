@@ -12,11 +12,20 @@ const mockUseAuth = AuthContext.useAuth as jest.MockedFunction<
 >;
 
 const mockRedirect = jest.fn();
+const mockGetState = jest.fn();
+let mockPathname = "/some/protected/page";
+let mockSearchParams: Record<string, string> = {};
+
 jest.mock("expo-router", () => ({
   Redirect: (props: any) => {
     mockRedirect(props);
     return null;
   },
+  usePathname: () => mockPathname,
+  useLocalSearchParams: () => mockSearchParams,
+  useNavigation: () => ({
+    getState: () => mockGetState(),
+  }),
 }));
 
 function TestComponent({ user }: WithAuthProps) {
@@ -28,6 +37,9 @@ const WrappedComponent = withAuth(TestComponent);
 describe("withAuth", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockPathname = "/some/protected/page";
+    mockSearchParams = {};
+    mockGetState.mockReturnValue({ routes: [], index: 0 });
   });
 
   it("should render null while loading", () => {
@@ -40,7 +52,9 @@ describe("withAuth", () => {
     expect(toJSON()).toBeNull();
   });
 
-  it("should redirect to /email-entry when no user", () => {
+  it("should redirect to /email-entry with redirect param using {{uuid}} placeholder", () => {
+    mockPathname = "/notes/users/abc-123/ref-456";
+    mockSearchParams = { uuid: "abc-123" };
     mockUseAuth.mockReturnValue({
       user: null,
       loading: false,
@@ -48,7 +62,9 @@ describe("withAuth", () => {
 
     render(<WrappedComponent />);
 
-    expect(mockRedirect).toHaveBeenCalledWith({ href: "/email-entry" });
+    expect(mockRedirect).toHaveBeenCalledWith({
+      href: "/email-entry?redirect=%2Fnotes%2Fusers%2F%7B%7Buuid%7D%7D%2Fref-456",
+    });
   });
 
   it("should render the wrapped component when authenticated", () => {
