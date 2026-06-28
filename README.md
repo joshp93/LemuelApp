@@ -1,117 +1,161 @@
-# Lemuel
+# Lemuel — A Daily Proverb App
 
-A daily proverb app that displays a new proverb each day and encourages users to meditate on it.
+Lemuel is a mobile app (Android & iOS) that brings you a new proverb every day. Read it, reflect on it, set reminders, and jot down your thoughts.
 
-## Features
+## What you can do
 
-- **Daily Proverb**: Fetches a daily proverb from an API and displays it in the app.
-- **Home Screen Widget**: Shows today's proverb on the home screen and auto-updates daily.
-- **Push Notifications**: Schedules push notifications to remind the user to read the proverb of the day.
+- **Daily proverb** — Each day a new proverb appears on the home screen. Choose from multiple Bible versions (KJV, NIV, ESV, etc.).
+- **Home screen widget** (Android) — The day's proverb is always visible on your home screen, updating automatically.
+- **Notifications** — Get a daily reminder to read the proverb. Choose a fixed time or a random window.
+- **Meditation timer** — Focus on the proverb with a full-screen animated meditation experience. Afterward, capture your thoughts.
+- **Notes & journaling** — Write rich-text notes for any proverb. See what others have written too (community notes).
+- **Your account** — Sign up with email, track your stats (meditations completed, notes written).
 
-## Future Goals
+## How it works
 
-- **Notes/Comments System**: A feature for personal reflections, with options for public or private notes.
+### Daily proverb flow
 
-## Tech Stack
+```mermaid
+sequenceDiagram
+    participant App
+    participant API as Backend API
+    participant DB as DynamoDB
 
-- **Frontend**: React Native with Expo
-- **Backend**: AWS Lambda (managed separately)
-- **Authentication**: AWS Cognito
+    App->>API: GET /kjv?date=today
+    API->>DB: Query daily-proverb
+    DB-->>API: Proverb ref + citation
+    API-->>App: { ref, proverb, citation }
+    App->>App: Display in ProverbCard
+    App->>App: Update home screen widget
+```
 
-## Development
-
-### Prerequisites
-
-- [Node.js](https://nodejs.org/)
-- [pnpm](https://pnpm.io/)
-- [Expo CLI](https://docs.expo.dev/get-started/installation/)
-
-### Getting Started
-
-1.  **Install dependencies**:
-    ```bash
-    pnpm install
-    ```
-2.  **Run the app**:
-
-    This project includes native code and is **not compatible with Expo Go**. You must run it in a development build on a simulator or physical device.
-
-    ```bash
-    # Run on Android
-    pnpm android
-
-    # Run on iOS
-    pnpm ios
-    ```
-
-## Architecture
-
-### Widget Implementation
-
-The app displays a home screen widget showing today's proverb, automatically updating daily.
-
--   **Voltra**: Provides Android widget support via Jetpack Compose Glance.
--   **Background Task**: Scheduled daily updates via `expo-background-task`.
--   **Config**: Widget defined in `app.json` plugins.
-
-### Push Notifications
-
-The app uses `expo-notifications` to schedule daily push notifications.
-
--   **Scheduling**: `src/notifications/daily-proverb-notification.ts`
--   **Preferences**: `src/notifications/notification-preferences.ts`
--   **Battery Optimization**: `src/utils/battery-optimization.ts` ensures notification delivery.
-
-### Daily Proverbs
-
-The app fetches the proverb of the day from a remote API.
-
--   **Data Fetching**: `src/hooks/useProverbForTheDay.ts`
--   **API Client**: `src/api/proverbs.ts`
--   **UI**: `src/components/proverb-card.tsx`
-
-### Authentication Flow
-
-The app uses AWS Cognito for authentication with SRP (Secure Remote Password) for sign-in and automatic token refresh.
-
-#### Sign-In Flow (SRP)
+### Authentication flow
 
 ```mermaid
 sequenceDiagram
     participant User
     participant App
+    participant API as Backend API
     participant Cognito
 
-    User->>App: Enters email/password
-    App->>Cognito: InitiateAuth (SRP_A)
-    Cognito-->>App: SRP_B, salt, secret_block
-    App->>App: Compute session key & signature
-    App->>Cognito: RespondToAuthChallenge (signature)
-    Cognito-->>App: IdToken, AccessToken, RefreshToken
+    User->>App: Enter email
+    App->>API: POST /auth/check-user-exists
+    API->>Cognito: AdminGetUser
+    Cognito-->>API: exists true/false
+    API-->>App: { exists }
+
+    alt New user
+        App->>User: Show sign-up form
+        User->>App: Email + password
+        App->>Cognito: SignUp
+        Cognito-->>App: verification needed
+        App->>User: Enter 6-digit code
+        User->>App: Verification code
+        App->>Cognito: ConfirmSignUp
+        Cognito-->>App: confirmed
+    else Returning user
+        App->>User: Show sign-in form
+        User->>App: Password
+        App->>Cognito: InitiateAuth
+        Cognito-->>App: IdToken, AccessToken, RefreshToken
+    end
+
     App->>App: Store tokens in AsyncStorage
-    App->>User: Sign-in successful
+    App->>API: POST /accounts/{uuid}/create
+    API->>DB: Create account record
 ```
 
-#### Token Refresh Flow
-
-The app automatically refreshes tokens before they expire.
+### Push notification flow
 
 ```mermaid
 sequenceDiagram
+    participant Cron as EventBridge (6 AM)
+    participant Lambda as choose-proverb
+    participant DB as DynamoDB
+    participant Stream as DynamoDB Stream
+    participant FCM as Firebase FCM
     participant App
-    participant AsyncStorage
-    participant Cognito
 
-    App->>AsyncStorage: Get stored tokens
-    AsyncStorage-->>App: IdToken, AccessToken, RefreshToken
-
-    Note over App: Check if token expiring soon
-
-    alt Token expired or expiring soon (< 5 min)
-        App->>Cognito: InitiateAuth (REFRESH_TOKEN_AUTH + RefreshToken)
-        Cognito-->>App: New IdToken, New AccessToken
-        App->>AsyncStorage: Save new tokens (reuse RefreshToken)
-    else Token still valid
-        AsyncStorage-->>App: Return current token
-    end
+    Cron->>Lambda: Daily trigger
+    Lambda->>DB: Pick random unused proverb
+    Lambda->>DB: Write daily-proverb for tomorrow
+    DB->>Stream: INSERT event
+    Stream->>Lambda: Invoke push-daily-proverb
+    Lambda->>DB: Query all device tokens
+    Lambda->>FCM: Send silent push to all devices
+    FCM-->>App: data: { type: "daily-proverb" }
+    App->>App: Update widget
+    App->>App: Schedule local notification
+    App->>User: Notification at preferred time
 ```
+
+### Notes & journaling flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant App
+    participant API as Backend API
+    participant DB as DynamoDB
+
+    User->>App: Complete meditation
+    App->>User: "Capture your thoughts"
+    User->>App: Tap to write note
+    App->>API: GET /notes/users/{uuid}/{ref}
+    API->>DB: Fetch existing note
+    DB-->>API: Note or null
+    API-->>App: Note content
+    App->>User: Show rich text editor
+    User->>App: Write note
+    User->>App: Tap Save
+    App->>API: POST /notes/users/{uuid}/{ref}
+    API->>DB: Upsert note
+    API-->>App: { success: true }
+
+    Note over App: Home screen shows community notes
+    App->>API: GET /notes/proverbs/{ref}
+    API->>DB: Query all notes for proverb
+    DB-->>API: [{ note, user, date }]
+    API-->>App: Notes list
+    App->>User: Display community notes
+```
+
+## Tech stack
+
+- **React Native** with Expo SDK 56
+- **TypeScript** 6.0
+- **Expo Router** (file-based navigation)
+- **AWS Cognito** (authentication)
+- **AWS Lambda + API Gateway** (backend, managed separately)
+- **Voltra** (Android widgets)
+- **react-native-reanimated** + **@shopify/react-native-skia** (animations)
+
+## Getting started
+
+```bash
+# Install dependencies
+pnpm install
+
+# Run on Android (requires a development build, not Expo Go)
+pnpm android
+
+# Run on iOS
+pnpm ios
+```
+
+## Development scripts
+
+| Command | What it does |
+|---|---|
+| `pnpm start` | Start Expo dev server |
+| `pnpm android` | Run on Android emulator/device |
+| `pnpm ios` | Run on iOS simulator |
+| `pnpm test` | Run tests (Jest) |
+| `pnpm lint` | Lint with Biome |
+| `pnpm typecheck` | TypeScript type checking |
+
+## Project status
+
+All core features are complete and working. Future plans include adding privacy controls for notes (public/private).
+
+_Questions or feedback? Open an issue on the repository._

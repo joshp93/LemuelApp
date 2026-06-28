@@ -1,186 +1,89 @@
-# Lemuel
+# LemuelApp — Expo / React Native frontend
 
-A daily proverb app that displays a new proverb each day and encourages users to meditate on it.
+A daily proverb mobile app (Android + iOS) built with Expo SDK 56, React Native 0.85, and TypeScript 6.0.
 
 ## What the app does
 
-- Fetches a daily proverb from an API and displays it in the app
-- Shows a widget on the home screen with today's proverb (auto-updates daily)
-- Schedules push notifications to remind the user to read the proverb of the day
+- Fetches and displays a **daily proverb** from a remote API (multiple Bible versions)
+- Shows a **home screen widget** (Android, via Voltra / Jetpack Compose Glance) that auto-updates daily via FCM silent push
+- Schedules **push notifications** at configurable times (random window or exact time) via `expo-notifications`
+- Provides a **meditation timer** with Skia-animated full-screen experience (nebula shader, progress arc)
+- Supports **rich-text notes/journaling** per proverb (viewable as community notes)
+- User **authentication** via AWS Cognito with automatic token refresh
 
-## Ultimate Goals
+## Project structure
 
-- ✅ **Widget** - Home screen widget showing the Daily Proverb
-- ✅ **Push Notifications** - Push notifications reminding users to meditate on the daily proverb
-- Notes/comments system for personal reflections (public or private)
+```
+app/                          # Expo Router pages (file-based routing)
+  _layout.tsx                 # Root layout: fonts, auth provider, notifications init, stack nav
+  index.tsx                   # Home: daily proverb, community notes, date nav, "Start Meditation"
+  email-entry.tsx             # First auth screen: email input, checks user existence
+  sign-in.tsx                 # Password entry, Cognito auth
+  sign-up.tsx                 # Email + password registration
+  confirm-sign-up.tsx         # 6-digit verification code entry
+  settings.tsx                # Notification mode (random/scheduled), meditation duration
+  meditation.tsx              # Full-screen Skia-animated meditation experience
+  account.tsx                 # Authenticated user profile (email, stats)
+  notes/
+    users/
+      [uuid].tsx              # My Meditations: list of user's notes (auth-guarded)
+      [uuid]/[ref].tsx        # Note editor: rich text (react-native-pell-rich-editor)
 
-Backend is separate (AWS Lambda). API changes needed for features beyond the app's direct functionality.
+src/
+  api/                        # API clients (proverbs, auth, notes, account, meditation, push-token, remote-logger, available-versions, daily-proverbs, version-storage)
+  auth/                       # Cognito auth: context, token storage, token utils, with-auth HOC
+  components/                 # Reusable UI: proverb-card, proverb-note-card, header-menu, themed-text, lemuel-button, time-picker, month-picker, version-dropdown, fade-in-down, dividing-line, error-boundary, expandable-section
+  hooks/                      # useProverbForTheDay, useSettingsPreferences, useFitFontSize, useKeyboardHeight, useUnsavedChanges
+  models/                     # Zod schemas: proverb, daily-proverb
+  notifications/              # Scheduling logic, preference storage, FCM push listener
+  settings/                   # Meditation preferences (AsyncStorage)
+  utils/                      # date, email, password, format, proverb-helper
+  widgets/                    # Voltra Android widget (proverb-widget.tsx)
+  constants/
+    theme.ts
 
-## Development Guidelines
-
-- Uses pnpm and TypeScript
-- Check which shell / environment you are running in before starting to avoid wasted effort. for example if you're running in PowerShell you can't use grep
-- Unit tests required
-- Don't modify generated files (e.g., android folder - regenerated on build)
-- Follow Expo documentation
-- Avoid building/running unless asked; if needed, ask first
-- Avoid running tests unless asked because this slows down the feedback loop
-- Optimize imports
-
-# Widget Implementation
-
-The app displays a home screen widget showing today's proverb, automatically updating daily.
-
-## Architecture
-
-- **Voltra** - Provides Android widget support via Jetpack Compose Glance
-- **FCM Silent Push** - Widget updates triggered via FCM data messages from the backend
-- **Config** - Widget defined in app.json plugins
-
-## Key Files
-
-- `src/widgets/proverb-widget.tsx` - Widget component
-- `src/widgets/index.tsx` - Widget registration
-- `src/notifications/push-listener.ts` - FCM silent push handler (widget update + notification scheduling)
-- `app.json` - Voltra plugin configuration
-
-# Push Notifications
-
-The app uses FCM silent push (data messages) to trigger daily updates. When `choose-proverb` writes tomorrow's proverb in the backend DynamoDB table, a Lambda sends an FCM data message to all registered devices. The app's `NOTIFICATION_DATA_RECEIVED` background handler fetches the proverb, updates the home screen widget, and schedules local notifications at the user's configured time.
-
-Users can configure when notifications are sent via two modes:
-
-- **Random time within a window** — Choose a start and end hour; the notification fires at a random time within that window each day.
-- **Specific time** — Choose an exact hour and minute; the notification fires at that time every day.
-
-Preferences are persisted in AsyncStorage. Push token registration is handled via `POST /push/register-token` on the backend.
-
-## Key Files
-- `src/notifications/daily-proverb-notification.ts` — Scheduling logic (`scheduleProverbNotification`, `resolveScheduleDate`, `getRandomTimeInWindow`).
-- `src/notifications/push-listener.ts` — FCM background handler, `NOTIFICATION_DATA_RECEIVED` task, token change listener.
-- `src/notifications/notification-preferences.ts` — Preference storage (`notification_mode`, `random_window_start`, `random_window_end`, `scheduled_time_hour`, `scheduled_time_minute`).
-- `src/api/push-token.ts` — Registers the FCM device token with the backend.
-- `app/settings.tsx` — Settings UI with animated accordion sections and notification toggle.
-
-# Daily Proverbs
-
-The app fetches the proverb of the day from a remote API.
-
-## Key Files
-- `src/hooks/useProverbForTheDay.ts` - Hook for fetching the proverb of the day.
-- `src/api/proverbs.ts` - API client for fetching proverbs.
-- `src/components/proverb-card.tsx` - Component for displaying a proverb.
-- `src/models/proverb.ts` - Proverb data model.
-
-# Authentication Flow
-
-The app uses AWS Cognito for authentication with SRP (Secure Remote Password) for sign-in and automatic token refresh.
-
-## Overview
-
-Authentication in the app follows this pattern:
-
-1. **Sign Up** - User creates account with email/password
-2. **Verify** - User confirms account with verification code
-3. **Sign In** - Full SRP authentication flow with Cognito
-4. **Token Storage** - Tokens stored in AsyncStorage
-5. **Proactive Refresh** - Automatic token refresh before expiration
-6. **Silent Sign-out** - Clear tokens on refresh failure (no redirect)
-
-## Sign-In Flow (SRP)
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant App
-    participant Cognito
-
-    User->>App: Enters email/password
-    App->>Cognito: InitiateAuth (SRP_A)
-    Cognito-->>App: SRP_B, salt, secret_block
-    App->>App: Compute session key & signature
-    App->>Cognito: RespondToAuthChallenge (signature)
-    Cognito-->>App: IdToken, AccessToken, RefreshToken
-    App->>App: Store tokens in AsyncStorage
-    App->>User: Sign-in successful
+__tests__/                    # Jest + @testing-library/react-native tests
 ```
 
-### Key Points
+## Features — Status
 
-- **SRP (Secure Remote Password)** - Password never sent to server
-- **Three tokens returned**:
-  - `IdToken` - Contains user identity (userId, email)
-  - `AccessToken` - Short-lived (~1 hour), used for API calls
-  - `RefreshToken` - Long-lived (~30 days), used to get new tokens
-- Uses `USER_SRP_AUTH` flow in Cognito
+| Feature | Status | Key files |
+|---|---|---|
+| Daily proverb display | ✅ Complete | `src/hooks/useProverbForTheDay.ts`, `src/api/proverbs.ts`, `src/components/proverb-card.tsx` |
+| Multiple Bible versions | ✅ Complete | `src/api/available-versions.ts`, `src/api/version-storage.ts`, `src/components/version-dropdown.tsx` |
+| Monthly proverb calendar | ✅ Complete | `src/api/daily-proverbs.ts`, `src/components/month-picker.tsx` |
+| Home screen widget (Android) | ✅ Complete | `src/widgets/proverb-widget.tsx`, `src/widgets/index.tsx` |
+| Push notifications | ✅ Complete | `src/notifications/daily-proverb-notification.ts`, `src/notifications/notification-preferences.ts`, `src/notifications/push-listener.ts` |
+| Authentication (Cognito) | ✅ Complete | `src/auth/auth-context.tsx`, `src/auth/token-storage.ts`, `src/auth/token-utils.ts`, `src/api/auth.ts`, `src/api/cognito.ts` |
+| Notes system (rich text journaling) | ✅ Complete | `src/api/notes.ts`, `src/components/proverb-note-card.tsx`, `app/notes/users/[uuid]/[ref].tsx`, `app/notes/users/[uuid].tsx` |
+| Meditation timer (Skia) | ✅ Complete | `app/meditation.tsx`, `src/api/meditation.ts`, `src/settings/meditation-preferences.ts` |
+| Account management | ✅ Complete | `app/account.tsx`, `src/api/account.ts` |
+| Logging | ✅ Complete | `src/api/remote-logger.ts` |
 
-## Token Refresh Flow
+**Notes on notes system**: Notes can be created per-proverb via the rich-text editor. Community notes are displayed on the home screen for each proverb. Privacy/public toggle is not yet implemented (all notes are effectively visible to all users).
 
-The app automatically refreshes tokens before they expire, both proactively (before API calls) and reactively (on 401 response).
+## Development guidelines
 
-```mermaid
-sequenceDiagram
-    participant App
-    participant AsyncStorage
-    participant Cognito
+- **Package manager**: pnpm
+- **Scripts**: `pnpm start`, `pnpm android`, `pnpm ios`, `pnpm test`, `pnpm lint`, `pnpm typecheck`
+- **Testing**: Jest with `@testing-library/react-native`. Tests live in `__tests__/` mirroring the source tree.
+- **Linting**: Biome (`pnpm lint`) + ESLint (`pnpm lint:eslint`)
+- **Typecheck**: `pnpm typecheck` (tsc --noEmit)
+- **Pre-test**: `pnpm pretest` runs typecheck + lint + eslint
+- **Do NOT** run tests unless asked — it slows the feedback loop
+- **Do NOT** modify `android/` — it's regenerated on prebuild
+- **Do NOT** build/run the app unless asked
+- **Do NOT** use Expo Go — native plugins (Voltra, notifications) require a dev build
+- Detect the OS shell before running commands (PowerShell on Windows — no `grep`)
 
-    App->>AsyncStorage: Get stored tokens
-    AsyncStorage-->>App: IdToken, AccessToken, RefreshToken
+## Auth flow
 
-    Note over App: Check if token expiring soon
+1. User enters email → `checkUserExists` → routes to sign-in or sign-up
+2. Sign-up → Cognito account creation → verification code screen
+3. Sign-in → Cognito auth → IdToken, AccessToken, RefreshToken stored in AsyncStorage
+4. Proactive token refresh (before expiry) + reactive refresh (on 401)
+5. Silent sign-out on refresh failure (tokens cleared, user set to null, no redirect)
 
-    alt Token expired or expiring soon (< 5 min)
-        App->>Cognito: InitiateAuth (REFRESH_TOKEN_AUTH + RefreshToken)
-        Cognito-->>App: New IdToken, New AccessToken
-        App->>AsyncStorage: Save new tokens (reuse RefreshToken)
-    else Token still valid
-        AsyncStorage-->>App: Return current token
-    end
-```
+## API base URL
 
-### Proactive Refresh Functions
-
-Call these functions before making authenticated API calls:
-
-- `getValidAccessToken()` - Returns valid access token, refreshes if needed
-- `getValidIdToken()` - Returns valid ID token, refreshes if needed
-
-### Silent Sign-Out
-
-If refresh fails (e.g., refresh token expired):
-
-1. Clear all tokens from AsyncStorage
-2. Set user to null in AuthContext
-3. App continues functioning (unauthenticated)
-4. No redirect, no error message shown
-
-## Key Files
-
-| File                        | Purpose                                       |
-| --------------------------- | --------------------------------------------- |
-| `src/auth/auth-context.tsx` | React Context providing auth state to app     |
-| `src/auth/token-storage.ts` | AsyncStorage read/write for tokens            |
-| `src/auth/token-utils.ts`   | Token expiration checking utilities           |
-| `src/api/auth.ts`           | Auth API functions (signIn, signOut, refresh) |
-| `src/api/cognito.ts`        | Low-level Cognito SDK calls                   |
-
-## Using Auth in Components
-
-```typescript
-// Get auth context
-const { user, signOut, refreshToken } = useAuth();
-
-// Get valid token before API call
-const token = await auth.getValidAccessToken();
-
-// Manual refresh (if needed)
-const success = await refreshToken();
-```
-
-## Token Expiration Times
-
-| Token Type    | Default Lifetime | Configurable |
-| ------------- | ---------------- | ------------ |
-| Access Token  | 1 hour           | Yes          |
-| IdToken       | 1 hour           | Yes          |
-| Refresh Token | 30 days          | Yes          |
+`https://vua1tbtwtd.execute-api.eu-west-2.amazonaws.com/prod`
