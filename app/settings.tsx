@@ -30,6 +30,10 @@ import {
   setScheduledTimeMinute,
 } from "../src/notifications/notification-preferences";
 import { setMeditationDuration } from "../src/settings/meditation-preferences";
+import {
+  getBatteryOptimizationWarningText,
+  openBatteryOptimizationSettings,
+} from "../src/utils/battery-optimization";
 export default function SettingsScreen() {
   const navigation = useNavigation();
   const {
@@ -208,6 +212,15 @@ export default function SettingsScreen() {
                 Send example notification
               </LemuelButton>
             </View>
+
+            <View style={styles.infoBox}>
+              <Text style={styles.infoText}>
+                {getBatteryOptimizationWarningText()}
+              </Text>
+              <LemuelButton onPress={openBatteryOptimizationSettings}>
+                Open battery settings
+              </LemuelButton>
+            </View>
           </View>
         )}
 
@@ -288,5 +301,19 @@ const styles = StyleSheet.create({
     bottom: 36,
     left: 20,
     right: 20,
+  },
+  infoBox: {
+    backgroundColor: "#E6F4FE",
+    borderLeftWidth: 4,
+    borderLeftColor: "black",
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 20,
+  },
+  infoText: {
+    fontSize: 13,
+    color: "#333",
+    lineHeight: 20,
+    marginBottom: 12,
   },
 });
