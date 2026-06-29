@@ -19,7 +19,8 @@
     "pretest": "pnpm typecheck && pnpm lint && pnpm lint:eslint",
     "test": "jest",
     "test:watch": "jest --watch",
-    "emulator": "D:\\android_sdk\\emulator\\emulator.exe -avd %npm_package_config_emulatorDevice% -use-keycode-forwarding"
+    "emulator": "D:\\android_sdk\\emulator\\emulator.exe -avd %npm_package_config_emulatorDevice% -use-keycode-forwarding",
+    "deploy": "eas build -p android --profile production"
   },
   "config": {
     "emulatorDevice": "Nexus_5_API_33"
