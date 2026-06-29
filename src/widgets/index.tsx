@@ -1,4 +1,4 @@
-import { updateAndroidWidget } from "@use-voltra/android-client";
+import { updateAndroidWidget } from "voltra/android/client";
 import React from "react";
 import { remoteLog } from "../api/remote-logger";
 import type { Proverb } from "../models/proverb";
