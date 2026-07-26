@@ -1,0 +1,24 @@
+## Short Description (80 chars max)
+
+Daily proverbs from the book of Proverbs. Meditate, journal, and reflect with others.
+
+## Full Description
+
+Lemuel brings you a daily proverb from the book of Proverbs — one chapter at a time. No cherry-picked verses. Just the full wisdom of each passage, the way it was written.
+
+It's not just reading. It's reflecting.
+
+1. Read — Each day brings a new proverb. Choose from multiple Bible versions.
+2. Meditate — Stop and sit with the verse. A full-screen animated meditation timer helps you focus without distractions.
+3. Journal — Capture your thoughts in a rich-text editor. Your notes are saved per proverb and travel with your account.
+4. Share & see — Optionally read what others are reflecting on. Community notes let you see a proverb through different eyes.
+
+More features:
+
+- Multiple Bible versions supported — including the NIV and KJV.
+- Daily reminders — Choose a fixed time or a random window.
+- Home screen widget — The day's proverb is always visible, updating automatically.
+- Your stats — Track your meditations completed and notes written over time.
+- Free. No ads. No noise.
+
+Lemuel is designed for one thing: helping you slow down, chew on a piece of wisdom, and let it settle. Not another scroll — a pause.
