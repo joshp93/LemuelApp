@@ -9,6 +9,8 @@ const SNOOZE_NOTIFICATION_ID = "daily-proverb-snoozed";
 const CATEGORY_ID = "proverb-meditation";
 const SNOOZE_ACTION_ID = "snooze";
 
+export const MEDITATE_ACTION_ID = "meditate";
+
 export const getNotificationIdForDate = (dateString: string): string =>
   `${NOTIFICATION_ID_PREFIX}-${dateString}`;
 
@@ -154,6 +156,13 @@ export const resolveScheduleDate = (
  */
 const _initializeCategories = async () => {
   await Notifications.setNotificationCategoryAsync(CATEGORY_ID, [
+    {
+      identifier: MEDITATE_ACTION_ID,
+      buttonTitle: "Begin meditation",
+      options: {
+        opensAppToForeground: true,
+      },
+    },
     {
       identifier: SNOOZE_ACTION_ID,
       buttonTitle: "Snooze 10 min",

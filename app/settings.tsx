@@ -29,6 +29,7 @@ import {
   setScheduledTimeHour,
   setScheduledTimeMinute,
 } from "../src/notifications/notification-preferences";
+import { ensureNotificationsScheduled } from "../src/notifications/push-listener";
 import { setMeditationDuration } from "../src/settings/meditation-preferences";
 import {
   getBatteryOptimizationWarningText,
@@ -71,6 +72,7 @@ export default function SettingsScreen() {
     await setScheduledTimeHour(parseInt(scheduledHour, 10) || 9);
     await setScheduledTimeMinute(parseInt(scheduledMinute, 10) || 0);
     await setMeditationDuration(meditationDuration);
+    await ensureNotificationsScheduled(5, true);
     snapshotRef.current = {
       enabled,
       mode,

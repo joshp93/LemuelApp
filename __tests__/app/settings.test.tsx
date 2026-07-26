@@ -26,6 +26,10 @@ jest.mock("expo-router", () => ({
 
 jest.mock("expo-notifications");
 
+jest.mock("voltra/android/client", () => ({
+  updateAndroidWidget: jest.fn(),
+}));
+
 jest.mock("../../src/notifications/notification-preferences");
 jest.mock("../../src/notifications/daily-proverb-notification");
 jest.mock("../../src/api/proverbs");

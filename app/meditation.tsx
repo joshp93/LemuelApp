@@ -9,7 +9,7 @@ import {
   useClock,
 } from "@shopify/react-native-skia";
 import { getCornerRadius } from "expo-device-corner-radius";
-import { Stack, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   type LayoutChangeEvent,
@@ -30,6 +30,7 @@ import { LemuelButton } from "../src/components/lemuel-button";
 import { Text } from "../src/components/themed-text";
 import { useFitFontSize } from "../src/hooks/useFitFontSize";
 import { useProverbForTheDay } from "../src/hooks/useProverbForTheDay";
+import type { Proverb } from "../src/models/proverb";
 import { getMeditationDuration } from "../src/settings/meditation-preferences";
 
 const INSET = 20;
@@ -127,8 +128,21 @@ export default function MeditationScreen() {
   const [isComplete, setIsComplete] = useState(false);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [durationMs, setDurationMs] = useState(60000);
-  const { ref } = useCanvasSize();
-  const { proverb, loading } = useProverbForTheDay();
+  const { ref: canvasRef } = useCanvasSize();
+  const { proverb: paramProverb, ref: paramRef } = useLocalSearchParams<{
+    proverb?: string;
+    ref?: string;
+  }>();
+  const hasParamProverb =
+    typeof paramProverb === "string" && typeof paramRef === "string";
+  const paramProverbData: Proverb | null = hasParamProverb
+    ? { proverb: paramProverb, ref: paramRef }
+    : null;
+
+  const hookResult = useProverbForTheDay();
+  const proverbData = paramProverbData ?? hookResult.proverb;
+  const loading = hasParamProverb ? false : hookResult.loading;
+
   const { user } = useAuth();
   const router = useRouter();
   const progress = useSharedValue(0);
@@ -158,7 +172,7 @@ export default function MeditationScreen() {
   }, []);
 
   useEffect(() => {
-    if (!animationStarted.current && !loading && proverb) {
+    if (!animationStarted.current && !loading && proverbData) {
       animationStarted.current = true;
       const today = new Date().toISOString().split("T")[0];
       const userId = user?.userId ?? "";
@@ -170,7 +184,7 @@ export default function MeditationScreen() {
       });
       textOpacity.value = withTiming(1, { duration: 1000 });
     }
-  }, [loading, proverb, durationMs]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [loading, proverbData, durationMs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const textAnimatedStyle = useAnimatedStyle(() => ({
     opacity: textOpacity.value,
@@ -178,7 +192,7 @@ export default function MeditationScreen() {
 
   const textBoxHeight = canvasSize.height - (INSET + CORNER_RADIUS + 8) - 100;
   const { fontSize, onTextLayout } = useFitFontSize(
-    proverb?.proverb,
+    proverbData?.proverb,
     textBoxHeight,
     FONT_SIZES,
   );
@@ -235,7 +249,7 @@ export default function MeditationScreen() {
           statusBarHidden: true,
         }}
       />
-      <Canvas style={StyleSheet.absoluteFill} ref={ref}>
+      <Canvas style={StyleSheet.absoluteFill} ref={canvasRef}>
         {effect && uniforms && (
           <Fill>
             <Shader source={effect} uniforms={uniforms} />
@@ -260,14 +274,14 @@ export default function MeditationScreen() {
       </Canvas>
 
       <View style={styles.overlay}>
-        {proverb && !loading && (
+        {proverbData && !loading && (
           <Animated.View style={[styles.textContainer, textAnimatedStyle]}>
             <ScrollView>
               <Text
                 style={[styles.proverbText, { fontSize, lineHeight: fontSize }]}
                 onTextLayout={onTextLayout}
               >
-                {proverb.proverb}
+                {proverbData.proverb}
               </Text>
             </ScrollView>
           </Animated.View>
@@ -282,7 +296,7 @@ export default function MeditationScreen() {
                 pathname: "/notes/users/[uuid]/[ref]",
                 params: {
                   uuid: user?.userId ?? "{{uuid}}",
-                  ref: proverb!.ref,
+                  ref: proverbData!.ref,
                   date: today,
                 },
               });

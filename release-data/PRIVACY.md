@@ -79,4 +79,4 @@ If we make material changes, we will update the "Last updated" date at the top o
 
 For questions, data deletion requests, or privacy concerns:
 
-**Email:** joshp93@gmail.com
+**Email:** proverbfortheday@gmail.com

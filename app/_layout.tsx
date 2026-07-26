@@ -6,6 +6,7 @@ import {
   useFonts,
 } from "@expo-google-fonts/nunito";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Notifications from "expo-notifications";
 import { Stack, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
@@ -14,8 +15,13 @@ import { registerPushToken } from "../src/api/push-token";
 import { AuthProvider } from "../src/auth/auth-context";
 import { HeaderMenu } from "../src/components/header-menu";
 import { COLORS } from "../src/constants/theme";
-import { initializeNotifications } from "../src/notifications/daily-proverb-notification";
 import {
+  initializeNotifications,
+  MEDITATE_ACTION_ID,
+} from "../src/notifications/daily-proverb-notification";
+import {
+  ensureNotificationsScheduled,
+  initializeBackgroundFetch,
   initializePushHandler,
   setupTokenListener,
 } from "../src/notifications/push-listener";
@@ -33,9 +39,33 @@ function AppContent() {
   useEffect(() => {
     initializePushHandler();
     initializeNotifications();
+    initializeBackgroundFetch();
     registerPushToken();
-    const subscription = setupTokenListener();
-    return () => subscription.remove();
+    ensureNotificationsScheduled(5);
+
+    const meditateSub = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        if (response.actionIdentifier === MEDITATE_ACTION_ID) {
+          const { proverb, ref } = response.notification.request.content
+            .data as Record<string, unknown>;
+          if (typeof proverb === "string" && typeof ref === "string") {
+            router.push({
+              pathname: "/meditation",
+              params: { proverb, ref },
+            });
+          }
+          Notifications.dismissNotificationAsync(
+            response.notification.request.identifier,
+          );
+        }
+      },
+    );
+
+    const tokenSub = setupTokenListener();
+    return () => {
+      tokenSub.remove();
+      meditateSub.remove();
+    };
   }, []);
 
   useEffect(() => {

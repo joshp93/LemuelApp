@@ -1,6 +1,6 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { memo, useMemo, useState } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import Animated from "react-native-reanimated";
 import RenderHtml from "react-native-render-html";
 import type { NoteEntity } from "../api/notes";
@@ -59,10 +59,21 @@ const ProverbNoteCard = memo(function ProverbNoteCard({
             flexDirection: "row",
             alignItems: "center",
             marginTop: 8,
-            justifyContent:
-              !showEdit && contentHeight > CLAMP ? "flex-end" : "flex-start",
           }}
         >
+          {showEdit && note.isPrivate && (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 4,
+                marginRight: 8,
+              }}
+            >
+              <MaterialIcons name="lock" size={14} color="#999" />
+              <Text style={{ color: "#999", fontSize: 12 }}>Private</Text>
+            </View>
+          )}
           {showEdit && (
             <LemuelButton
               size="sm"
@@ -79,7 +90,7 @@ const ProverbNoteCard = memo(function ProverbNoteCard({
               <MaterialIcons name="edit" size={16} color="white" />
             </LemuelButton>
           )}
-          {showEdit && contentHeight > CLAMP && <View style={{ flex: 1 }} />}
+          <View style={{ flex: 1 }} />
           {contentHeight > CLAMP && (
             <LemuelButton
               size="sm"

@@ -1,3 +1,4 @@
+import { MaterialIcons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -5,6 +6,7 @@ import {
   type LayoutChangeEvent,
   ScrollView,
   StyleSheet,
+  Switch,
   useWindowDimensions,
   View,
 } from "react-native";
@@ -50,6 +52,7 @@ function UserNotePage({ user: _user }: WithAuthProps) {
   const [notesLoading, setNotesLoading] = useState(true);
   const [saveButtonHeight, setSaveButtonHeight] = useState(0);
   const [isDirty, setIsDirty] = useState(false);
+  const [isPrivate, setIsPrivate] = useState(false);
   const richTextRef = useRef<RichEditor>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -70,6 +73,7 @@ function UserNotePage({ user: _user }: WithAuthProps) {
       .then((data) => {
         if (data) {
           setEditorContent(data.note);
+          setIsPrivate(data.isPrivate ?? false);
           setIsDirty(false);
         }
       })
@@ -89,14 +93,14 @@ function UserNotePage({ user: _user }: WithAuthProps) {
   const persistNote = useCallback(async () => {
     setSaving(true);
     try {
-      await saveUserNote(uuid!, ref!, editorContent, date!);
+      await saveUserNote(uuid!, ref!, editorContent, date!, isPrivate);
       setIsDirty(false);
     } catch (err) {
       remoteLog("error", "[Notes] Failed to save note", { error: err });
     } finally {
       setSaving(false);
     }
-  }, [uuid, ref, editorContent, date]);
+  }, [uuid, ref, editorContent, date, isPrivate]);
 
   const handleSave = useCallback(async () => {
     await persistNote();
@@ -214,6 +218,40 @@ function UserNotePage({ user: _user }: WithAuthProps) {
                 style={{ minHeight: 150 }}
               />
             )}
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                paddingHorizontal: 12,
+                paddingVertical: 8,
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <MaterialIcons
+                  name={isPrivate ? "lock" : "lock-open"}
+                  size={18}
+                  color="#666"
+                />
+                <Text style={{ color: "#666", fontSize: 14 }}>
+                  Keep private
+                </Text>
+              </View>
+              <Switch
+                value={isPrivate}
+                onValueChange={(v) => {
+                  setIsPrivate(v);
+                  setIsDirty(true);
+                }}
+                trackColor={{ false: "#ccc", true: "#666" }}
+              />
+            </View>
             <View onLayout={handleSaveButtonLayout}>
               <LemuelButton
                 style={styles.saveButton}

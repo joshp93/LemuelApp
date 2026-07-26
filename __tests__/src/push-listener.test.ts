@@ -17,6 +17,16 @@ import {
 } from "../../src/notifications/push-listener";
 import { updateProverbWidget } from "../../src/widgets";
 
+jest.mock("expo-background-task", () => ({
+  getStatusAsync: jest.fn().mockResolvedValue(2),
+  registerTaskAsync: jest.fn(),
+  BackgroundTaskStatus: { Restricted: 1, Available: 2 },
+  BackgroundTaskResult: {
+    Success: "Success",
+    Failed: "Failed",
+  },
+}));
+
 jest.mock("expo-notifications", () => ({
   SchedulableTriggerInputTypes: {
     DATE: "date",

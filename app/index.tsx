@@ -65,7 +65,7 @@ export default function Index() {
 
     if (user) {
       promises.push(
-        getProverbNotes(proverb.ref)
+        getProverbNotes(proverb.ref, user!.userId)
           .then((res) => setNotes(res.items))
           .catch(() => setNotes([])),
       );

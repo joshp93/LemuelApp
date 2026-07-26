@@ -1,3 +1,4 @@
+import * as BackgroundTask from "expo-background-task";
 import * as Notifications from "expo-notifications";
 import * as TaskManager from "expo-task-manager";
 import { Platform } from "react-native";
@@ -28,6 +29,7 @@ import {
 } from "./notification-preferences";
 
 const BACKGROUND_NOTIFICATION_TASK = "NOTIFICATION_DATA_RECEIVED";
+const BACKGROUND_FETCH_TASK = "ENSURE_NOTIFICATIONS_BACKGROUND_FETCH";
 
 /**
  * Subscribes to FCM token refresh events. When the device token changes
@@ -129,32 +131,32 @@ TaskManager.defineTask(
 );
 
 /**
- * Core handler triggered by the daily-proverb FCM silent push.
- * Fetches today's proverb from the API, updates the home screen widget,
- * and schedules local notifications for today and tomorrow at the user's
- * configured time (if notifications are enabled).
+ * Ensures local notifications are scheduled for the next `daysAhead` days.
+ * Fetches today's proverb and updates the home screen widget, then schedules
+ * notifications according to the user's preferences for each day.
  *
- * @internal Exported for testing only.
+ * When `force` is true, cancels and re-schedules all days (used when
+ * preferences change). When false, preserves today's existing notification
+ * (to avoid resetting an already-chosen random time), but always re-schedules
+ * future days.
  */
-export async function handleDailyProverbPush() {
-  try {
-    remoteLog("debug", "[PushListener] Handling daily proverb push");
+export async function ensureNotificationsScheduled(
+  daysAhead: number = 5,
+  force: boolean = false,
+) {
+  remoteLog("debug", "[PushListener] Ensuring notifications scheduled", {
+    daysAhead,
+    force,
+  });
 
+  try {
     const storedVersion = await getChosenVersion();
     const version = storedVersion || "niv";
-    const todayStr = new Date().toISOString().split("T")[0];
-    const tomorrowDate = new Date();
-    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-    const tomorrowStr = tomorrowDate.toISOString().split("T")[0];
+    const today = new Date();
+    const todayStr = today.toISOString().split("T")[0];
 
-    remoteLog("debug", "[PushListener] Fetching today's proverb", {
-      date: todayStr,
-    });
     const todayProverb = await getProverbForTheDay(version, todayStr);
-
-    remoteLog("debug", "[PushListener] Updating widget");
     await updateProverbWidget(todayProverb);
-    remoteLog("info", "[PushListener] Widget updated");
 
     const enabled = await getNotificationsEnabled();
     if (!enabled) {
@@ -162,63 +164,129 @@ export async function handleDailyProverbPush() {
       return;
     }
 
-    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-    const expectedTodayId = getNotificationIdForDate(todayStr);
-    const hasTodayNotification = scheduled.some((n) => {
-      if (n.identifier !== expectedTodayId) return false;
-      if (!n.trigger || typeof n.trigger !== "object") return false;
-      const trigger = n.trigger as Record<string, unknown>;
-      if (trigger.type === Notifications.SchedulableTriggerInputTypes.DATE) {
-        const rawDate = trigger.date;
-        if (rawDate == null) return false;
-        const date =
-          typeof rawDate === "number" ? new Date(rawDate) : (rawDate as Date);
-        return date.toDateString() === new Date().toDateString();
-      }
-      return false;
-    });
-
-    remoteLog("debug", "[PushListener] Existing today notification found", {
-      hasTodayNotification,
-    });
-
     const mode = await getNotificationMode();
 
-    if (!hasTodayNotification) {
-      remoteLog("debug", "[PushListener] Cancelling and scheduling today", {
-        mode,
-        date: todayStr,
-      });
-      await cancelProverbNotification(todayStr);
-      await scheduleNotificationForModeAndDate(mode, todayStr, todayProverb);
-    } else {
-      remoteLog(
-        "debug",
-        "[PushListener] Today's notification already scheduled, skipping",
-      );
+    for (let i = 0; i < daysAhead; i++) {
+      const date = new Date(today);
+      date.setDate(date.getDate() + i);
+      const dateStr = date.toISOString().split("T")[0];
+
+      if (!force && i === 0) {
+        const scheduled =
+          await Notifications.getAllScheduledNotificationsAsync();
+        const expectedId = getNotificationIdForDate(dateStr);
+        const hasNotification = scheduled.some((n) => {
+          if (n.identifier !== expectedId) return false;
+          if (!n.trigger || typeof n.trigger !== "object") return false;
+          const trigger = n.trigger as Record<string, unknown>;
+          if (
+            trigger.type === Notifications.SchedulableTriggerInputTypes.DATE
+          ) {
+            const rawDate = trigger.date;
+            if (rawDate == null) return false;
+            const d =
+              typeof rawDate === "number"
+                ? new Date(rawDate)
+                : (rawDate as Date);
+            return d.toDateString() === date.toDateString();
+          }
+          return false;
+        });
+
+        if (hasNotification) {
+          remoteLog(
+            "debug",
+            "[PushListener] Today's notification already scheduled, skipping",
+            { dateStr },
+          );
+          continue;
+        }
+
+        await cancelProverbNotification(dateStr);
+        await scheduleNotificationForModeAndDate(mode, dateStr, todayProverb);
+      } else {
+        await cancelProverbNotification(dateStr);
+        try {
+          const proverb = await getProverbForTheDay(version, dateStr);
+          await scheduleNotificationForModeAndDate(mode, dateStr, proverb);
+        } catch (error) {
+          remoteLog("warn", "[PushListener] Failed to schedule for date", {
+            dateStr,
+            error,
+          });
+        }
+      }
     }
 
-    remoteLog("debug", "[PushListener] Fetching tomorrow's proverb", {
-      date: tomorrowStr,
+    remoteLog("info", "[PushListener] Notification scheduling complete", {
+      daysAhead,
     });
-    const tomorrowProverb = await getProverbForTheDay(version, tomorrowStr);
-
-    remoteLog("debug", "[PushListener] Cancelling and scheduling tomorrow", {
-      mode,
-      date: tomorrowStr,
-    });
-    await cancelProverbNotification(tomorrowStr);
-    await scheduleNotificationForModeAndDate(
-      mode,
-      tomorrowStr,
-      tomorrowProverb,
-    );
-
-    remoteLog("info", "[PushListener] Daily proverb push handler complete");
   } catch (error) {
-    remoteLog("error", "[PushListener] Background task failed", { error });
+    remoteLog("error", "[PushListener] ensureNotificationsScheduled failed", {
+      error,
+    });
   }
 }
+
+/**
+ * Core handler triggered by the daily-proverb FCM silent push.
+ * Delegates to {@link ensureNotificationsScheduled} for today and tomorrow.
+ *
+ * @internal Exported for testing only.
+ */
+export async function handleDailyProverbPush() {
+  await ensureNotificationsScheduled(2);
+}
+
+let backgroundFetchTaskDefined = false;
+
+/**
+ * Defines the background fetch task handler and registers it with the OS
+ * Should be called on every app launch.
+ *
+ * The task handler calls {@link ensureNotificationsScheduled} as a fallback
+ * when neither the app is opened nor an FCM push arrives. The handler is
+ * defined via {@link TaskManager.defineTask} immediately before registration
+ * to guarantee availability — {@link BackgroundTask.registerTaskAsync}
+ * requires the task to be defined first.
+ */
+export const initializeBackgroundFetch = async () => {
+  remoteLog("debug", "[PushListener] Registering background fetch task");
+
+  if (!backgroundFetchTaskDefined) {
+    TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
+      remoteLog("debug", "[PushListener] Background fetch task fired");
+      try {
+        await ensureNotificationsScheduled(5);
+        return BackgroundTask.BackgroundTaskResult.Success;
+      } catch (error) {
+        remoteLog("error", "[PushListener] Background fetch task failed", {
+          error,
+        });
+        return BackgroundTask.BackgroundTaskResult.Failed;
+      }
+    });
+    backgroundFetchTaskDefined = true;
+  }
+
+  try {
+    const status = await BackgroundTask.getStatusAsync();
+    if (status === BackgroundTask.BackgroundTaskStatus.Restricted) {
+      remoteLog("warn", "[PushListener] Background fetch is restricted");
+      return;
+    }
+    await BackgroundTask.registerTaskAsync(BACKGROUND_FETCH_TASK, {
+      minimumInterval: 21600,
+    });
+    remoteLog("info", "[PushListener] Background fetch task registered");
+  } catch (error) {
+    remoteLog(
+      "error",
+      "[PushListener] Failed to register background fetch task",
+      { error },
+    );
+  }
+};
 
 /**
  * Schedules a local notification for a specific date using the user's

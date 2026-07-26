@@ -23,7 +23,6 @@
         "INTERNET",
         "RECEIVE_BOOT_COMPLETED",
         "POST_NOTIFICATIONS",
-
         "REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
       ]
     },
@@ -75,7 +74,8 @@
       ],
       "expo-font",
       "expo-image",
-      "expo-status-bar"
+      "expo-status-bar",
+      "expo-background-task"
     ],
     "experiments": {
       "typedRoutes": true,

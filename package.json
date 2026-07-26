@@ -19,7 +19,7 @@
     "pretest": "pnpm typecheck && pnpm lint && pnpm lint:eslint",
     "test": "jest",
     "test:watch": "jest --watch",
-    "emulator": "D:\\android_sdk\\emulator\\emulator.exe -avd %npm_package_config_emulatorDevice% -use-keycode-forwarding",
+    "emulator": "C:\\android_sdk\\emulator\\emulator.exe -avd %npm_package_config_emulatorDevice% -use-keycode-forwarding",
     "deploy": "eas build -p android --profile production"
   },
   "config": {
@@ -37,6 +37,7 @@
     "buffer": "^6.0.3",
     "expo": "~56.0.4",
     "expo-application": "^56.0.3",
+    "expo-background-task": "~56.0.23",
     "expo-constants": "~56.0.15",
     "expo-device": "~56.0.4",
     "expo-device-corner-radius": "^0.1.1",
@@ -51,7 +52,7 @@
     "expo-status-bar": "~56.0.4",
     "expo-symbols": "~56.0.5",
     "expo-system-ui": "~56.0.5",
-    "expo-task-manager": "^56.0.14",
+    "expo-task-manager": "^56.0.23",
     "expo-web-browser": "~56.0.5",
     "jwt-decode": "^4.0.0",
     "react": "19.2.3",

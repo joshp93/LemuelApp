@@ -12,6 +12,7 @@ export interface UserNoteResponse {
   dateCreated: string;
   uuid: string;
   ref: string;
+  isPrivate?: boolean;
 }
 
 /**
@@ -24,6 +25,7 @@ export interface NoteEntity {
   dateCreated: string;
   uuid: string;
   ref: string;
+  isPrivate?: boolean;
 }
 
 /**
@@ -93,6 +95,7 @@ export async function saveUserNote(
   ref: string,
   note: string,
   date: string,
+  isPrivate?: boolean,
 ): Promise<UserNoteResponse> {
   const token = await getValidIdToken();
   if (!token) {
@@ -107,7 +110,7 @@ export async function saveUserNote(
         Authorization: token,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ note, date }),
+      body: JSON.stringify({ note, date, isPrivate }),
     },
   );
 
@@ -156,22 +159,32 @@ export async function getUserNotes(
  * Fetches all notes for a given proverb reference.
  *
  * Makes an authenticated GET request to `/notes/proverbs/${ref}`.
- * Returns a list of note entities from all users.
+ * Returns a list of note entities from all users. When a `userId` is provided,
+ * the author's own private notes are included in the response; other users'
+ * private notes are always excluded.
  *
  * @param ref - The proverb reference, e.g. `Proverbs3:5`.
+ * @param userId - The requesting user's Cognito UUID (optional). When provided,
+ *                 the user's own private notes are included in the result.
  * @returns A paginated response with note items.
  * @throws If the request fails or if not authenticated.
  */
 export async function getProverbNotes(
   ref: string,
+  userId?: string,
 ): Promise<ProverbNotesResponse> {
   const token = await getValidIdToken();
   if (!token) {
     throw new Error("Not authenticated");
   }
 
+  const params = new URLSearchParams();
+  if (userId) {
+    params.set("userId", userId);
+  }
+
   const response = await fetch(
-    `${LEMUEL_API_BASE_URL}/notes/proverbs/${convertDisplayProverbToProverbKey(ref)}`,
+    `${LEMUEL_API_BASE_URL}/notes/proverbs/${convertDisplayProverbToProverbKey(ref)}?${params.toString()}`,
     {
       method: "GET",
       headers: { Authorization: token },

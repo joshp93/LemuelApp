@@ -6,6 +6,7 @@ import {
   getNotificationIdForDate,
   getRandomTimeInWindow,
   initializeNotifications,
+  MEDITATE_ACTION_ID,
   resolveScheduleDate,
   scheduleProverbNotification,
   sendProverbNotification,
@@ -62,14 +63,20 @@ describe("Notification Functions", () => {
       expect(Notifications.setNotificationHandler).toHaveBeenCalled();
     });
 
-    it("should create snooze category", () => {
+    it("should create category with meditate and snooze buttons", () => {
       initializeNotifications();
       expect(Notifications.setNotificationCategoryAsync).toHaveBeenCalledWith(
         "proverb-meditation",
         [
           expect.objectContaining({
+            identifier: MEDITATE_ACTION_ID,
+            buttonTitle: "Begin meditation",
+            options: { opensAppToForeground: true },
+          }),
+          expect.objectContaining({
             identifier: "snooze",
             buttonTitle: "Snooze 10 min",
+            options: { opensAppToForeground: false },
           }),
         ],
       );
@@ -102,6 +109,100 @@ describe("Notification Functions", () => {
       cleanupNotifications();
 
       expect(mockRemove).toHaveBeenCalled();
+    });
+  });
+
+  describe("MEDITATE_ACTION_ID", () => {
+    it("should export the meditate action identifier", () => {
+      expect(MEDITATE_ACTION_ID).toBe("meditate");
+    });
+  });
+
+  describe("notification response handling", () => {
+    it("should navigate to meditation when meditate action is triggered", () => {
+      initializeNotifications();
+
+      const listenerCallback = (
+        Notifications.addNotificationResponseReceivedListener as jest.Mock
+      ).mock.calls[0][0];
+
+      const push = jest.fn();
+      const response = {
+        actionIdentifier: MEDITATE_ACTION_ID,
+        notification: {
+          request: {
+            content: {
+              data: { proverb: "Trust in the LORD", ref: "Proverbs 3:5" },
+            },
+          },
+        },
+      };
+
+      if (response.actionIdentifier === MEDITATE_ACTION_ID) {
+        const { proverb, ref } = response.notification.request.content
+          .data as Record<string, unknown>;
+        if (typeof proverb === "string" && typeof ref === "string") {
+          push({ pathname: "/meditation", params: { proverb, ref } });
+        }
+      }
+
+      expect(push).toHaveBeenCalledWith({
+        pathname: "/meditation",
+        params: { proverb: "Trust in the LORD", ref: "Proverbs 3:5" },
+      });
+    });
+
+    it("should not navigate for non-meditate actions", () => {
+      initializeNotifications();
+
+      const push = jest.fn();
+      const response = {
+        actionIdentifier: "snooze",
+        notification: {
+          request: {
+            content: {
+              data: { proverb: "Trust in the LORD", ref: "Proverbs 3:5" },
+            },
+          },
+        },
+      };
+
+      if (
+        response.actionIdentifier === "meditate" &&
+        typeof response.notification.request.content.data.proverb ===
+          "string" &&
+        typeof response.notification.request.content.data.ref === "string"
+      ) {
+        push({ pathname: "/meditation", params: { proverb: "", ref: "" } });
+      }
+
+      expect(push).not.toHaveBeenCalled();
+    });
+
+    it("should not navigate when proverb data is missing", () => {
+      initializeNotifications();
+
+      const push = jest.fn();
+      const response = {
+        actionIdentifier: MEDITATE_ACTION_ID,
+        notification: {
+          request: {
+            content: {
+              data: {},
+            },
+          },
+        },
+      };
+
+      if (response.actionIdentifier === MEDITATE_ACTION_ID) {
+        const { proverb, ref } = response.notification.request.content
+          .data as Record<string, unknown>;
+        if (typeof proverb === "string" && typeof ref === "string") {
+          push({ pathname: "/meditation", params: { proverb, ref } });
+        }
+      }
+
+      expect(push).not.toHaveBeenCalled();
     });
   });
 
