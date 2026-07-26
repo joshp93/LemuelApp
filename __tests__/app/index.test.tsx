@@ -285,10 +285,11 @@ describe("Index", () => {
       proverb: mockProverb,
     });
 
-    const { getByText } = render(<Index />);
+    const { getAllByText } = render(<Index />);
 
     await waitFor(() => {
-      expect(getByText("<p>My meditation note</p>")).toBeTruthy();
+      const elements = getAllByText("<p>My meditation note</p>");
+      expect(elements.length).toBeGreaterThanOrEqual(1);
     });
   });
 

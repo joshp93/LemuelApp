@@ -6,6 +6,8 @@ import RenderHtml from "react-native-render-html";
 import type { NoteEntity } from "../api/notes";
 import { LemuelButton } from "./lemuel-button";
 
+const CLAMP = 60;
+
 const ProverbNoteCard = memo(function ProverbNoteCard({
   note,
   contentWidth,
@@ -20,7 +22,6 @@ const ProverbNoteCard = memo(function ProverbNoteCard({
   const [expanded, setExpanded] = useState(false);
   const [contentHeight, setContentHeight] = useState(0);
   const source = useMemo(() => ({ html: note.note }), [note.note]);
-  const CLAMP = 60;
 
   return (
     <View
@@ -31,6 +32,30 @@ const ProverbNoteCard = memo(function ProverbNoteCard({
         marginTop: 12,
       }}
     >
+      <View
+        style={{
+          position: "absolute",
+          left: 12,
+          right: 12,
+          opacity: 0,
+          zIndex: -1,
+        }}
+        pointerEvents="none"
+      >
+        <View
+          onLayout={(e) => {
+            if (contentHeight === 0) {
+              setContentHeight(e.nativeEvent.layout.height);
+            }
+          }}
+        >
+          <RenderHtml
+            contentWidth={contentWidth}
+            source={source}
+            baseStyle={{ color: "#333", fontSize: 18 }}
+          />
+        </View>
+      </View>
       <Pressable onPress={() => setExpanded(!expanded)}>
         <Animated.View
           style={{
@@ -40,17 +65,11 @@ const ProverbNoteCard = memo(function ProverbNoteCard({
             transitionDuration: 300,
           }}
         >
-          <View
-            onLayout={(e) => {
-              setContentHeight(e.nativeEvent.layout.height);
-            }}
-          >
-            <RenderHtml
-              contentWidth={contentWidth}
-              source={source}
-              baseStyle={{ color: "#333", fontSize: 18 }}
-            />
-          </View>
+          <RenderHtml
+            contentWidth={contentWidth}
+            source={source}
+            baseStyle={{ color: "#333", fontSize: 18 }}
+          />
         </Animated.View>
       </Pressable>
       {(contentHeight > CLAMP || showEdit) && (
