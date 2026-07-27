@@ -3,6 +3,7 @@ import { Stack } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,14 +13,17 @@ import {
 } from "react-native";
 import {
   type AccountDetails,
+  deleteAccount,
   getAccountDetails,
   upsertDisplayName,
 } from "../src/api/account";
+import { useAuth } from "../src/auth/auth-context";
 import { type WithAuthProps, withAuth } from "../src/auth/with-auth";
 import { LemuelButton } from "../src/components/lemuel-button";
 import { formatDate } from "../src/utils/date";
 
 function Account({ user }: WithAuthProps) {
+  const { signOut } = useAuth();
   const [account, setAccount] = useState<AccountDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +31,8 @@ function Account({ user }: WithAuthProps) {
   const [displayNameDraft, setDisplayNameDraft] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [accountManagementExpanded, setAccountManagementExpanded] = useState(false);
 
   const loadAccount = () => {
     getAccountDetails(user.userId)
@@ -63,6 +69,33 @@ function Account({ user }: WithAuthProps) {
     setEditingDisplayName(false);
     setDisplayNameDraft(account?.displayName ?? "");
     setSaveError(null);
+  };
+
+  const handleDelete = () => {
+    Alert.alert(
+      "Delete Account",
+      "This action cannot be undone. All your data, notes, and account information will be permanently deleted.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete Forever",
+          style: "destructive",
+          onPress: async () => {
+            setDeleting(true);
+            const ok = await deleteAccount(user.userId);
+            setDeleting(false);
+            if (ok) {
+              signOut();
+            } else {
+              Alert.alert(
+                "Error",
+                "Failed to delete account. Please try again.",
+              );
+            }
+          },
+        },
+      ],
+    );
   };
 
   return (
@@ -185,7 +218,45 @@ function Account({ user }: WithAuthProps) {
             Account record not found. It will be created on your next sign-in.
           </Text>
         )}
+
+        {!loading && (
+          <View style={styles.accordionCard}>
+            <Pressable
+              style={styles.accordionHeader}
+              onPress={() => setAccountManagementExpanded(!accountManagementExpanded)}
+            >
+              <Text style={styles.label}>Account Management</Text>
+              <MaterialIcons
+                name={
+                  accountManagementExpanded
+                    ? "keyboard-arrow-up"
+                    : "keyboard-arrow-down"
+                }
+                size={24}
+                color="#666"
+              />
+            </Pressable>
+            {accountManagementExpanded && (
+              <View style={styles.accordionContent}>
+                <Pressable
+                  style={styles.deleteButton}
+                  onPress={handleDelete}
+                  disabled={deleting}
+                >
+                  <Text style={styles.deleteButtonText}>Delete Account</Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
+        )}
       </ScrollView>
+
+      {deleting && (
+        <View style={styles.overlay}>
+          <ActivityIndicator size="large" color="white" />
+          <Text style={styles.overlayText}>Deleting account...</Text>
+        </View>
+      )}
     </>
   );
 }
@@ -263,5 +334,49 @@ const styles = StyleSheet.create({
     color: "#dc3545",
     fontSize: 14,
     marginTop: 4,
+  },
+  accordionCard: {
+    backgroundColor: "white",
+    borderRadius: 12,
+    marginTop: 32,
+    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+    borderCurve: "continuous",
+    overflow: "hidden",
+  },
+  accordionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 20,
+  },
+  accordionContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  deleteButton: {
+    backgroundColor: "#dc3545",
+    borderRadius: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  deleteButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  overlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 999,
+  },
+  overlayText: {
+    color: "white",
+    fontSize: 18,
+    marginTop: 16,
+    fontWeight: "500",
   },
 });

@@ -96,4 +96,15 @@ describe("ProverbNoteCard", () => {
     const treeAfter = JSON.stringify(toJSON());
     expect(treeAfter).not.toContain("60");
   });
+
+  it("should show author name with person icon when displayName is set", async () => {
+    const note = makeNote(`<p>${LONG_NOTE_TEXT}</p>`, {
+      displayName: "test-author",
+    });
+    const { getByText } = render(
+      <ProverbNoteCard note={note} contentWidth={350} />,
+    );
+
+    expect(getByText("test-author")).toBeTruthy();
+  });
 });

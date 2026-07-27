@@ -34,6 +34,41 @@ const ProverbNoteCard = memo(function ProverbNoteCard({
     >
       <View
         style={{
+          flexDirection: "row",
+          alignItems: "center",
+          marginBottom: 4,
+        }}
+      >
+        {showEdit && note.isPrivate && (
+          <MaterialIcons
+            name="lock"
+            size={12}
+            color="#999"
+            style={{ marginRight: 4 }}
+          />
+        )}
+        {note.displayName ? (
+          <>
+            <MaterialIcons
+              name="person"
+              size={12}
+              color="#999"
+              style={{ marginRight: 3 }}
+            />
+            <Text
+              style={{
+                color: "#666",
+                fontSize: 11,
+                fontWeight: "500",
+              }}
+            >
+              {note.displayName}
+            </Text>
+          </>
+        ) : null}
+      </View>
+      <View
+        style={{
           position: "absolute",
           left: 12,
           right: 12,
@@ -80,31 +115,6 @@ const ProverbNoteCard = memo(function ProverbNoteCard({
             marginTop: 8,
           }}
         >
-          {showEdit && note.isPrivate && (
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 4,
-                marginRight: 8,
-              }}
-            >
-              <MaterialIcons name="lock" size={14} color="#999" />
-              <Text style={{ color: "#999", fontSize: 12 }}>Private</Text>
-            </View>
-          )}
-          {note.displayName ? (
-            <Text
-              style={{
-                color: "#999",
-                fontSize: 12,
-                fontStyle: "italic",
-                marginRight: 8,
-              }}
-            >
-              — {note.displayName}
-            </Text>
-          ) : null}
           {showEdit && (
             <LemuelButton
               size="sm"

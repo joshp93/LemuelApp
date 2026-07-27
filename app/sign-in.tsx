@@ -1,10 +1,8 @@
 import {
   Stack,
   useLocalSearchParams,
-  useNavigation,
   useRouter,
 } from "expo-router";
-import { StackActions } from "expo-router/build/react-navigation";
 import { useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -22,7 +20,6 @@ import { LemuelButton } from "../src/components/lemuel-button";
 
 export default function SignIn() {
   const router = useRouter();
-  const navigation = useNavigation();
   const params = useLocalSearchParams<{
     email?: string;
     displayName?: string;
@@ -52,8 +49,7 @@ export default function SignIn() {
 
     if (result.success) {
       await refreshUser();
-      await createAccountRecord(params.displayName!);
-      navigation.dispatch(StackActions.popToTop());
+      await createAccountRecord(params.displayName || "");
       const authenticatedUser = await getAuthenticatedUser();
       const resolvedRedirect =
         redirect?.replace("{{uuid}}", authenticatedUser?.userId ?? "") || "/";

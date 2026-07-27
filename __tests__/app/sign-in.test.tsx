@@ -128,23 +128,6 @@ describe("SignIn", () => {
     expect(mockReplace).toHaveBeenCalledWith("/");
   });
 
-  it("should dispatch popToTop on successful sign in", async () => {
-    mockSignIn.mockResolvedValueOnce({ success: true });
-
-    const { getByPlaceholderText, getAllByText } = render(<SignIn />);
-
-    fireEvent.changeText(getByPlaceholderText("Password"), "password123");
-
-    const signInButtons = getAllByText("Sign In");
-    fireEvent.press(signInButtons[1]);
-
-    await waitFor(() => {
-      expect(mockSignIn).toHaveBeenCalledWith("", "password123");
-    });
-
-    expect(mockDispatch).toHaveBeenCalled();
-  });
-
   it("should show error message on sign in failure", async () => {
     mockSignIn.mockResolvedValueOnce({
       success: false,

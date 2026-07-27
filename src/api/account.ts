@@ -113,6 +113,42 @@ export async function createAccountRecord(
  * @param displayName The display name to set.
  * @returns true if successful.
  */
+/**
+ * Permanently deletes the authenticated user's account, including all associated data
+ * (notes, meditations, device tokens) and the Cognito user record.
+ * @param uuid The user's Cognito sub (userId).
+ * @returns true if deletion was successful.
+ */
+export async function deleteAccount(uuid: string): Promise<boolean> {
+  const token = await getValidIdToken();
+  if (!token) {
+    remoteLog("error", "[Account] No valid ID token, cannot delete account");
+    return false;
+  }
+
+  try {
+    const response = await fetch(`${LEMUEL_API_BASE_URL}/accounts/${uuid}`, {
+      method: "DELETE",
+      headers: { Authorization: token },
+    });
+
+    if (!response.ok) {
+      remoteLog("error", "[Account] Delete account failed", {
+        status: response.status,
+      });
+      return false;
+    }
+
+    remoteLog("info", "[Account] Account deleted successfully");
+    await AsyncStorage.removeItem(ACCOUNT_CREATED_KEY);
+    remoteLog("info", "[Account] ACCOUNT_CREATED_KEY cleared");
+    return true;
+  } catch (error) {
+    remoteLog("error", "[Account] Delete account error", { error });
+    return false;
+  }
+}
+
 export async function upsertDisplayName(
   uuid: string,
   displayName: string,

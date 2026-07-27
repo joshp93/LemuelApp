@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { type Href, useRouter } from "expo-router";
 import type React from "react";
 import { useState } from "react";
 import {
@@ -48,10 +48,14 @@ export function HeaderMenu({ children }: { children?: React.ReactNode }) {
     });
   };
 
-  const navigateTo = (path: string) => {
-    remoteLog("debug", "[HeaderMenu] Navigating", { path });
+  const navigateTo = (path: Href, replace?: boolean) => {
+    remoteLog("debug", "[HeaderMenu] Navigating", { path, replace });
     closeMenu();
-    router.push(path as any);
+    if (replace) {
+      router.replace(path);
+    } else {
+      router.push(path);
+    }
   };
 
   const handleSignOut = () => {
@@ -136,7 +140,7 @@ export function HeaderMenu({ children }: { children?: React.ReactNode }) {
                 ) : (
                   <TouchableOpacity
                     style={styles.menuItem}
-                    onPress={() => navigateTo("/email-entry")}
+                    onPress={() => navigateTo("/email-entry", true)}
                   >
                     <Text style={styles.signInText}>Sign In</Text>
                   </TouchableOpacity>
