@@ -13,6 +13,7 @@ export interface UserNoteResponse {
   uuid: string;
   ref: string;
   isPrivate?: boolean;
+  displayName: string;
 }
 
 /**
@@ -26,6 +27,7 @@ export interface NoteEntity {
   uuid: string;
   ref: string;
   isPrivate?: boolean;
+  displayName: string;
 }
 
 /**

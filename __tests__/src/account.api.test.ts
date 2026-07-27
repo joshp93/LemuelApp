@@ -87,7 +87,7 @@ describe("createAccountRecord", () => {
   it("should skip if ACCOUNT_CREATED is already true", async () => {
     await AsyncStorage.setItem("ACCOUNT_CREATED", "true");
 
-    const result = await createAccountRecord();
+    const result = await createAccountRecord("Alice");
 
     expect(result).toBe(true);
     expect(mockGetValidIdToken).not.toHaveBeenCalled();
@@ -103,7 +103,7 @@ describe("createAccountRecord", () => {
       status: 200,
     } as Response);
 
-    const result = await createAccountRecord();
+    const result = await createAccountRecord("Alice");
 
     expect(result).toBe(true);
     expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -111,7 +111,11 @@ describe("createAccountRecord", () => {
     const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
     expect(init.method).toBe("POST");
     expect(url).toContain("/accounts/uuid-123/create");
-    expect(init.headers).toEqual({ Authorization: "valid-token" });
+    expect(init.headers).toEqual({
+      Authorization: "valid-token",
+      "Content-Type": "application/json",
+    });
+    expect(JSON.parse(init.body as string)).toEqual({ displayName: "Alice" });
 
     const flag = await AsyncStorage.getItem("ACCOUNT_CREATED");
     expect(flag).toBe("true");
@@ -121,7 +125,7 @@ describe("createAccountRecord", () => {
     await AsyncStorage.removeItem("ACCOUNT_CREATED");
     mockGetValidIdToken.mockResolvedValue(null);
 
-    const result = await createAccountRecord();
+    const result = await createAccountRecord("Alice");
 
     expect(result).toBe(false);
     expect(mockFetch).not.toHaveBeenCalled();
@@ -136,7 +140,7 @@ describe("createAccountRecord", () => {
       status: 500,
     } as Response);
 
-    const result = await createAccountRecord();
+    const result = await createAccountRecord("Alice");
 
     expect(result).toBe(false);
     const flag = await AsyncStorage.getItem("ACCOUNT_CREATED");

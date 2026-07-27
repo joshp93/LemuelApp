@@ -1,37 +1,69 @@
+import { MaterialIcons } from "@expo/vector-icons";
 import { Stack } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
-import { type AccountDetails, getAccountDetails } from "../src/api/account";
+import {
+  type AccountDetails,
+  getAccountDetails,
+  upsertDisplayName,
+} from "../src/api/account";
 import { type WithAuthProps, withAuth } from "../src/auth/with-auth";
+import { LemuelButton } from "../src/components/lemuel-button";
 import { formatDate } from "../src/utils/date";
 
-/**
- * Account screen showing the authenticated user's profile details.
- * Redirects to the email-entry screen if the user is not signed in.
- * This redirect is handled by the withAuth HOC.
- */
 function Account({ user }: WithAuthProps) {
   const [account, setAccount] = useState<AccountDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editingDisplayName, setEditingDisplayName] = useState(false);
+  const [displayNameDraft, setDisplayNameDraft] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadAccount = () => {
     getAccountDetails(user.userId)
       .then((data) => {
         setAccount(data);
+        setDisplayNameDraft(data?.displayName ?? "");
         setLoading(false);
       })
       .catch((err: Error) => {
         setError(err.message);
         setLoading(false);
       });
+  };
+
+  useEffect(() => {
+    loadAccount();
   }, [user.userId]);
+
+  const handleSaveDisplayName = async () => {
+    if (!displayNameDraft.trim() || displayNameDraft.length > 50) return;
+    setSaving(true);
+    setSaveError(null);
+    const ok = await upsertDisplayName(user.userId, displayNameDraft.trim());
+    setSaving(false);
+    if (ok) {
+      setEditingDisplayName(false);
+      loadAccount();
+    } else {
+      setSaveError("Failed to save display name. Please try again.");
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingDisplayName(false);
+    setDisplayNameDraft(account?.displayName ?? "");
+    setSaveError(null);
+  };
 
   return (
     <>
@@ -49,6 +81,71 @@ function Account({ user }: WithAuthProps) {
           </Text>
         ) : account ? (
           <View style={styles.card}>
+            <Text selectable style={styles.label}>
+              Display Name
+            </Text>
+            {editingDisplayName ? (
+              <View>
+                <TextInput
+                  style={styles.editInput}
+                  value={displayNameDraft}
+                  onChangeText={setDisplayNameDraft}
+                  autoCapitalize="none"
+                  maxLength={50}
+                />
+                {saveError ? (
+                  <Text style={styles.saveError}>{saveError}</Text>
+                ) : null}
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    marginTop: 8,
+                  }}
+                >
+                  <Pressable
+                    style={[styles.editButton, { backgroundColor: "#dc3545" }]}
+                    onPress={handleSaveDisplayName}
+                    disabled={saving || !displayNameDraft.trim()}
+                  >
+                    <Text style={styles.editButtonText}>
+                      {saving ? "Saving..." : "Save"}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.editButton, { backgroundColor: "black" }]}
+                    onPress={handleCancelEdit}
+                  >
+                    <Text style={styles.editButtonText}>Cancel</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : (
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+              >
+                <Text selectable style={[styles.value, { flex: 1 }]}>
+                  {account.displayName || "Set display name"}
+                </Text>
+                <LemuelButton
+                  size="sm"
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    padding: 0,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                  onPress={() => setEditingDisplayName(true)}
+                >
+                  <MaterialIcons name="edit" size={16} color="white" />
+                </LemuelButton>
+              </View>
+            )}
+
+            <View style={styles.divider} />
+
             <Text selectable style={styles.label}>
               Email
             </Text>
@@ -140,5 +237,31 @@ const styles = StyleSheet.create({
     color: "#666",
     textAlign: "center",
     lineHeight: 24,
+  },
+  editInput: {
+    backgroundColor: "white",
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    color: "#333",
+  },
+  editButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  editButtonText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  saveError: {
+    color: "#dc3545",
+    fontSize: 14,
+    marginTop: 4,
   },
 });

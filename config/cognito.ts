@@ -5,6 +5,6 @@
 
 export const COGNITO_CONFIG = {
   region: "eu-west-2",
-  userPoolId: "eu-west-2_Oas7XphX7",
-  clientId: "557lc1t882n3uf3o8ra8cu03oa",
+  userPoolId: "eu-west-2_q4mAkBLNO",
+  clientId: "49ptkntch0ui1uelb6e68s5m0n",
 } as const;

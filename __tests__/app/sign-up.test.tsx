@@ -29,9 +29,10 @@ describe("SignUp", () => {
     mockParams = {};
   });
 
-  it("should render email, password, and confirm password inputs", () => {
+  it("should render email, username, password, and confirm password inputs", () => {
     const { getByPlaceholderText } = render(<SignUp />);
     expect(getByPlaceholderText("Email")).toBeTruthy();
+    expect(getByPlaceholderText("Username")).toBeTruthy();
     expect(getByPlaceholderText("Password")).toBeTruthy();
     expect(getByPlaceholderText("Confirm Password")).toBeTruthy();
   });
@@ -124,6 +125,7 @@ describe("SignUp", () => {
     const { getByPlaceholderText, getAllByText } = render(<SignUp />);
 
     fireEvent.changeText(getByPlaceholderText("Email"), "test@example.com");
+    fireEvent.changeText(getByPlaceholderText("Username"), "testuser");
     fireEvent.changeText(getByPlaceholderText("Password"), "Password1");
     fireEvent.changeText(getByPlaceholderText("Confirm Password"), "Password1");
 
@@ -139,7 +141,7 @@ describe("SignUp", () => {
 
     expect(mockReplace).toHaveBeenCalledWith({
       pathname: "/confirm-sign-up",
-      params: { email: "test@example.com" },
+      params: { email: "test@example.com", displayName: "testuser" },
     });
   });
 
@@ -150,6 +152,7 @@ describe("SignUp", () => {
     const { getByPlaceholderText, getAllByText } = render(<SignUp />);
 
     fireEvent.changeText(getByPlaceholderText("Email"), "test@example.com");
+    fireEvent.changeText(getByPlaceholderText("Username"), "testuser");
     fireEvent.changeText(getByPlaceholderText("Password"), "Password1");
     fireEvent.changeText(getByPlaceholderText("Confirm Password"), "Password1");
 
@@ -167,6 +170,7 @@ describe("SignUp", () => {
       pathname: "/confirm-sign-up",
       params: {
         email: "test@example.com",
+        displayName: "testuser",
         redirect: "/notes/users/abc-123/ref-456",
       },
     });
@@ -183,6 +187,7 @@ describe("SignUp", () => {
     );
 
     fireEvent.changeText(getByPlaceholderText("Email"), "test@example.com");
+    fireEvent.changeText(getByPlaceholderText("Username"), "testuser");
     fireEvent.changeText(getByPlaceholderText("Password"), "Password1");
     fireEvent.changeText(getByPlaceholderText("Confirm Password"), "Password1");
 

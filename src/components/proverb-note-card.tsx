@@ -93,6 +93,18 @@ const ProverbNoteCard = memo(function ProverbNoteCard({
               <Text style={{ color: "#999", fontSize: 12 }}>Private</Text>
             </View>
           )}
+          {note.displayName ? (
+            <Text
+              style={{
+                color: "#999",
+                fontSize: 12,
+                fontStyle: "italic",
+                marginRight: 8,
+              }}
+            >
+              — {note.displayName}
+            </Text>
+          ) : null}
           {showEdit && (
             <LemuelButton
               size="sm"

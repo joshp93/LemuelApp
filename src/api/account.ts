@@ -8,7 +8,6 @@ const ACCOUNT_CREATED_KEY = "ACCOUNT_CREATED";
 
 /**
  * Account details returned by the backend DynamoDB table.
- * Maps to the AccountEntitySchema in the lemuel backend repo.
  */
 export interface AccountDetails {
   pk: string;
@@ -16,13 +15,11 @@ export interface AccountDetails {
   accountCreatedDate: string;
   totalMeditations: number;
   totalNotes: number;
+  displayName: string;
 }
 
 /**
  * Fetches the authenticated user's account details from the backend.
- * Uses the Cognito ID token in the Authorization header — ID tokens carry
- * user identity claims and are the correct token type for web API auth.
- * Access tokens are only for direct Cognito API calls (e.g. GlobalSignOut).
  * @param uuid The user's Cognito sub (userId).
  * @returns AccountDetails on success, null if the record does not exist (404).
  * @throws If the request fails for a reason other than 404.
@@ -57,12 +54,12 @@ export async function getAccountDetails(
  * Creates a backend account record for the currently authenticated user.
  * Guarded by an AsyncStorage flag so the API call is only made once per device.
  * Decodes the user's Cognito sub from the ID token internally.
- * Uses the ID token in the Authorization header — ID tokens carry user identity
- * claims and are the correct token type for web request auth headers.
- * Access tokens are only for direct Cognito API calls (e.g. GlobalSignOut).
+ * @param displayName The user's display name to store on the account entity.
  * @returns true if the record was created or already existed.
  */
-export async function createAccountRecord(): Promise<boolean> {
+export async function createAccountRecord(
+  displayName: string,
+): Promise<boolean> {
   const created = await AsyncStorage.getItem(ACCOUNT_CREATED_KEY);
   if (created === "true") {
     remoteLog("info", "[Account] Account record already created, skipping");
@@ -79,11 +76,17 @@ export async function createAccountRecord(): Promise<boolean> {
   const uuid = decoded.sub;
 
   try {
+    const body = JSON.stringify({ displayName });
+    remoteLog("debug", "[Account] Creating account record", { body });
     const response = await fetch(
       `${LEMUEL_API_BASE_URL}/accounts/${uuid}/create`,
       {
         method: "POST",
-        headers: { Authorization: token },
+        headers: {
+          Authorization: token,
+          "Content-Type": "application/json",
+        },
+        body,
       },
     );
 
@@ -99,6 +102,54 @@ export async function createAccountRecord(): Promise<boolean> {
     return true;
   } catch (error) {
     remoteLog("error", "[Account] Account creation failed", { error });
+    return false;
+  }
+}
+
+/**
+ * Creates or updates the display name for a user.
+ * Writes to both Cognito and DynamoDB (via backend).
+ * @param uuid The user's Cognito sub (userId).
+ * @param displayName The display name to set.
+ * @returns true if successful.
+ */
+export async function upsertDisplayName(
+  uuid: string,
+  displayName: string,
+): Promise<boolean> {
+  const token = await getValidIdToken();
+  if (!token) {
+    remoteLog(
+      "error",
+      "[Account] No valid ID token, cannot update display name",
+    );
+    return false;
+  }
+
+  try {
+    const response = await fetch(
+      `${LEMUEL_API_BASE_URL}/accounts/${uuid}/display-name`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: token,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ displayName }),
+      },
+    );
+
+    if (!response.ok) {
+      remoteLog("error", "[Account] Display name update failed", {
+        status: response.status,
+      });
+      return false;
+    }
+
+    remoteLog("info", "[Account] Display name updated successfully");
+    return true;
+  } catch (error) {
+    remoteLog("error", "[Account] Display name update error", { error });
     return false;
   }
 }

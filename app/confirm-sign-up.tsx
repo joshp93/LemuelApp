@@ -14,8 +14,13 @@ import { LemuelButton } from "../src/components/lemuel-button";
 
 export default function ConfirmSignUp() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ email?: string; redirect?: string }>();
+  const params = useLocalSearchParams<{
+    email?: string;
+    displayName?: string;
+    redirect?: string;
+  }>();
   const email = params.email || "";
+  const displayName = params.displayName;
   const redirect = params.redirect;
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -49,7 +54,7 @@ export default function ConfirmSignUp() {
         () =>
           router.replace({
             pathname: "/sign-in",
-            params: { email, ...(redirect && { redirect }) },
+            params: { email, displayName, ...(redirect && { redirect }) },
           }),
         2000,
       );

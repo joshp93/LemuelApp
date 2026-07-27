@@ -23,7 +23,11 @@ import { LemuelButton } from "../src/components/lemuel-button";
 export default function SignIn() {
   const router = useRouter();
   const navigation = useNavigation();
-  const params = useLocalSearchParams<{ email?: string; redirect?: string }>();
+  const params = useLocalSearchParams<{
+    email?: string;
+    displayName?: string;
+    redirect?: string;
+  }>();
   const { refreshUser } = useAuth();
   const email = params.email || "";
   const redirect = params.redirect;
@@ -48,7 +52,7 @@ export default function SignIn() {
 
     if (result.success) {
       await refreshUser();
-      await createAccountRecord();
+      await createAccountRecord(params.displayName!);
       navigation.dispatch(StackActions.popToTop());
       const authenticatedUser = await getAuthenticatedUser();
       const resolvedRedirect =

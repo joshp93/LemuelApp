@@ -14,11 +14,21 @@ import { LemuelButton } from "../src/components/lemuel-button";
 import { isValidEmail } from "../src/utils/email";
 import { getPasswordError } from "../src/utils/password";
 
+function isValidDisplayName(value: string): string | undefined {
+  if (!value) return "Username is required";
+  if (value.length < 3) return "Username must be at least 3 characters";
+  if (value.length > 50) return "Username must be at most 50 characters";
+  if (!/^[a-zA-Z0-9 _-]+$/.test(value))
+    return "Username can only contain letters, numbers, spaces, hyphens, and underscores";
+  return undefined;
+}
+
 export default function SignUp() {
   const router = useRouter();
   const params = useLocalSearchParams<{ email?: string; redirect?: string }>();
   const [email, setEmail] = useState(params.email || "");
   const redirect = params.redirect;
+  const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -27,21 +37,24 @@ export default function SignUp() {
   const [successMessage, setSuccessMessage] = useState("");
   const [fieldErrors, setFieldErrors] = useState<{
     email?: string;
+    displayName?: string;
     password?: string;
     confirmPassword?: string;
   }>({});
 
   const validateField = (
-    field: "email" | "password" | "confirmPassword",
+    field: "email" | "displayName" | "password" | "confirmPassword",
     value: string,
     allValues?: { password: string; confirmPassword: string },
   ) => {
     let error: string | undefined;
 
     if (!value) {
-      error = `${field === "confirmPassword" ? "Confirm password" : field === "email" ? "Email" : "Password"} is required`;
+      error = `${field === "confirmPassword" ? "Confirm password" : field === "displayName" ? "Username" : field === "email" ? "Email" : "Password"} is required`;
     } else if (field === "email" && !isValidEmail(value)) {
       error = "Please enter a valid email address";
+    } else if (field === "displayName") {
+      error = isValidDisplayName(value);
     } else if (field === "password") {
       error = getPasswordError(value) || undefined;
     } else if (
@@ -61,13 +74,14 @@ export default function SignUp() {
     setSuccessMessage("");
 
     const emailValid = validateField("email", email);
+    const displayNameValid = validateField("displayName", displayName);
     const passwordValid = validateField("password", password);
     const confirmValid = validateField("confirmPassword", confirmPassword, {
       password,
       confirmPassword,
     });
 
-    if (!emailValid || !passwordValid || !confirmValid) {
+    if (!emailValid || !displayNameValid || !passwordValid || !confirmValid) {
       return;
     }
 
@@ -79,7 +93,7 @@ export default function SignUp() {
       setSuccessMessage("Check your email for a verification code");
       router.replace({
         pathname: "/confirm-sign-up",
-        params: { email, ...(redirect && { redirect }) },
+        params: { email, displayName, ...(redirect && { redirect }) },
       });
     } else {
       setFormError(result.message || "Sign up failed. Please try again.");
@@ -117,6 +131,22 @@ export default function SignUp() {
           />
           {fieldErrors.email ? (
             <Text style={styles.fieldError}>{fieldErrors.email}</Text>
+          ) : null}
+
+          <TextInput
+            style={[
+              styles.input,
+              fieldErrors.displayName ? styles.inputError : null,
+            ]}
+            placeholder="Username"
+            value={displayName}
+            onChangeText={setDisplayName}
+            onBlur={() => validateField("displayName", displayName)}
+            autoCapitalize="none"
+            autoComplete="username"
+          />
+          {fieldErrors.displayName ? (
+            <Text style={styles.fieldError}>{fieldErrors.displayName}</Text>
           ) : null}
 
           <TextInput
