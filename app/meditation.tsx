@@ -12,9 +12,11 @@ import { getCornerRadius } from "expo-device-corner-radius";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Dimensions,
   type LayoutChangeEvent,
   ScrollView,
   StyleSheet,
+  useWindowDimensions,
   View,
 } from "react-native";
 import Animated, {
@@ -23,6 +25,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
 import { recordMeditationCompletion } from "../src/api/meditation";
 import { useAuth } from "../src/auth/auth-context";
@@ -145,6 +148,9 @@ export default function MeditationScreen() {
 
   const { user } = useAuth();
   const router = useRouter();
+  const { height: windowHeight } = useWindowDimensions();
+  const screenHeight = Dimensions.get("screen").height;
+  const hasVisibleNavBar = screenHeight - windowHeight > 30;
   const progress = useSharedValue(0);
   const textOpacity = useSharedValue(0);
   const animationStarted = useRef(false);
@@ -240,8 +246,8 @@ export default function MeditationScreen() {
     return Skia.Path.MakeFromSVGString(d);
   }, [canvasSize]);
 
-  return (
-    <View style={styles.container} onLayout={handleLayout}>
+  const innerContent = (
+    <>
       <Stack.Screen
         options={{
           contentStyle: { backgroundColor: "#000" },
@@ -306,12 +312,28 @@ export default function MeditationScreen() {
           </LemuelButton>
         )}
       </View>
+    </>
+  );
+
+  if (hasVisibleNavBar) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: "#000" }}>
+        <View style={{ flex: 1 }} onLayout={handleLayout}>
+          {innerContent}
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <View style={styles.absoluteFill} onLayout={handleLayout}>
+      {innerContent}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  absoluteFill: {
     position: "absolute",
     top: 0,
     left: 0,

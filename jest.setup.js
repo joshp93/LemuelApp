@@ -13,6 +13,13 @@ global.console = {
 
 jest.mock("./src/api/remote-logger");
 
-jest.mock("expo-device-corner-radius", () => ({
-  getCornerRadius: jest.fn(() => 0),
-}));
+jest.mock("react-native-safe-area-context", () => {
+  const insets = { top: 0, right: 0, bottom: 0, left: 0 };
+  const frame = { x: 0, y: 0, width: 0, height: 0 };
+  return {
+    SafeAreaProvider: ({ children }) => children,
+    SafeAreaView: ({ children }) => children,
+    useSafeAreaInsets: () => insets,
+    useSafeAreaFrame: () => frame,
+  };
+});

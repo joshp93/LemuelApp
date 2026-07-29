@@ -89,6 +89,7 @@ function MyMeditationsPage(_props: WithAuthProps) {
       )}
       {!loading && !error && notes.length > 0 && (
         <FlatList
+          contentInsetAdjustmentBehavior="automatic"
           data={notes}
           keyExtractor={(item) => item.ref}
           contentContainerStyle={styles.listContent}

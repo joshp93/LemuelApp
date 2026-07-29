@@ -9,6 +9,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { resendVerificationCode, verifyAccount } from "../src/api/auth";
 import { LemuelButton } from "../src/components/lemuel-button";
 
@@ -85,55 +86,60 @@ export default function ConfirmSignUp() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
-        <View style={styles.container}>
-          <Text style={styles.title}>Confirm Sign Up</Text>
-          <Text style={styles.subtitle}>
-            Enter the 6-digit code sent to your email
-          </Text>
-
-          {formError ? <Text style={styles.formError}>{formError}</Text> : null}
-          {successMessage ? (
-            <Text style={styles.success}>{successMessage}</Text>
-          ) : null}
-
-          <Text style={styles.emailPreview}>{email}</Text>
-
-          <TextInput
-            style={[styles.input, fieldError ? styles.inputError : null]}
-            placeholder="Verification Code"
-            value={code}
-            onChangeText={setCode}
-            onBlur={() => {
-              if (!code) setFieldError("Verification code is required");
-            }}
-            keyboardType="number-pad"
-            maxLength={6}
-          />
-          {fieldError ? (
-            <Text style={styles.fieldError}>{fieldError}</Text>
-          ) : null}
-
-          <LemuelButton onPress={handleConfirm} disabled={loading}>
-            {loading ? "Verifying..." : "Verify"}
-          </LemuelButton>
-
-          {resendMessage ? (
-            <Text style={styles.resendMessage}>{resendMessage}</Text>
-          ) : null}
-
-          <Pressable
-            style={[
-              styles.resendButton,
-              resending && styles.resendButtonDisabled,
-            ]}
-            onPress={handleResend}
-            disabled={resending}
-          >
-            <Text style={styles.resendButtonText}>
-              {resending ? "Sending..." : "Resend Code"}
+        <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
+          <View style={styles.container}>
+            <Text style={styles.title}>Confirm Sign Up</Text>
+            <Text style={styles.subtitle}>
+              Enter the 6-digit code sent to your email
             </Text>
-          </Pressable>
-        </View>
+
+            {formError ? (
+              <Text style={styles.formError}>{formError}</Text>
+            ) : null}
+            {successMessage ? (
+              <Text style={styles.success}>{successMessage}</Text>
+            ) : null}
+
+            <Text style={styles.emailPreview}>{email}</Text>
+
+            <TextInput
+              style={[styles.input, fieldError ? styles.inputError : null]}
+              placeholder="Verification Code"
+              placeholderTextColor="#999"
+              value={code}
+              onChangeText={setCode}
+              onBlur={() => {
+                if (!code) setFieldError("Verification code is required");
+              }}
+              keyboardType="number-pad"
+              maxLength={6}
+            />
+            {fieldError ? (
+              <Text style={styles.fieldError}>{fieldError}</Text>
+            ) : null}
+
+            <LemuelButton onPress={handleConfirm} disabled={loading}>
+              {loading ? "Verifying..." : "Verify"}
+            </LemuelButton>
+
+            {resendMessage ? (
+              <Text style={styles.resendMessage}>{resendMessage}</Text>
+            ) : null}
+
+            <Pressable
+              style={[
+                styles.resendButton,
+                resending && styles.resendButtonDisabled,
+              ]}
+              onPress={handleResend}
+              disabled={resending}
+            >
+              <Text style={styles.resendButtonText}>
+                {resending ? "Sending..." : "Resend Code"}
+              </Text>
+            </Pressable>
+          </View>
+        </SafeAreaView>
       </KeyboardAvoidingView>
     </>
   );
@@ -192,6 +198,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ddd",
     textAlign: "center",
+    color: "#333",
   },
   inputError: {
     borderColor: "#dc3545",

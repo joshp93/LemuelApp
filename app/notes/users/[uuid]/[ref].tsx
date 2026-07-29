@@ -161,6 +161,7 @@ function UserNotePage({ user: _user }: WithAuthProps) {
         />
         <ScrollView
           ref={scrollViewRef}
+          contentInsetAdjustmentBehavior="automatic"
           contentContainerStyle={[
             styles.contentContainer,
             { paddingBottom: bottomPadding },

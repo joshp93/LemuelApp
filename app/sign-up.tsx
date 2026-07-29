@@ -9,6 +9,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { createAccount } from "../src/api/auth";
 import { LemuelButton } from "../src/components/lemuel-button";
 import { isValidEmail } from "../src/utils/email";
@@ -111,98 +112,111 @@ export default function SignUp() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
-        <View style={styles.container}>
-          <Text style={styles.title}>Sign Up</Text>
+        <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
+          <View style={styles.container}>
+            <Text style={styles.title}>Sign Up</Text>
 
-          {formError ? <Text style={styles.formError}>{formError}</Text> : null}
-          {successMessage ? (
-            <Text style={styles.success}>{successMessage}</Text>
-          ) : null}
+            {formError ? (
+              <Text style={styles.formError}>{formError}</Text>
+            ) : null}
+            {successMessage ? (
+              <Text style={styles.success}>{successMessage}</Text>
+            ) : null}
 
-          <TextInput
-            style={[styles.input, fieldErrors.email ? styles.inputError : null]}
-            placeholder="Email"
-            value={email}
-            onChangeText={setEmail}
-            onBlur={() => validateField("email", email)}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            autoComplete="email"
-          />
-          {fieldErrors.email ? (
-            <Text style={styles.fieldError}>{fieldErrors.email}</Text>
-          ) : null}
-
-          <TextInput
-            style={[
-              styles.input,
-              fieldErrors.displayName ? styles.inputError : null,
-            ]}
-            placeholder="Username"
-            value={displayName}
-            onChangeText={setDisplayName}
-            onBlur={() => validateField("displayName", displayName)}
-            autoCapitalize="none"
-            autoComplete="username"
-          />
-          {fieldErrors.displayName ? (
-            <Text style={styles.fieldError}>{fieldErrors.displayName}</Text>
-          ) : null}
-
-          <TextInput
-            style={[
-              styles.input,
-              fieldErrors.password ? styles.inputError : null,
-            ]}
-            placeholder="Password"
-            value={password}
-            onChangeText={setPassword}
-            onBlur={() => validateField("password", password)}
-            secureTextEntry={!showPassword}
-          />
-          {fieldErrors.password ? (
-            <Text style={styles.fieldError}>{fieldErrors.password}</Text>
-          ) : null}
-
-          <View style={styles.passwordContainer}>
             <TextInput
               style={[
                 styles.input,
-                styles.passwordInput,
-                fieldErrors.confirmPassword ? styles.inputError : null,
+                fieldErrors.email ? styles.inputError : null,
               ]}
-              placeholder="Confirm Password"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              onBlur={() =>
-                validateField("confirmPassword", confirmPassword, {
-                  password,
-                  confirmPassword,
-                })
-              }
+              placeholder="Email"
+              placeholderTextColor="#999"
+              value={email}
+              onChangeText={setEmail}
+              onBlur={() => validateField("email", email)}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              autoComplete="email"
+            />
+            {fieldErrors.email ? (
+              <Text style={styles.fieldError}>{fieldErrors.email}</Text>
+            ) : null}
+
+            <TextInput
+              style={[
+                styles.input,
+                fieldErrors.displayName ? styles.inputError : null,
+              ]}
+              placeholder="Username"
+              placeholderTextColor="#999"
+              value={displayName}
+              onChangeText={setDisplayName}
+              onBlur={() => validateField("displayName", displayName)}
+              autoCapitalize="none"
+              autoComplete="username"
+            />
+            {fieldErrors.displayName ? (
+              <Text style={styles.fieldError}>{fieldErrors.displayName}</Text>
+            ) : null}
+
+            <TextInput
+              style={[
+                styles.input,
+                fieldErrors.password ? styles.inputError : null,
+              ]}
+              placeholder="Password"
+              placeholderTextColor="#999"
+              value={password}
+              onChangeText={setPassword}
+              onBlur={() => validateField("password", password)}
               secureTextEntry={!showPassword}
             />
-            <Pressable
-              style={styles.showPasswordButton}
-              onPress={() => setShowPassword(!showPassword)}
-            >
-              <Text style={styles.showPasswordText}>
-                {showPassword ? "Hide" : "Show"}
+            {fieldErrors.password ? (
+              <Text style={styles.fieldError}>{fieldErrors.password}</Text>
+            ) : null}
+
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={[
+                  styles.input,
+                  styles.passwordInput,
+                  fieldErrors.confirmPassword ? styles.inputError : null,
+                ]}
+                placeholder="Confirm Password"
+                placeholderTextColor="#999"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                onBlur={() =>
+                  validateField("confirmPassword", confirmPassword, {
+                    password,
+                    confirmPassword,
+                  })
+                }
+                secureTextEntry={!showPassword}
+              />
+              <Pressable
+                style={styles.showPasswordButton}
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                <Text style={styles.showPasswordText}>
+                  {showPassword ? "Hide" : "Show"}
+                </Text>
+              </Pressable>
+            </View>
+            {fieldErrors.confirmPassword ? (
+              <Text style={styles.fieldError}>
+                {fieldErrors.confirmPassword}
               </Text>
+            ) : null}
+
+            <LemuelButton onPress={handleSignUp} disabled={loading}>
+              {loading ? "Signing up..." : "Sign Up"}
+            </LemuelButton>
+
+            <Pressable style={styles.backButton} onPress={handleBack}>
+              <Text style={styles.backButtonText}>Back to Email</Text>
             </Pressable>
           </View>
-          {fieldErrors.confirmPassword ? (
-            <Text style={styles.fieldError}>{fieldErrors.confirmPassword}</Text>
-          ) : null}
-
-          <LemuelButton onPress={handleSignUp} disabled={loading}>
-            {loading ? "Signing up..." : "Sign Up"}
-          </LemuelButton>
-
-          <Pressable style={styles.backButton} onPress={handleBack}>
-            <Text style={styles.backButtonText}>Back to Email</Text>
-          </Pressable>
-        </View>
+        </SafeAreaView>
       </KeyboardAvoidingView>
     </>
   );
@@ -248,6 +262,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     borderWidth: 1,
     borderColor: "#ddd",
+    color: "#333",
   },
   inputError: {
     borderColor: "#dc3545",

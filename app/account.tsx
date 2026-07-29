@@ -32,7 +32,8 @@ function Account({ user }: WithAuthProps) {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [accountManagementExpanded, setAccountManagementExpanded] = useState(false);
+  const [accountManagementExpanded, setAccountManagementExpanded] =
+    useState(false);
 
   const loadAccount = () => {
     getAccountDetails(user.userId)
@@ -223,7 +224,9 @@ function Account({ user }: WithAuthProps) {
           <View style={styles.accordionCard}>
             <Pressable
               style={styles.accordionHeader}
-              onPress={() => setAccountManagementExpanded(!accountManagementExpanded)}
+              onPress={() =>
+                setAccountManagementExpanded(!accountManagementExpanded)
+              }
             >
               <Text style={styles.label}>Account Management</Text>
               <MaterialIcons

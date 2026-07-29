@@ -9,6 +9,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { checkUserExists } from "../src/api/auth";
 import { LemuelButton } from "../src/components/lemuel-button";
 import { isValidEmail } from "../src/utils/email";
@@ -66,30 +67,33 @@ export default function EmailEntry() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
-        <View style={styles.container}>
-          <Text style={styles.title}>Welcome</Text>
-          <Text style={styles.subtitle}>Enter your email to continue</Text>
+        <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
+          <View style={styles.container}>
+            <Text style={styles.title}>Welcome</Text>
+            <Text style={styles.subtitle}>Enter your email to continue</Text>
 
-          {fieldError ? (
-            <Text style={styles.fieldError}>{fieldError}</Text>
-          ) : null}
+            {fieldError ? (
+              <Text style={styles.fieldError}>{fieldError}</Text>
+            ) : null}
 
-          <TextInput
-            style={[styles.input, fieldError ? styles.inputError : null]}
-            placeholder="Email"
-            value={email}
-            onChangeText={setEmail}
-            onBlur={() => validateField(email)}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            autoComplete="email"
-          />
+            <TextInput
+              style={[styles.input, fieldError ? styles.inputError : null]}
+              placeholder="Email"
+              placeholderTextColor="#999"
+              value={email}
+              onChangeText={setEmail}
+              onBlur={() => validateField(email)}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              autoComplete="email"
+            />
 
-          <LemuelButton onPress={handleContinue} disabled={loading}>
-            {loading ? "" : "Continue"}
-          </LemuelButton>
-          {loading && <ActivityIndicator style={styles.loader} />}
-        </View>
+            <LemuelButton onPress={handleContinue} disabled={loading}>
+              {loading ? "" : "Continue"}
+            </LemuelButton>
+            {loading && <ActivityIndicator style={styles.loader} />}
+          </View>
+        </SafeAreaView>
       </KeyboardAvoidingView>
     </>
   );
@@ -129,6 +133,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     borderWidth: 1,
     borderColor: "#ddd",
+    color: "#333",
   },
   inputError: {
     borderColor: "#dc3545",

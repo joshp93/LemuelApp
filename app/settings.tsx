@@ -10,6 +10,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getProverbForTheDay } from "../src/api/proverbs";
 import { remoteLog } from "../src/api/remote-logger";
 import { getChosenVersion } from "../src/api/version-storage";
@@ -37,6 +38,7 @@ import {
 } from "../src/utils/battery-optimization";
 export default function SettingsScreen() {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const {
     loading,
     enabled,
@@ -154,6 +156,7 @@ export default function SettingsScreen() {
     <View style={{ flex: 1 }}>
       <Stack.Screen options={{ title: "Settings" }} />
       <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
         style={styles.container}
         contentContainerStyle={{ paddingBottom: 100 }}
       >
@@ -246,7 +249,9 @@ export default function SettingsScreen() {
       </ScrollView>
 
       {!loading && isDirty && (
-        <View style={styles.updateButtonWrapper}>
+        <View
+          style={[styles.updateButtonWrapper, { bottom: insets.bottom + 36 }]}
+        >
           <LemuelButton onPress={persistAll}>Update</LemuelButton>
         </View>
       )}

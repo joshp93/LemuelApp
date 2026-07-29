@@ -1,6 +1,6 @@
 import { MaterialIcons } from "@expo/vector-icons";
-import { Stack, useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Stack, useNavigation, useRouter } from "expo-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AppState,
   type AppStateStatus,
@@ -9,6 +9,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   getProverbNotes,
   getUserNote,
@@ -33,6 +34,8 @@ const FONT_SIZES = [56, 40, 24];
 
 export default function Index() {
   const router = useRouter();
+  const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const contentWidth = useMemo(() => windowWidth - 56, [windowWidth]);
   const { user } = useAuth();
@@ -89,6 +92,18 @@ export default function Index() {
     setDataReady(false);
     loadPageData();
   }, [proverb, loading, loadPageData]);
+
+  const loadPageDataRef = useRef(loadPageData);
+  loadPageDataRef.current = loadPageData;
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("focus", () => {
+      if (!proverb?.ref) return;
+      setDataReady(false);
+      loadPageDataRef.current();
+    });
+    return unsubscribe;
+  }, [navigation]);
 
   const onRefresh = useCallback(async () => {
     remoteLog("debug", "[Index] Pull-to-refresh triggered");
@@ -154,6 +169,7 @@ export default function Index() {
         }}
       />
       <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -164,7 +180,7 @@ export default function Index() {
         contentContainerStyle={{
           padding: 16,
           flexGrow: 1,
-          paddingBottom: 36,
+          paddingBottom: insets.bottom + 36,
         }}
         style={{
           flex: 1,

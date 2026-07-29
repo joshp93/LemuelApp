@@ -1,8 +1,4 @@
-import {
-  Stack,
-  useLocalSearchParams,
-  useRouter,
-} from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -13,6 +9,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { createAccountRecord } from "../src/api/account";
 import { getAuthenticatedUser, signIn } from "../src/api/auth";
 import { useAuth } from "../src/auth/auth-context";
@@ -76,48 +73,53 @@ export default function SignIn() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
-        <View style={styles.container}>
-          <Text style={styles.title}>Sign In</Text>
-          <Text style={styles.emailPreview}>{email}</Text>
+        <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
+          <View style={styles.container}>
+            <Text style={styles.title}>Sign In</Text>
+            <Text style={styles.emailPreview}>{email}</Text>
 
-          {formError ? <Text style={styles.formError}>{formError}</Text> : null}
+            {formError ? (
+              <Text style={styles.formError}>{formError}</Text>
+            ) : null}
 
-          <View style={styles.passwordContainer}>
-            <TextInput
-              style={[
-                styles.input,
-                styles.passwordInput,
-                fieldError ? styles.inputError : null,
-              ]}
-              placeholder="Password"
-              value={password}
-              onChangeText={setPassword}
-              onBlur={() => {
-                if (!password) setFieldError("Password is required");
-              }}
-              secureTextEntry={!showPassword}
-            />
-            <Pressable
-              style={styles.showPasswordButton}
-              onPress={() => setShowPassword(!showPassword)}
-            >
-              <Text style={styles.showPasswordText}>
-                {showPassword ? "Hide" : "Show"}
-              </Text>
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={[
+                  styles.input,
+                  styles.passwordInput,
+                  fieldError ? styles.inputError : null,
+                ]}
+                placeholder="Password"
+                placeholderTextColor="#999"
+                value={password}
+                onChangeText={setPassword}
+                onBlur={() => {
+                  if (!password) setFieldError("Password is required");
+                }}
+                secureTextEntry={!showPassword}
+              />
+              <Pressable
+                style={styles.showPasswordButton}
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                <Text style={styles.showPasswordText}>
+                  {showPassword ? "Hide" : "Show"}
+                </Text>
+              </Pressable>
+            </View>
+            {fieldError ? (
+              <Text style={styles.fieldError}>{fieldError}</Text>
+            ) : null}
+
+            <LemuelButton onPress={handleSignIn} disabled={loading}>
+              {loading ? "Signing in..." : "Sign In"}
+            </LemuelButton>
+
+            <Pressable style={styles.backButton} onPress={handleBack}>
+              <Text style={styles.backButtonText}>Back to Email</Text>
             </Pressable>
           </View>
-          {fieldError ? (
-            <Text style={styles.fieldError}>{fieldError}</Text>
-          ) : null}
-
-          <LemuelButton onPress={handleSignIn} disabled={loading}>
-            {loading ? "Signing in..." : "Sign In"}
-          </LemuelButton>
-
-          <Pressable style={styles.backButton} onPress={handleBack}>
-            <Text style={styles.backButtonText}>Back to Email</Text>
-          </Pressable>
-        </View>
+        </SafeAreaView>
       </KeyboardAvoidingView>
     </>
   );
@@ -163,6 +165,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     borderWidth: 1,
     borderColor: "#ddd",
+    color: "#333",
   },
   inputError: {
     borderColor: "#dc3545",

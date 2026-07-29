@@ -28,6 +28,7 @@ export interface NoteEntity {
   ref: string;
   isPrivate?: boolean;
   displayName: string;
+  date: string;
 }
 
 /**

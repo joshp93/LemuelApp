@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { remoteLog } from "../api/remote-logger";
 import { useAuth } from "../auth/auth-context";
 import { DividingLine } from "./dividing-line";
@@ -25,6 +26,7 @@ export function HeaderMenu({ children }: { children?: React.ReactNode }) {
   const [slideAnimation] = useState(new Animated.Value(300));
   const router = useRouter();
   const { user, signOut } = useAuth();
+  const insets = useSafeAreaInsets();
 
   const openMenu = () => {
     remoteLog("debug", "[HeaderMenu] Menu opened", {
@@ -92,7 +94,12 @@ export function HeaderMenu({ children }: { children?: React.ReactNode }) {
               { transform: [{ translateX: slideAnimation }] },
             ]}
           >
-            <View style={styles.menuContent}>
+            <View
+              style={[
+                styles.menuContent,
+                { paddingBottom: insets.bottom + 20 },
+              ]}
+            >
               <View style={styles.topItems}>
                 {user && (
                   <>
@@ -194,7 +201,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 60,
     paddingHorizontal: 20,
-    paddingBottom: 20,
     justifyContent: "space-between",
   },
   topItems: {
