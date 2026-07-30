@@ -2,11 +2,13 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   type LayoutChangeEvent,
   ScrollView,
   StyleSheet,
   Switch,
+  TouchableOpacity,
   useWindowDimensions,
   View,
 } from "react-native";
@@ -16,7 +18,11 @@ import {
   RichToolbar,
 } from "react-native-pell-rich-editor";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { getUserNote, saveUserNote } from "../../../../src/api/notes";
+import {
+  deleteUserNote,
+  getUserNote,
+  saveUserNote,
+} from "../../../../src/api/notes";
 import { remoteLog } from "../../../../src/api/remote-logger";
 import { type WithAuthProps, withAuth } from "../../../../src/auth/with-auth";
 import { LemuelButton } from "../../../../src/components/lemuel-button";
@@ -55,6 +61,7 @@ function UserNotePage({ user: _user }: WithAuthProps) {
   const [saveButtonHeight, setSaveButtonHeight] = useState(0);
   const [isDirty, setIsDirty] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const richTextRef = useRef<RichEditor>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -106,10 +113,34 @@ function UserNotePage({ user: _user }: WithAuthProps) {
 
   const handleSave = useCallback(async () => {
     await persistNote();
-    router.push("/");
-  }, [persistNote, router]);
+    router.replace({ pathname: "/", params: { date } });
+  }, [persistNote, router, date]);
 
   useUnsavedChanges(isDirty, persistNote);
+
+  const handleDelete = useCallback(() => {
+    Alert.alert("Delete Note", "Are you sure you want to delete this note?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          setDeleting(true);
+          try {
+            setIsDirty(false);
+            await deleteUserNote(uuid!, ref!, date!);
+            remoteLog("info", "[Notes] Note deleted", { uuid, ref });
+            router.replace("/");
+          } catch (err) {
+            remoteLog("error", "[Notes] Failed to delete note", {
+              error: err,
+            });
+            setDeleting(false);
+          }
+        },
+      },
+    ]);
+  }, [uuid, ref, date, router]);
 
   const handleSaveButtonLayout = useCallback((e: LayoutChangeEvent) => {
     const h = e.nativeEvent.layout.height;
@@ -196,6 +227,13 @@ function UserNotePage({ user: _user }: WithAuthProps) {
                     style={styles.toolbarInner}
                   />
                 </View>
+                <TouchableOpacity
+                  onPress={handleDelete}
+                  disabled={deleting}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <MaterialIcons name="delete" size={24} color="white" />
+                </TouchableOpacity>
               </View>
             )}
             {notesLoading ? (

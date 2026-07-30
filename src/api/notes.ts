@@ -133,6 +133,47 @@ export async function saveUserNote(
 }
 
 /**
+ * Deletes a user note for a given proverb reference and date.
+ *
+ * Makes an authenticated DELETE request to `/notes/users/${uuid}/${ref}?date=...`.
+ * Idempotent — succeeds even if the note does not exist.
+ *
+ * @param uuid - The user's Cognito sub (userId).
+ * @param ref  - The proverb reference, e.g. `Proverbs3:5`.
+ * @param date - The date of the daily proverb, e.g. "2026-06-16".
+ * @returns The response as a boolean on success.
+ * @throws If the request fails or if not authenticated.
+ */
+export async function deleteUserNote(
+  uuid: string,
+  ref: string,
+  date: string,
+): Promise<boolean> {
+  const token = await getValidIdToken();
+  if (!token) {
+    throw new Error("Not authenticated");
+  }
+
+  const url = new URL(
+    `${LEMUEL_API_BASE_URL}/notes/users/${uuid}/${convertDisplayProverbToProverbKey(ref)}`,
+  );
+  url.searchParams.set("date", date);
+
+  const response = await fetch(url.toString(), {
+    method: "DELETE",
+    headers: { Authorization: token },
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `Failed to delete user note: ${response.status} ${response.statusText}`,
+    );
+  }
+
+  return true;
+}
+
+/**
  * Fetches all notes for a given user.
  *
  * Makes an authenticated GET request to `/notes/users/${uuid}`.

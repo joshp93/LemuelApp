@@ -1,5 +1,10 @@
 import { MaterialIcons } from "@expo/vector-icons";
-import { Stack, useNavigation, useRouter } from "expo-router";
+import {
+  Stack,
+  useLocalSearchParams,
+  useNavigation,
+  useRouter,
+} from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AppState,
@@ -50,6 +55,7 @@ export default function Index() {
     refresh,
     goToDate,
   } = useProverbForTheDay();
+  const { date: paramDate } = useLocalSearchParams<{ date?: string }>();
   const todayString = useMemo(() => new Date().toISOString().split("T")[0], []);
   const isToday = !date || date === todayString;
   const [notes, setNotes] = useState<NoteEntity[]>([]);
@@ -104,6 +110,12 @@ export default function Index() {
     });
     return unsubscribe;
   }, [navigation]);
+
+  useEffect(() => {
+    if (paramDate && selectedVersion) {
+      goToDate(paramDate);
+    }
+  }, [paramDate, selectedVersion]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onRefresh = useCallback(async () => {
     remoteLog("debug", "[Index] Pull-to-refresh triggered");
@@ -205,7 +217,12 @@ export default function Index() {
             />
             {!userNote && (
               <LemuelButton
-                onPress={() => router.push("/meditation")}
+                onPress={() =>
+                  router.push({
+                    pathname: "/meditation",
+                    params: { date },
+                  })
+                }
                 style={{ marginTop: 16 }}
               >
                 Start Meditation

@@ -75,10 +75,11 @@ jest.mock("react-native-render-html", () => {
 
 jest.mock("expo-router", () => ({
   Stack: { Screen: () => null },
-  useRouter: () => ({ push: jest.fn() }),
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
   useNavigation: () => ({
     addListener: jest.fn(() => jest.fn()),
   }),
+  useLocalSearchParams: () => ({ date: undefined }),
 }));
 
 const mockUseProverbForTheDay = useProverbForTheDay as jest.MockedFunction<

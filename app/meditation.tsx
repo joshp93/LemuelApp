@@ -132,9 +132,14 @@ export default function MeditationScreen() {
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [durationMs, setDurationMs] = useState(60000);
   const { ref: canvasRef } = useCanvasSize();
-  const { proverb: paramProverb, ref: paramRef } = useLocalSearchParams<{
+  const {
+    proverb: paramProverb,
+    ref: paramRef,
+    date: paramDate,
+  } = useLocalSearchParams<{
     proverb?: string;
     ref?: string;
+    date?: string;
   }>();
   const hasParamProverb =
     typeof paramProverb === "string" && typeof paramRef === "string";
@@ -142,7 +147,9 @@ export default function MeditationScreen() {
     ? { proverb: paramProverb, ref: paramRef }
     : null;
 
-  const hookResult = useProverbForTheDay();
+  const effectiveDate = paramDate ?? new Date().toISOString().split("T")[0];
+
+  const hookResult = useProverbForTheDay(paramDate);
   const proverbData = paramProverbData ?? hookResult.proverb;
   const loading = hasParamProverb ? false : hookResult.loading;
 
@@ -180,12 +187,11 @@ export default function MeditationScreen() {
   useEffect(() => {
     if (!animationStarted.current && !loading && proverbData) {
       animationStarted.current = true;
-      const today = new Date().toISOString().split("T")[0];
       const userId = user?.userId ?? "";
       progress.value = withTiming(1, { duration: durationMs }, (finished) => {
         if (finished) {
           scheduleOnRN(setIsComplete, true);
-          scheduleOnRN(recordMeditationCompletion, userId, today);
+          scheduleOnRN(recordMeditationCompletion, userId, effectiveDate);
         }
       });
       textOpacity.value = withTiming(1, { duration: 1000 });
@@ -297,13 +303,12 @@ export default function MeditationScreen() {
           <LemuelButton
             style={styles.captureButton}
             onPress={() => {
-              const today = new Date().toISOString().split("T")[0];
               router.replace({
                 pathname: "/notes/users/[uuid]/[ref]",
                 params: {
                   uuid: user?.userId ?? "{{uuid}}",
                   ref: proverbData!.ref,
-                  date: today,
+                  date: effectiveDate,
                 },
               });
             }}
