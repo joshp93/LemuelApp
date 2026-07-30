@@ -40,32 +40,38 @@ export interface ProverbNotesResponse {
 }
 
 /**
- * Fetches a single user note for a given proverb reference.
+ * Fetches a single user note for a given proverb reference and date.
  *
- * Makes an authenticated GET request to `/notes/users/${uuid}/${ref}`.
+ * Makes an authenticated GET request to `/notes/users/${uuid}/${ref}?date=...`.
  * Returns the note if it exists, or `null` if no note has been saved yet (404).
  *
  * @param uuid - The user's Cognito sub (userId).
  * @param ref  - The proverb reference, e.g. `Proverbs3:5`.
+ * @param date - Optional date of the daily proverb, e.g. "2026-06-16".
  * @returns The note response on success, or `null` on 404.
  * @throws If the request fails for a reason other than 404, or if not authenticated.
  */
 export async function getUserNote(
   uuid: string,
   ref: string,
+  date?: string,
 ): Promise<UserNoteResponse | null> {
   const token = await getValidIdToken();
   if (!token) {
     throw new Error("Not authenticated");
   }
 
-  const response = await fetch(
+  const url = new URL(
     `${LEMUEL_API_BASE_URL}/notes/users/${uuid}/${convertDisplayProverbToProverbKey(ref)}`,
-    {
-      method: "GET",
-      headers: { Authorization: token },
-    },
   );
+  if (date) {
+    url.searchParams.set("date", date);
+  }
+
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    headers: { Authorization: token },
+  });
 
   if (response.status === 404) {
     return null;

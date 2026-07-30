@@ -73,7 +73,7 @@ export default function Index() {
           .catch(() => setNotes([])),
       );
       promises.push(
-        getUserNote(user.userId, proverb.ref)
+        getUserNote(user.userId, proverb.ref, date ?? todayString)
           .then(setUserNote)
           .catch(() => setUserNote(null)),
       );
@@ -128,7 +128,7 @@ export default function Index() {
     }
   }, [proverb]);
 
-  const textBoxHeight = windowHeight * 0.6;
+  const textBoxHeight = windowHeight * 0.6 - insets.bottom;
 
   const { fontSize, onTextLayout } = useFitFontSize(
     proverb?.proverb,

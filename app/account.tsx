@@ -11,6 +11,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   type AccountDetails,
   deleteAccount,
@@ -23,6 +24,7 @@ import { LemuelButton } from "../src/components/lemuel-button";
 import { formatDate } from "../src/utils/date";
 
 function Account({ user }: WithAuthProps) {
+  const insets = useSafeAreaInsets();
   const { signOut } = useAuth();
   const [account, setAccount] = useState<AccountDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -105,7 +107,10 @@ function Account({ user }: WithAuthProps) {
       <ScrollView
         style={styles.container}
         contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: insets.bottom + 20 },
+        ]}
       >
         {loading ? (
           <ActivityIndicator size="large" color="#333" />

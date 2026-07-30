@@ -34,6 +34,7 @@ export function MonthPicker({
   );
   const [loadingDays, setLoadingDays] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const todayStr = useMemo(() => new Date().toISOString().split("T")[0], []);
 
   useEffect(() => {
     if (!visible) return;
@@ -136,11 +137,13 @@ export function MonthPicker({
                     );
                   }
                   const dateStr = `${currentMonth}-${pad(day)}`;
-                  const enabled = availableDays.has(dateStr);
+                  const enabled =
+                    availableDays.has(dateStr) && dateStr <= todayStr;
                   const dayRef = availableDays.get(dateStr);
                   return (
                     <TouchableOpacity
                       key={dateStr}
+                      testID={`day-${dateStr}`}
                       style={styles.dayCell}
                       disabled={!enabled}
                       onPress={() => setSelectedDay(dateStr)}
@@ -181,6 +184,7 @@ export function MonthPicker({
               !selectedDay && styles.confirmBtnDisabled,
             ]}
             disabled={!selectedDay}
+            testID="confirm-btn"
             onPress={() => selectedDay && onSelectDay(selectedDay)}
           >
             <Text style={styles.confirmText}>Go</Text>

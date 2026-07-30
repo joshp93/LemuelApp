@@ -105,6 +105,6 @@ describe("ProverbNoteCard", () => {
       <ProverbNoteCard note={note} contentWidth={350} />,
     );
 
-    expect(getByText("test-author")).toBeTruthy();
+    expect(getByText("test-author - Thu Jan 01 2026")).toBeTruthy();
   });
 });

@@ -62,7 +62,7 @@ const ProverbNoteCard = memo(function ProverbNoteCard({
                 fontWeight: "500",
               }}
             >
-              {note.displayName}
+              {note.displayName} - {new Date(note.dateCreated).toDateString()}
             </Text>
           </>
         ) : null}
