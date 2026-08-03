@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   getNotificationMode,
+  getNotificationSentDate,
   getNotificationsEnabled,
   getRandomWindowEndMinute,
   getRandomWindowHourEnd,
@@ -9,6 +10,7 @@ import {
   getScheduledTimeHour,
   getScheduledTimeMinute,
   setNotificationMode,
+  setNotificationSentDate,
   setNotificationsEnabled,
   setRandomWindowEndMinute,
   setRandomWindowHourEnd,
@@ -161,6 +163,26 @@ describe("notification-preferences", () => {
       await AsyncStorage.setItem("scheduled_time_minute", "99");
       const result = await getScheduledTimeMinute();
       expect(result).toBe(0);
+    });
+  });
+
+  describe("notification sent date", () => {
+    it("returns null when no date has been stored", async () => {
+      const result = await getNotificationSentDate();
+      expect(result).toBeNull();
+    });
+
+    it("returns stored date after setting", async () => {
+      await setNotificationSentDate("2026-08-03");
+      const result = await getNotificationSentDate();
+      expect(result).toBe("2026-08-03");
+    });
+
+    it("overwrites previous date with new date", async () => {
+      await setNotificationSentDate("2026-08-02");
+      await setNotificationSentDate("2026-08-03");
+      const result = await getNotificationSentDate();
+      expect(result).toBe("2026-08-03");
     });
   });
 });

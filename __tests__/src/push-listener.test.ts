@@ -3,6 +3,7 @@ import { getProverbForTheDay } from "../../src/api/proverbs";
 import { getChosenVersion } from "../../src/api/version-storage";
 import {
   getNotificationMode,
+  getNotificationSentDate,
   getNotificationsEnabled,
   getRandomWindowEndMinute,
   getRandomWindowHourEnd,
@@ -60,6 +61,7 @@ jest.mock("../../src/widgets", () => ({
 }));
 jest.mock("../../src/notifications/notification-preferences", () => ({
   getNotificationMode: jest.fn(),
+  getNotificationSentDate: jest.fn(),
   getNotificationsEnabled: jest.fn(),
   getRandomWindowHourStart: jest.fn(),
   getRandomWindowStartMinute: jest.fn(),
@@ -67,6 +69,7 @@ jest.mock("../../src/notifications/notification-preferences", () => ({
   getRandomWindowEndMinute: jest.fn(),
   getScheduledTimeHour: jest.fn(),
   getScheduledTimeMinute: jest.fn(),
+  setNotificationSentDate: jest.fn(),
 }));
 
 const mockProverb = {
@@ -83,6 +86,7 @@ describe("push-listener", () => {
     (getProverbForTheDay as jest.Mock).mockResolvedValue(mockProverb);
     (updateProverbWidget as jest.Mock).mockResolvedValue(undefined);
     (getNotificationsEnabled as jest.Mock).mockResolvedValue(true);
+    (getNotificationSentDate as jest.Mock).mockResolvedValue(null);
     (
       Notifications.getAllScheduledNotificationsAsync as jest.Mock
     ).mockResolvedValue([]);
@@ -315,6 +319,38 @@ describe("push-listener", () => {
         `daily-proverb-meditation-${tomorrowStr}`,
       );
       expect(new Set(scheduleCalls).size).toBe(scheduleCalls.length);
+    });
+
+    it("should skip today when notification was already sent (sent-date match)", async () => {
+      const todayStr = new Date().toISOString().split("T")[0];
+      (getNotificationSentDate as jest.Mock).mockResolvedValue(todayStr);
+      (
+        Notifications.getAllScheduledNotificationsAsync as jest.Mock
+      ).mockResolvedValue([]);
+
+      await handleDailyProverbPush();
+
+      const cancelCalls = (
+        Notifications.cancelScheduledNotificationAsync as jest.Mock
+      ).mock.calls.map((c: unknown[]) => c[0]);
+      const cancelForToday = cancelCalls.filter(
+        (id: unknown) => id === `daily-proverb-meditation-${todayStr}`,
+      );
+      expect(cancelForToday).toHaveLength(0);
+    });
+
+    it("should schedule today when sent-date is for a different day", async () => {
+      (
+        Notifications.getAllScheduledNotificationsAsync as jest.Mock
+      ).mockResolvedValue([]);
+
+      await handleDailyProverbPush();
+
+      const todayStr = new Date().toISOString().split("T")[0];
+      expect(
+        Notifications.cancelScheduledNotificationAsync,
+      ).toHaveBeenCalledWith(`daily-proverb-meditation-${todayStr}`);
+      expect(Notifications.scheduleNotificationAsync).toHaveBeenCalled();
     });
 
     it("should cancel today's old notification before scheduling today's new one", async () => {

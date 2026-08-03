@@ -91,7 +91,7 @@ export default function Index() {
     await Promise.all(promises);
     remoteLog("info", "[Index] Page data loaded", { ref: proverb.ref });
     setDataReady(true);
-  }, [proverb, user]);
+  }, [proverb, user, date, todayString]);
 
   useEffect(() => {
     if (!proverb || loading) return;

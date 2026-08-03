@@ -8,6 +8,7 @@ const RANDOM_WINDOW_START_MINUTE_KEY = "random_window_start_minute";
 const RANDOM_WINDOW_END_MINUTE_KEY = "random_window_end_minute";
 const SCHEDULED_TIME_HOUR_KEY = "scheduled_time_hour";
 const SCHEDULED_TIME_MINUTE_KEY = "scheduled_time_minute";
+const NOTIFICATION_SENT_DATE_KEY = "notification_sent_date";
 
 export type NotificationMode = "random" | "scheduled";
 
@@ -260,5 +261,22 @@ export const setScheduledTimeMinute = async (minute: number): Promise<void> => {
     await AsyncStorage.setItem(SCHEDULED_TIME_MINUTE_KEY, minute.toString());
   } catch (error) {
     console.error("Error saving scheduled time minute:", error);
+  }
+};
+
+export const getNotificationSentDate = async (): Promise<string | null> => {
+  try {
+    return await AsyncStorage.getItem(NOTIFICATION_SENT_DATE_KEY);
+  } catch (error) {
+    console.error("Error getting notification sent date:", error);
+    return null;
+  }
+};
+
+export const setNotificationSentDate = async (date: string): Promise<void> => {
+  try {
+    await AsyncStorage.setItem(NOTIFICATION_SENT_DATE_KEY, date);
+  } catch (error) {
+    console.error("Error saving notification sent date:", error);
   }
 };

@@ -3,6 +3,7 @@ import { Platform } from "react-native";
 import { remoteLog } from "../api/remote-logger";
 import { COLORS } from "../constants/theme";
 import { type Proverb, ProverbSchema } from "../models/proverb";
+import { setNotificationSentDate } from "./notification-preferences";
 
 const NOTIFICATION_ID_PREFIX = "daily-proverb-meditation";
 const SNOOZE_NOTIFICATION_ID = "daily-proverb-snoozed";
@@ -100,6 +101,7 @@ export const scheduleProverbNotification = async (
     content: _createNotificationContent(proverb),
     trigger,
   });
+  await setNotificationSentDate(dateString);
   remoteLog("debug", "[Notifications] Notification scheduled", {
     notificationId,
     dateString,
@@ -287,6 +289,7 @@ export const sendProverbNotification = async (
       content: _createNotificationContent(proverb),
       trigger: null,
     });
+    await setNotificationSentDate(ds);
     remoteLog("debug", "[Notifications] Immediate notification sent", {
       notificationId,
     });

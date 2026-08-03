@@ -5,9 +5,9 @@ A daily proverb mobile app (Android + iOS) built with Expo SDK 56, React Native 
 ## What the app does
 
 - Fetches and displays a **daily proverb** from a remote API (multiple Bible versions)
-- Shows a **home screen widget** (Android, via Voltra / Jetpack Compose Glance) that auto-updates daily via FCM silent push
-- Schedules **push notifications** at configurable times (random window or exact time) via `expo-notifications`
-- Provides a **meditation timer** with Skia-animated full-screen experience (nebula shader, progress arc)
+- Shows a **home screen widget** (Android, via Voltra / Jetpack Compose Glance) updated on app launch, background fetch, and FCM silent push
+- Schedules **push notifications** at configurable times (random window or exact time) via `expo-notifications`, with sent-date deduplication to prevent duplicates
+- Provides a **meditation timer** with Skia-animated full-screen experience (nebula shader, progress arc), adapting shader complexity to device performance tier
 - Supports **rich-text notes/journaling** per proverb (viewable as community notes)
 - User **authentication** via AWS Cognito with automatic token refresh
 
@@ -33,7 +33,7 @@ src/
   api/                        # API clients (proverbs, auth, notes, account, meditation, push-token, remote-logger, available-versions, daily-proverbs, version-storage)
   auth/                       # Cognito auth: context, token storage, token utils, with-auth HOC
   components/                 # Reusable UI: proverb-card, proverb-note-card, header-menu, themed-text, lemuel-button, time-picker, month-picker, version-dropdown, fade-in-down, dividing-line, error-boundary, expandable-section
-  hooks/                      # useProverbForTheDay, useSettingsPreferences, useFitFontSize, useKeyboardHeight, useUnsavedChanges
+  hooks/                      # useProverbForTheDay, useSettingsPreferences, useFitFontSize, useKeyboardHeight, useUnsavedChanges, useDeviceTier
   models/                     # Zod schemas: proverb, daily-proverb
   notifications/              # Scheduling logic, preference storage, FCM push listener
   settings/                   # Meditation preferences (AsyncStorage)
@@ -54,9 +54,11 @@ __tests__/                    # Jest + @testing-library/react-native tests
 | Monthly proverb calendar | ✅ Complete | `src/api/daily-proverbs.ts`, `src/components/month-picker.tsx` |
 | Home screen widget (Android) | ✅ Complete | `src/widgets/proverb-widget.tsx`, `src/widgets/index.tsx` |
 | Push notifications | ✅ Complete | `src/notifications/daily-proverb-notification.ts`, `src/notifications/notification-preferences.ts`, `src/notifications/push-listener.ts` |
+| Notification dedup (sent-date tracking) | ✅ Complete | `src/notifications/notification-preferences.ts` (`getNotificationSentDate`/`setNotificationSentDate`), checked in `ensureNotificationsScheduled` before scheduling |
 | Authentication (Cognito) | ✅ Complete | `src/auth/auth-context.tsx`, `src/auth/token-storage.ts`, `src/auth/token-utils.ts`, `src/api/auth.ts`, `src/api/cognito.ts` |
 | Notes system (rich text journaling) | ✅ Complete | `src/api/notes.ts`, `src/components/proverb-note-card.tsx`, `app/notes/users/[uuid]/[ref].tsx`, `app/notes/users/[uuid].tsx` |
-| Meditation timer (Skia) | ✅ Complete | `app/meditation.tsx`, `src/api/meditation.ts`, `src/settings/meditation-preferences.ts` |
+| Meditation timer (Skia) | ✅ Complete | `app/meditation.tsx`, `src/api/meditation.ts`, `src/settings/meditation-preferences.ts`, `src/hooks/useDeviceTier.ts` |
+| Device performance tier detection | ✅ Complete | `src/hooks/useDeviceTier.ts` (classifies low/medium/high via `expo-device` totalMemory) |
 | Account management | ✅ Complete | `app/account.tsx`, `src/api/account.ts` |
 | Logging | ✅ Complete | `src/api/remote-logger.ts` |
 

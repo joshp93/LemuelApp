@@ -19,6 +19,7 @@ import {
 } from "./daily-proverb-notification";
 import {
   getNotificationMode,
+  getNotificationSentDate,
   getNotificationsEnabled,
   getRandomWindowEndMinute,
   getRandomWindowHourEnd,
@@ -197,6 +198,16 @@ export async function ensureNotificationsScheduled(
           remoteLog(
             "debug",
             "[PushListener] Today's notification already scheduled, skipping",
+            { dateStr },
+          );
+          continue;
+        }
+
+        const sentDate = await getNotificationSentDate();
+        if (sentDate === dateStr) {
+          remoteLog(
+            "debug",
+            "[PushListener] Notification already sent for today, skipping",
             { dateStr },
           );
           continue;

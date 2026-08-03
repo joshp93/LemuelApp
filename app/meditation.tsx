@@ -28,9 +28,11 @@ import Animated, {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
 import { recordMeditationCompletion } from "../src/api/meditation";
+import { remoteLog } from "../src/api/remote-logger";
 import { useAuth } from "../src/auth/auth-context";
 import { LemuelButton } from "../src/components/lemuel-button";
 import { Text } from "../src/components/themed-text";
+import { type DeviceTier, useDeviceTier } from "../src/hooks/useDeviceTier";
 import { useFitFontSize } from "../src/hooks/useFitFontSize";
 import { useProverbForTheDay } from "../src/hooks/useProverbForTheDay";
 import type { Proverb } from "../src/models/proverb";
@@ -70,18 +72,80 @@ const glowLayers = [
   { w: STROKE_WIDTH, a: 0.9 },
 ];
 
-const sksl = `uniform float2 u_resolution;
+const TIER_GLOW_STEP: Record<DeviceTier, number> = {
+  high: 1,
+  medium: 2,
+  low: 3,
+};
+
+const TIER_SHADER: Record<
+  DeviceTier,
+  {
+    kIterations: number;
+    kVolsteps: number;
+    kStepsize: number;
+    kBrightness: number;
+    kFormuparam: number;
+    kShellFloor: number;
+    kTile: number;
+    kDarkmatter: number;
+  }
+> = {
+  high: {
+    kIterations: 12,
+    kVolsteps: 10,
+    kStepsize: 0.1,
+    kBrightness: 0.0015,
+    kFormuparam: 0.53,
+    kShellFloor: 0.01,
+    kTile: 0.85,
+    kDarkmatter: 0.45,
+  },
+  medium: {
+    kIterations: 8,
+    kVolsteps: 10,
+    kStepsize: 0.1,
+    kBrightness: 0.002,
+    kFormuparam: 0.53,
+    kShellFloor: 0.01,
+    kTile: 0.85,
+    kDarkmatter: 0.45,
+  },
+  low: {
+    kIterations: 5,
+    kVolsteps: 10,
+    kStepsize: 0.1,
+    kBrightness: 0.004,
+    kFormuparam: 0.7,
+    kShellFloor: 0.01,
+    kTile: 0.85,
+    kDarkmatter: 0.45,
+  },
+};
+
+function makeSkSL(
+  kIterations: number,
+  kVolsteps: number,
+  kStepsize: number,
+  kBrightness: number,
+  kFormuparam: number,
+  kShellFloor: number,
+  kTile: number,
+  kDarkmatter: number,
+): string {
+  return `uniform float2 u_resolution;
 uniform float u_time;
 
-const float kIterations = 12.0;
-const float kFormuparam = 0.53;
-const float kVolsteps = 10.0;
-const float kStepsize = 0.1;
+const float kIterations = ${kIterations.toFixed(1)};
+const float kFormuparam = ${kFormuparam.toFixed(2)};
+const float kVolsteps = ${kVolsteps.toFixed(1)};
+const float kStepsize = ${kStepsize.toFixed(2)};
 const float kZoom = 0.800;
-const float kTile = 0.850;
+const float kTile = ${kTile.toFixed(2)};
 const float kSpeed = 0.010;
-const float kBrightness = 0.0015;
-const float kDarkmatter = 0.450;
+const float kBrightness = ${kBrightness.toFixed(4)};
+const float kShellFloor = ${kShellFloor.toFixed(3)};
+const float kDarkmatter = ${kDarkmatter.toFixed(2)};
 const float kDistfading = 0.730;
 const float kSaturation = 0.850;
 
@@ -112,7 +176,7 @@ half4 main(vec2 xy) {
         float a = 0.0;
         for (float i = 0.0; i < kIterations; i++) {
             p = abs(p) / dot(p, p) - kFormuparam;
-            a += abs(length(p) - pa);
+            a += max(abs(length(p) - pa), kShellFloor);
             pa = length(p);
         }
         float dm = max(0.0, kDarkmatter - a * a * 0.001);
@@ -126,6 +190,7 @@ half4 main(vec2 xy) {
     v = mix(vec3(length(v)), v, kSaturation);
     return half4(v * 0.01, 1.0);
 }`;
+}
 
 export default function MeditationScreen() {
   const [isComplete, setIsComplete] = useState(false);
@@ -162,6 +227,8 @@ export default function MeditationScreen() {
   const textOpacity = useSharedValue(0);
   const animationStarted = useRef(false);
 
+  const tier = useDeviceTier();
+
   const resolution = useSharedValue([0, 0]);
   const handleLayout = useCallback((e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
@@ -170,7 +237,42 @@ export default function MeditationScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const effect = useMemo(() => Skia.RuntimeEffect.Make(sksl), []);
+  const sksl = useMemo(
+    () =>
+      makeSkSL(
+        TIER_SHADER[tier].kIterations,
+        TIER_SHADER[tier].kVolsteps,
+        TIER_SHADER[tier].kStepsize,
+        TIER_SHADER[tier].kBrightness,
+        TIER_SHADER[tier].kFormuparam,
+        TIER_SHADER[tier].kShellFloor,
+        TIER_SHADER[tier].kTile,
+        TIER_SHADER[tier].kDarkmatter,
+      ),
+    [tier],
+  );
+  const effect = useMemo(() => Skia.RuntimeEffect.Make(sksl), [sksl]);
+  const sampledGlowLayers = useMemo(() => {
+    const step = TIER_GLOW_STEP[tier];
+    return glowLayers.filter((_, i) => i % step === 0);
+  }, [tier]);
+
+  useEffect(() => {
+    const cfg = TIER_SHADER[tier];
+    remoteLog("debug", "[MeditationScreen] Shader configured", {
+      tier,
+      kIterations: cfg.kIterations,
+      kVolsteps: cfg.kVolsteps,
+      kStepsize: cfg.kStepsize,
+      kBrightness: cfg.kBrightness,
+      kFormuparam: cfg.kFormuparam,
+      kShellFloor: cfg.kShellFloor,
+      kTile: cfg.kTile,
+      kDarkmatter: cfg.kDarkmatter,
+      glowLayers: sampledGlowLayers.length,
+    });
+  }, [tier, sampledGlowLayers]);
+
   const clock = useClock();
   const uniforms = useDerivedValue<Uniforms>(() => ({
     u_time: clock.value / 1000,
@@ -269,7 +371,7 @@ export default function MeditationScreen() {
         )}
         {outlinePath &&
           segments.map((seg, si) =>
-            glowLayers.map(({ w, a }, li) => (
+            sampledGlowLayers.map(({ w, a }, li) => (
               <Path
                 key={`${si}-${li}`}
                 path={outlinePath}
