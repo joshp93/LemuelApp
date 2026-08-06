@@ -3,7 +3,7 @@ import { getProverbForTheDay } from "../../src/api/proverbs";
 import { getChosenVersion } from "../../src/api/version-storage";
 import {
   getNotificationMode,
-  getNotificationSentDate,
+  getNotificationSentDates,
   getNotificationsEnabled,
   getRandomWindowEndMinute,
   getRandomWindowHourEnd,
@@ -13,7 +13,9 @@ import {
   getScheduledTimeMinute,
 } from "../../src/notifications/notification-preferences";
 import {
+  ensureNotificationsScheduled,
   handleDailyProverbPush,
+  resetNotificationEnsureChain,
   scheduleNotificationForModeAndDate,
 } from "../../src/notifications/push-listener";
 import { updateProverbWidget } from "../../src/widgets";
@@ -61,7 +63,7 @@ jest.mock("../../src/widgets", () => ({
 }));
 jest.mock("../../src/notifications/notification-preferences", () => ({
   getNotificationMode: jest.fn(),
-  getNotificationSentDate: jest.fn(),
+  getNotificationSentDates: jest.fn().mockResolvedValue([]),
   getNotificationsEnabled: jest.fn(),
   getRandomWindowHourStart: jest.fn(),
   getRandomWindowStartMinute: jest.fn(),
@@ -69,7 +71,7 @@ jest.mock("../../src/notifications/notification-preferences", () => ({
   getRandomWindowEndMinute: jest.fn(),
   getScheduledTimeHour: jest.fn(),
   getScheduledTimeMinute: jest.fn(),
-  setNotificationSentDate: jest.fn(),
+  addNotificationSentDate: jest.fn(),
 }));
 
 const mockProverb = {
@@ -77,16 +79,32 @@ const mockProverb = {
   proverb: "Trust in the LORD",
 };
 
+const toLocalDateString = (d: Date): string => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const getTodayStr = (): string => toLocalDateString(new Date());
+
+const getTomorrowStr = (): string => {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return toLocalDateString(d);
+};
+
 describe("push-listener", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
+    resetNotificationEnsureChain();
 
     (getChosenVersion as jest.Mock).mockResolvedValue("niv");
     (getProverbForTheDay as jest.Mock).mockResolvedValue(mockProverb);
     (updateProverbWidget as jest.Mock).mockResolvedValue(undefined);
     (getNotificationsEnabled as jest.Mock).mockResolvedValue(true);
-    (getNotificationSentDate as jest.Mock).mockResolvedValue(null);
+    (getNotificationSentDates as jest.Mock).mockResolvedValue([]);
     (
       Notifications.getAllScheduledNotificationsAsync as jest.Mock
     ).mockResolvedValue([]);
@@ -242,7 +260,7 @@ describe("push-listener", () => {
 
       await handleDailyProverbPush();
 
-      const todayStr = new Date().toISOString().split("T")[0];
+      const todayStr = getTodayStr();
       expect(
         Notifications.cancelScheduledNotificationAsync,
       ).toHaveBeenCalledWith(`daily-proverb-meditation-${todayStr}`);
@@ -250,7 +268,7 @@ describe("push-listener", () => {
     });
 
     it("should skip today's scheduling when today notification already exists (matches by ID)", async () => {
-      const todayStr = new Date().toISOString().split("T")[0];
+      const todayStr = getTodayStr();
       const todayAt10am = new Date();
       todayAt10am.setHours(10, 0, 0, 0);
       const existingNotification = {
@@ -289,7 +307,7 @@ describe("push-listener", () => {
 
       await handleDailyProverbPush();
 
-      const todayStr = new Date().toISOString().split("T")[0];
+      const todayStr = getTodayStr();
       expect(
         Notifications.cancelScheduledNotificationAsync,
       ).toHaveBeenCalledWith(`daily-proverb-meditation-${todayStr}`);
@@ -309,10 +327,8 @@ describe("push-listener", () => {
         (c: unknown[]) => (c[0] as { identifier: string }).identifier,
       );
 
-      const todayStr = new Date().toISOString().split("T")[0];
-      const tomorrowDate = new Date();
-      tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-      const tomorrowStr = tomorrowDate.toISOString().split("T")[0];
+      const todayStr = getTodayStr();
+      const tomorrowStr = getTomorrowStr();
 
       expect(scheduleCalls).toContain(`daily-proverb-meditation-${todayStr}`);
       expect(scheduleCalls).toContain(
@@ -321,9 +337,10 @@ describe("push-listener", () => {
       expect(new Set(scheduleCalls).size).toBe(scheduleCalls.length);
     });
 
-    it("should skip today when notification was already sent (sent-date match)", async () => {
-      const todayStr = new Date().toISOString().split("T")[0];
-      (getNotificationSentDate as jest.Mock).mockResolvedValue(todayStr);
+    it("should skip today when notification was already handled (sent-date match)", async () => {
+      (getNotificationSentDates as jest.Mock).mockResolvedValue([
+        getTodayStr(),
+      ]);
       (
         Notifications.getAllScheduledNotificationsAsync as jest.Mock
       ).mockResolvedValue([]);
@@ -334,22 +351,66 @@ describe("push-listener", () => {
         Notifications.cancelScheduledNotificationAsync as jest.Mock
       ).mock.calls.map((c: unknown[]) => c[0]);
       const cancelForToday = cancelCalls.filter(
-        (id: unknown) => id === `daily-proverb-meditation-${todayStr}`,
+        (id: unknown) => id === `daily-proverb-meditation-${getTodayStr()}`,
       );
       expect(cancelForToday).toHaveLength(0);
     });
 
-    it("should schedule today when sent-date is for a different day", async () => {
+    it("should NOT immediately re-send today when today fired earlier (regression)", async () => {
+      const id = `daily-proverb-meditation-${getTodayStr()}`;
+      (getNotificationSentDates as jest.Mock).mockResolvedValue([
+        getTodayStr(),
+      ]);
       (
         Notifications.getAllScheduledNotificationsAsync as jest.Mock
       ).mockResolvedValue([]);
 
       await handleDailyProverbPush();
 
-      const todayStr = new Date().toISOString().split("T")[0];
+      const scheduleCalls = (
+        Notifications.scheduleNotificationAsync as jest.Mock
+      ).mock.calls.map(
+        (c: unknown[]) => (c[0] as { identifier: string }).identifier,
+      );
+      const scheduleForToday = scheduleCalls.filter((x) => x === id);
+      const cancelForToday = (
+        Notifications.cancelScheduledNotificationAsync as jest.Mock
+      ).mock.calls
+        .map((c: unknown[]) => c[0])
+        .filter((x: unknown) => x === id);
+
+      expect(scheduleForToday).toHaveLength(0);
+      expect(cancelForToday).toHaveLength(0);
+    });
+
+    it("should still schedule today when handled set holds only future days (no clobber)", async () => {
+      (getNotificationSentDates as jest.Mock).mockResolvedValue([
+        getTomorrowStr(),
+        "2099-01-01",
+      ]);
+      (
+        Notifications.getAllScheduledNotificationsAsync as jest.Mock
+      ).mockResolvedValue([]);
+
+      await handleDailyProverbPush();
+
+      const todayId = `daily-proverb-meditation-${getTodayStr()}`;
       expect(
         Notifications.cancelScheduledNotificationAsync,
-      ).toHaveBeenCalledWith(`daily-proverb-meditation-${todayStr}`);
+      ).toHaveBeenCalledWith(todayId);
+      expect(Notifications.scheduleNotificationAsync).toHaveBeenCalled();
+    });
+
+    it("should schedule today when no handled dates are recorded", async () => {
+      (
+        Notifications.getAllScheduledNotificationsAsync as jest.Mock
+      ).mockResolvedValue([]);
+
+      await handleDailyProverbPush();
+
+      expect(
+        Notifications.cancelScheduledNotificationAsync,
+      ).toHaveBeenCalledWith(`daily-proverb-meditation-${getTodayStr()}`);
       expect(Notifications.scheduleNotificationAsync).toHaveBeenCalled();
     });
 
@@ -360,7 +421,7 @@ describe("push-listener", () => {
 
       await handleDailyProverbPush();
 
-      const todayStr = new Date().toISOString().split("T")[0];
+      const todayStr = getTodayStr();
       const cancelCalls = (
         Notifications.cancelScheduledNotificationAsync as jest.Mock
       ).mock.calls.map((c: unknown[]) => c[0]);
@@ -375,9 +436,7 @@ describe("push-listener", () => {
 
       await handleDailyProverbPush();
 
-      const tomorrowDate = new Date();
-      tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-      const tomorrowStr = tomorrowDate.toISOString().split("T")[0];
+      const tomorrowStr = getTomorrowStr();
       const cancelCalls = (
         Notifications.cancelScheduledNotificationAsync as jest.Mock
       ).mock.calls.map((c: unknown[]) => c[0]);
@@ -401,6 +460,141 @@ describe("push-listener", () => {
       );
 
       await expect(handleDailyProverbPush()).resolves.not.toThrow();
+    });
+  });
+
+  describe("ensureNotificationsScheduled force behaviour", () => {
+    beforeEach(() => {
+      jest.setSystemTime(new Date(2026, 7, 6, 8, 0, 0));
+      (getNotificationMode as jest.Mock).mockResolvedValue("scheduled");
+      (getScheduledTimeHour as jest.Mock).mockResolvedValue(9);
+      (getScheduledTimeMinute as jest.Mock).mockResolvedValue(0);
+    });
+
+    const pendingToday = () => ({
+      identifier: `daily-proverb-meditation-${getTodayStr()}`,
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: new Date(),
+      },
+    });
+
+    it("should skip today when force=true but today already fired", async () => {
+      const id = `daily-proverb-meditation-${getTodayStr()}`;
+      (getNotificationSentDates as jest.Mock).mockResolvedValue([
+        getTodayStr(),
+      ]);
+      (
+        Notifications.getAllScheduledNotificationsAsync as jest.Mock
+      ).mockResolvedValue([]);
+
+      await ensureNotificationsScheduled(2, true);
+
+      const scheduleCalls = (
+        Notifications.scheduleNotificationAsync as jest.Mock
+      ).mock.calls.map(
+        (c: unknown[]) => (c[0] as { identifier: string }).identifier,
+      );
+      const cancelForToday = (
+        Notifications.cancelScheduledNotificationAsync as jest.Mock
+      ).mock.calls
+        .map((c: unknown[]) => c[0])
+        .filter((x: unknown) => x === id);
+
+      expect(scheduleCalls).not.toContain(id);
+      expect(cancelForToday).toHaveLength(0);
+    });
+
+    it("should re-schedule today when force=true and it is still pending", async () => {
+      const id = `daily-proverb-meditation-${getTodayStr()}`;
+      (getNotificationSentDates as jest.Mock).mockResolvedValue([
+        getTodayStr(),
+      ]);
+
+      const scheduled: Array<{
+        identifier: string;
+        trigger: { type: string; date: Date };
+      }> = [pendingToday()];
+      (
+        Notifications.getAllScheduledNotificationsAsync as jest.Mock
+      ).mockImplementation(async () => scheduled);
+      (
+        Notifications.cancelScheduledNotificationAsync as jest.Mock
+      ).mockImplementation(async (cancelId: string) => {
+        const idx = scheduled.findIndex((n) => n.identifier === cancelId);
+        if (idx >= 0) scheduled.splice(idx, 1);
+      });
+
+      await ensureNotificationsScheduled(2, true);
+
+      expect(
+        Notifications.cancelScheduledNotificationAsync,
+      ).toHaveBeenCalledWith(id);
+      expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          identifier: id,
+          trigger: expect.objectContaining({
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+          }),
+        }),
+      );
+    });
+
+    it("should skip future days already handled when force=false", async () => {
+      (getNotificationSentDates as jest.Mock).mockResolvedValue([
+        getTomorrowStr(),
+      ]);
+      (
+        Notifications.getAllScheduledNotificationsAsync as jest.Mock
+      ).mockResolvedValue([]);
+
+      await ensureNotificationsScheduled(3, false);
+
+      const cancelCalls = (
+        Notifications.cancelScheduledNotificationAsync as jest.Mock
+      ).mock.calls.map((c: unknown[]) => c[0]);
+      expect(cancelCalls).not.toContain(
+        `daily-proverb-meditation-${getTomorrowStr()}`,
+      );
+      expect(cancelCalls).toContain(
+        `daily-proverb-meditation-${getTodayStr()}`,
+      );
+    });
+  });
+
+  describe("ensureNotificationsScheduled serialization", () => {
+    it("should queue concurrent calls instead of running them at the same time", async () => {
+      jest.setSystemTime(new Date(2026, 7, 6, 8, 0, 0));
+      (getNotificationMode as jest.Mock).mockResolvedValue("scheduled");
+      (getScheduledTimeHour as jest.Mock).mockResolvedValue(9);
+      (getScheduledTimeMinute as jest.Mock).mockResolvedValue(0);
+      (
+        Notifications.getAllScheduledNotificationsAsync as jest.Mock
+      ).mockResolvedValue([]);
+      (getNotificationSentDates as jest.Mock).mockResolvedValue([]);
+
+      let release: (() => void) | undefined;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+
+      const proverbMock = jest.fn();
+      proverbMock.mockReturnValueOnce(gate.then(() => mockProverb));
+      proverbMock.mockResolvedValue(mockProverb);
+      (getProverbForTheDay as jest.Mock).mockImplementation(proverbMock);
+
+      const first = ensureNotificationsScheduled(5, false);
+      const second = ensureNotificationsScheduled(5, false);
+
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(getProverbForTheDay).toHaveBeenCalledTimes(1);
+
+      release!();
+      await Promise.all([first, second]);
+
+      expect(getProverbForTheDay.mock.calls.length).toBeGreaterThan(1);
     });
   });
 });

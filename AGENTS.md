@@ -54,7 +54,7 @@ __tests__/                    # Jest + @testing-library/react-native tests
 | Monthly proverb calendar | ✅ Complete | `src/api/daily-proverbs.ts`, `src/components/month-picker.tsx` |
 | Home screen widget (Android) | ✅ Complete | `src/widgets/proverb-widget.tsx`, `src/widgets/index.tsx` |
 | Push notifications | ✅ Complete | `src/notifications/daily-proverb-notification.ts`, `src/notifications/notification-preferences.ts`, `src/notifications/push-listener.ts` |
-| Notification dedup (sent-date tracking) | ✅ Complete | `src/notifications/notification-preferences.ts` (`getNotificationSentDate`/`setNotificationSentDate`), checked in `ensureNotificationsScheduled` before scheduling |
+| Notification dedup (sent-date set) | ✅ Complete | `src/notifications/notification-preferences.ts` (`getNotificationSentDates`/`addNotificationSentDate`, JSON array, legacy-scalar migration, stale-date pruning); skipped per-day in `ensureNotificationsScheduled`; concurrent runs serialized; UTC/local date strings normalised via `src/utils/date.ts:toLocalDateString` |
 | Authentication (Cognito) | ✅ Complete | `src/auth/auth-context.tsx`, `src/auth/token-storage.ts`, `src/auth/token-utils.ts`, `src/api/auth.ts`, `src/api/cognito.ts` |
 | Notes system (rich text journaling) | ✅ Complete | `src/api/notes.ts`, `src/components/proverb-note-card.tsx`, `app/notes/users/[uuid]/[ref].tsx`, `app/notes/users/[uuid].tsx` |
 | Meditation timer (Skia) | ✅ Complete | `app/meditation.tsx`, `src/api/meditation.ts`, `src/settings/meditation-preferences.ts`, `src/hooks/useDeviceTier.ts` |

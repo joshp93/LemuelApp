@@ -3,10 +3,15 @@ import { Platform } from "react-native";
 import { remoteLog } from "../api/remote-logger";
 import { COLORS } from "../constants/theme";
 import { type Proverb, ProverbSchema } from "../models/proverb";
-import { setNotificationSentDate } from "./notification-preferences";
+import { toLocalDateString } from "../utils/date";
+import {
+  addNotificationSentDate,
+  getNotificationSentDates,
+} from "./notification-preferences";
 
 const NOTIFICATION_ID_PREFIX = "daily-proverb-meditation";
 const SNOOZE_NOTIFICATION_ID = "daily-proverb-snoozed";
+export const EXAMPLE_NOTIFICATION_ID = "daily-proverb-example";
 const CATEGORY_ID = "proverb-meditation";
 const SNOOZE_ACTION_ID = "snooze";
 
@@ -101,7 +106,7 @@ export const scheduleProverbNotification = async (
     content: _createNotificationContent(proverb),
     trigger,
   });
-  await setNotificationSentDate(dateString);
+  await addNotificationSentDate(dateString);
   remoteLog("debug", "[Notifications] Notification scheduled", {
     notificationId,
     dateString,
@@ -258,6 +263,7 @@ export const cancelProverbNotification = async (dateString: string) => {
 /**
  * Sends a notification immediately without any scheduled trigger.
  * Uses the dateString (or today's date if not provided) for the notification identifier.
+ * Skips sending if the date has already been handled (dedup).
  * @param proverb The proverb to include in the notification
  * @param dateString Optional ISO date string (YYYY-MM-DD), defaults to today
  */
@@ -277,8 +283,18 @@ export const sendProverbNotification = async (
 
     await _createAndroidChannel();
 
-    const ds = dateString || new Date().toISOString().split("T")[0];
+    const ds = dateString || toLocalDateString(new Date());
     const notificationId = getNotificationIdForDate(ds);
+
+    const sentDates = await getNotificationSentDates();
+    if (sentDates.includes(ds)) {
+      remoteLog(
+        "debug",
+        "[Notifications] Date already handled, skipping immediate send",
+        { dateString: ds },
+      );
+      return;
+    }
 
     remoteLog("debug", "[Notifications] Sending immediate notification", {
       notificationId,
@@ -289,7 +305,7 @@ export const sendProverbNotification = async (
       content: _createNotificationContent(proverb),
       trigger: null,
     });
-    await setNotificationSentDate(ds);
+    await addNotificationSentDate(ds);
     remoteLog("debug", "[Notifications] Immediate notification sent", {
       notificationId,
     });
@@ -299,5 +315,42 @@ export const sendProverbNotification = async (
       "[Notifications] Failed to send daily proverb notification",
       { error },
     );
+  }
+};
+
+/**
+ * Sends a test/example notification immediately using a dedicated identifier
+ * that never collides with the real daily-proverb notifications and never
+ * marks a real date as handled.
+ * @param proverb The proverb to include in the notification
+ */
+export const sendExampleProverbNotification = async (proverb: Proverb) => {
+  try {
+    const { status } = await Notifications.requestPermissionsAsync();
+    if (status !== "granted") {
+      remoteLog(
+        "warn",
+        "[Notifications] Notification permissions not granted (example)",
+      );
+      return;
+    }
+
+    await _createAndroidChannel();
+
+    remoteLog("debug", "[Notifications] Sending example notification", {
+      notificationId: EXAMPLE_NOTIFICATION_ID,
+    });
+    await Notifications.scheduleNotificationAsync({
+      identifier: EXAMPLE_NOTIFICATION_ID,
+      content: _createNotificationContent(proverb),
+      trigger: null,
+    });
+    remoteLog("debug", "[Notifications] Example notification sent", {
+      notificationId: EXAMPLE_NOTIFICATION_ID,
+    });
+  } catch (error) {
+    remoteLog("error", "[Notifications] Failed to send example notification", {
+      error,
+    });
   }
 };

@@ -8,6 +8,7 @@ import { getProverbForTheDay } from "../api/proverbs";
 import { remoteLog } from "../api/remote-logger";
 import { getChosenVersion } from "../api/version-storage";
 import type { Proverb } from "../models/proverb";
+import { toLocalDateString } from "../utils/date";
 import { updateProverbWidget } from "../widgets";
 import {
   cancelProverbNotification,
@@ -19,7 +20,7 @@ import {
 } from "./daily-proverb-notification";
 import {
   getNotificationMode,
-  getNotificationSentDate,
+  getNotificationSentDates,
   getNotificationsEnabled,
   getRandomWindowEndMinute,
   getRandomWindowHourEnd,
@@ -132,16 +133,68 @@ TaskManager.defineTask(
 );
 
 /**
+ * Serializes calls to {@link ensureNotificationsScheduled} so that concurrent
+ * invocations (app launch, background fetch, FCM silent push, settings save)
+ * queue instead of racing. This prevents two runs from both passing the
+ * dedup checks and both scheduling/sending the same day's notification.
+ */
+let ensureChain: Promise<void> = Promise.resolve();
+
+/**
+ * Resets the internal serialization queue. Test utility only.
+ */
+export const resetNotificationEnsureChain = () => {
+  ensureChain = Promise.resolve();
+};
+
+/**
  * Ensures local notifications are scheduled for the next `daysAhead` days.
  * Fetches today's proverb and updates the home screen widget, then schedules
  * notifications according to the user's preferences for each day.
  *
- * When `force` is true, cancels and re-schedules all days (used when
- * preferences change). When false, preserves today's existing notification
- * (to avoid resetting an already-chosen random time), but always re-schedules
- * future days.
+ * Any day already recorded in the handled-dates set is skipped (dedup), so a
+ * notification that has already fired is never scheduled or sent again.
+ *
+ * When `force` is true, cancels and re-schedules future days (used when
+ * preferences change). Today is re-scheduled under `force` only while it is
+ * still pending; once today's notification has fired it is skipped like any
+ * other handled day.
  */
-export async function ensureNotificationsScheduled(
+export function ensureNotificationsScheduled(
+  daysAhead: number = 5,
+  force: boolean = false,
+): Promise<void> {
+  const run = () => runEnsureNotificationsScheduled(daysAhead, force);
+  ensureChain = ensureChain.then(run, run);
+  return ensureChain;
+}
+
+/**
+ * True if a scheduled (pending) notification exists for the given date with
+ * the matching date-specific identifier and trigger date.
+ */
+async function hasPendingNotificationForDate(
+  dateStr: string,
+  date: Date,
+): Promise<boolean> {
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+  const expectedId = getNotificationIdForDate(dateStr);
+  return scheduled.some((n) => {
+    if (n.identifier !== expectedId) return false;
+    if (!n.trigger || typeof n.trigger !== "object") return false;
+    const trigger = n.trigger as Record<string, unknown>;
+    if (trigger.type === Notifications.SchedulableTriggerInputTypes.DATE) {
+      const rawDate = trigger.date;
+      if (rawDate == null) return false;
+      const d =
+        typeof rawDate === "number" ? new Date(rawDate) : (rawDate as Date);
+      return d.toDateString() === date.toDateString();
+    }
+    return false;
+  });
+}
+
+async function runEnsureNotificationsScheduled(
   daysAhead: number = 5,
   force: boolean = false,
 ) {
@@ -154,7 +207,7 @@ export async function ensureNotificationsScheduled(
     const storedVersion = await getChosenVersion();
     const version = storedVersion || "niv";
     const today = new Date();
-    const todayStr = today.toISOString().split("T")[0];
+    const todayStr = toLocalDateString(today);
 
     const todayProverb = await getProverbForTheDay(version, todayStr);
     await updateProverbWidget(todayProverb);
@@ -166,35 +219,27 @@ export async function ensureNotificationsScheduled(
     }
 
     const mode = await getNotificationMode();
+    const handledDates = await getNotificationSentDates();
 
     for (let i = 0; i < daysAhead; i++) {
       const date = new Date(today);
       date.setDate(date.getDate() + i);
-      const dateStr = date.toISOString().split("T")[0];
+      const dateStr = toLocalDateString(date);
+      const isToday = i === 0;
 
-      if (!force && i === 0) {
-        const scheduled =
-          await Notifications.getAllScheduledNotificationsAsync();
-        const expectedId = getNotificationIdForDate(dateStr);
-        const hasNotification = scheduled.some((n) => {
-          if (n.identifier !== expectedId) return false;
-          if (!n.trigger || typeof n.trigger !== "object") return false;
-          const trigger = n.trigger as Record<string, unknown>;
-          if (
-            trigger.type === Notifications.SchedulableTriggerInputTypes.DATE
-          ) {
-            const rawDate = trigger.date;
-            if (rawDate == null) return false;
-            const d =
-              typeof rawDate === "number"
-                ? new Date(rawDate)
-                : (rawDate as Date);
-            return d.toDateString() === date.toDateString();
-          }
-          return false;
-        });
+      if (!isToday && !force && handledDates.includes(dateStr)) {
+        remoteLog(
+          "debug",
+          "[PushListener] Future day already handled, skipping",
+          { dateStr },
+        );
+        continue;
+      }
 
-        if (hasNotification) {
+      if (isToday) {
+        const hasPending = await hasPendingNotificationForDate(dateStr, date);
+
+        if (hasPending && !force) {
           remoteLog(
             "debug",
             "[PushListener] Today's notification already scheduled, skipping",
@@ -203,11 +248,16 @@ export async function ensureNotificationsScheduled(
           continue;
         }
 
-        const sentDate = await getNotificationSentDate();
-        if (sentDate === dateStr) {
+        if (hasPending && force) {
+          await cancelProverbNotification(dateStr);
+          await scheduleNotificationForModeAndDate(mode, dateStr, todayProverb);
+          continue;
+        }
+
+        if (handledDates.includes(dateStr)) {
           remoteLog(
             "debug",
-            "[PushListener] Notification already sent for today, skipping",
+            "[PushListener] Today's notification already sent, skipping",
             { dateStr },
           );
           continue;
@@ -356,6 +406,15 @@ export async function scheduleNotificationForModeAndDate(
       "debug",
       "[PushListener] Target date is in the past, sending immediately",
     );
+    const handledDates = await getNotificationSentDates();
+    if (handledDates.includes(dateString)) {
+      remoteLog(
+        "debug",
+        "[PushListener] Date already handled, skipping immediate send",
+        { dateString },
+      );
+      return;
+    }
     await sendProverbNotification(proverb, dateString);
     return;
   }

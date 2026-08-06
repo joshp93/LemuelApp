@@ -2,7 +2,7 @@ import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import SettingsScreen from "../../app/settings";
 import { getProverbForTheDay } from "../../src/api/proverbs";
 import { getChosenVersion } from "../../src/api/version-storage";
-import { sendProverbNotification } from "../../src/notifications/daily-proverb-notification";
+import { sendExampleProverbNotification } from "../../src/notifications/daily-proverb-notification";
 import {
   getNotificationMode,
   getNotificationsEnabled,
@@ -63,9 +63,9 @@ const mockGetScheduledTimeHour = getScheduledTimeHour as jest.MockedFunction<
 >;
 const mockGetScheduledTimeMinute =
   getScheduledTimeMinute as jest.MockedFunction<typeof getScheduledTimeMinute>;
-const mockSendProverbNotification =
-  sendProverbNotification as jest.MockedFunction<
-    typeof sendProverbNotification
+const mockSendExampleProverbNotification =
+  sendExampleProverbNotification as jest.MockedFunction<
+    typeof sendExampleProverbNotification
   >;
 const mockGetProverbForTheDay = getProverbForTheDay as jest.MockedFunction<
   typeof getProverbForTheDay
@@ -94,7 +94,7 @@ describe("SettingsScreen", () => {
     mockGetRandomWindowEndMinute.mockResolvedValue(0);
     mockGetScheduledTimeHour.mockResolvedValue(8);
     mockGetScheduledTimeMinute.mockResolvedValue(0);
-    mockSendProverbNotification.mockResolvedValue(undefined);
+    mockSendExampleProverbNotification.mockResolvedValue(undefined);
     mockGetProverbForTheDay.mockResolvedValue(mockProverb);
     mockGetChosenVersion.mockResolvedValue("niv");
     mockGetMeditationDuration.mockResolvedValue(60000);
@@ -188,7 +188,7 @@ describe("SettingsScreen", () => {
     fireEvent.press(sendButton);
 
     await waitFor(() => {
-      expect(mockSendProverbNotification).toHaveBeenCalled();
+      expect(mockSendExampleProverbNotification).toHaveBeenCalled();
     });
   });
 });

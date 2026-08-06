@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { toLocalDateString } from "../utils/date";
 
 const NOTIFICATIONS_ENABLED_KEY = "notifications_enabled";
 const NOTIFICATION_MODE_KEY = "notification_mode";
@@ -264,19 +265,54 @@ export const setScheduledTimeMinute = async (minute: number): Promise<void> => {
   }
 };
 
-export const getNotificationSentDate = async (): Promise<string | null> => {
+const SENT_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Returns the set of dates whose daily-proverb notification has already been
+ * handled (scheduled or sent). Stored as a JSON array under a single key so
+ * that scheduling multiple days does not clobber the entry for today.
+ *
+ * Legacy installs stored a single scalar date string under the same key; such
+ * a value is migrated into a single-element array transparently.
+ */
+export const getNotificationSentDates = async (): Promise<string[]> => {
   try {
-    return await AsyncStorage.getItem(NOTIFICATION_SENT_DATE_KEY);
+    const value = await AsyncStorage.getItem(NOTIFICATION_SENT_DATE_KEY);
+    if (!value) return [];
+    if (value.startsWith("[")) {
+      const parsed: unknown = JSON.parse(value);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((d): d is string => typeof d === "string");
+      }
+      return [];
+    }
+    if (SENT_DATE_PATTERN.test(value)) {
+      return [value];
+    }
+    return [];
   } catch (error) {
-    console.error("Error getting notification sent date:", error);
-    return null;
+    console.error("Error getting notification sent dates:", error);
+    return [];
   }
 };
 
-export const setNotificationSentDate = async (date: string): Promise<void> => {
+/**
+ * Records a date as handled. Deduplicates existing entries and prunes dates
+ * earlier than today so the list does not grow unboundedly.
+ */
+export const addNotificationSentDate = async (date: string): Promise<void> => {
   try {
-    await AsyncStorage.setItem(NOTIFICATION_SENT_DATE_KEY, date);
+    const dates = await getNotificationSentDates();
+    if (!dates.includes(date)) {
+      dates.push(date);
+    }
+    const today = toLocalDateString(new Date());
+    const pruned = dates.filter((d) => d >= today);
+    await AsyncStorage.setItem(
+      NOTIFICATION_SENT_DATE_KEY,
+      JSON.stringify(pruned),
+    );
   } catch (error) {
-    console.error("Error saving notification sent date:", error);
+    console.error("Error saving notification sent dates:", error);
   }
 };

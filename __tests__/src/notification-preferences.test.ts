@@ -1,7 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
+  addNotificationSentDate,
   getNotificationMode,
-  getNotificationSentDate,
+  getNotificationSentDates,
   getNotificationsEnabled,
   getRandomWindowEndMinute,
   getRandomWindowHourEnd,
@@ -10,7 +11,6 @@ import {
   getScheduledTimeHour,
   getScheduledTimeMinute,
   setNotificationMode,
-  setNotificationSentDate,
   setNotificationsEnabled,
   setRandomWindowEndMinute,
   setRandomWindowHourEnd,
@@ -166,23 +166,71 @@ describe("notification-preferences", () => {
     });
   });
 
-  describe("notification sent date", () => {
-    it("returns null when no date has been stored", async () => {
-      const result = await getNotificationSentDate();
-      expect(result).toBeNull();
+  describe("notification sent dates", () => {
+    it("returns an empty array when nothing stored", async () => {
+      const result = await getNotificationSentDates();
+      expect(result).toEqual([]);
     });
 
-    it("returns stored date after setting", async () => {
-      await setNotificationSentDate("2026-08-03");
-      const result = await getNotificationSentDate();
-      expect(result).toBe("2026-08-03");
+    it("returns the stored dates after adding", async () => {
+      await addNotificationSentDate("2099-08-03");
+      await addNotificationSentDate("2099-08-04");
+      const result = await getNotificationSentDates();
+      expect(result).toEqual(["2099-08-03", "2099-08-04"]);
     });
 
-    it("overwrites previous date with new date", async () => {
-      await setNotificationSentDate("2026-08-02");
-      await setNotificationSentDate("2026-08-03");
-      const result = await getNotificationSentDate();
-      expect(result).toBe("2026-08-03");
+    it("does not duplicate an existing date", async () => {
+      await addNotificationSentDate("2099-08-03");
+      await addNotificationSentDate("2099-08-03");
+      const result = await getNotificationSentDates();
+      expect(result).toEqual(["2099-08-03"]);
+    });
+
+    it("accumulates multiple dates instead of clobbering today", async () => {
+      await addNotificationSentDate("2099-08-03");
+      await addNotificationSentDate("2099-08-04");
+      const result = await getNotificationSentDates();
+      expect(result).toContain("2099-08-03");
+      expect(result).toContain("2099-08-04");
+    });
+
+    it("prunes dates earlier than today on add", async () => {
+      await AsyncStorage.setItem(
+        "notification_sent_date",
+        JSON.stringify(["2020-01-01", "2020-01-02"]),
+      );
+      const today = new Date();
+      const todayStr = [
+        today.getFullYear(),
+        String(today.getMonth() + 1).padStart(2, "0"),
+        String(today.getDate()).padStart(2, "0"),
+      ].join("-");
+
+      await addNotificationSentDate(todayStr);
+
+      const result = await getNotificationSentDates();
+      expect(result).toEqual([todayStr]);
+    });
+
+    it("migrates a legacy scalar date value into a single-element array", async () => {
+      await AsyncStorage.setItem("notification_sent_date", "2026-08-03");
+      const result = await getNotificationSentDates();
+      expect(result).toEqual(["2026-08-03"]);
+    });
+
+    it("handles corrupt stored JSON by returning an empty array", async () => {
+      await AsyncStorage.setItem("notification_sent_date", "{not json");
+      const result = await getNotificationSentDates();
+      expect(result).toEqual([]);
+    });
+
+    it("filters out non-string entries from a stored array", async () => {
+      await AsyncStorage.setItem(
+        "notification_sent_date",
+        JSON.stringify(["2026-08-03", 42, null]),
+      );
+      const result = await getNotificationSentDates();
+      expect(result).toEqual(["2026-08-03"]);
     });
   });
 });

@@ -18,7 +18,7 @@ import { ExpandableSection } from "../src/components/expandable-section";
 import { LemuelButton } from "../src/components/lemuel-button";
 import { TimePicker } from "../src/components/time-picker";
 import { useSettingsPreferences } from "../src/hooks/useSettingsPreferences";
-import { sendProverbNotification } from "../src/notifications/daily-proverb-notification";
+import { sendExampleProverbNotification } from "../src/notifications/daily-proverb-notification";
 import {
   type NotificationMode,
   setNotificationMode,
@@ -133,7 +133,7 @@ export default function SettingsScreen() {
       const storedVersion = await getChosenVersion();
       const version = storedVersion || "niv";
       const proverb = await getProverbForTheDay(version);
-      await sendProverbNotification(proverb);
+      await sendExampleProverbNotification(proverb);
     } catch (error) {
       remoteLog("error", "[Settings] Failed to send example notification", {
         error,

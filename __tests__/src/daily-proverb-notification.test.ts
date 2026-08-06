@@ -3,12 +3,14 @@ import type { Proverb } from "../../src/models/proverb";
 import {
   cancelProverbNotification,
   cleanupNotifications,
+  EXAMPLE_NOTIFICATION_ID,
   getNotificationIdForDate,
   getRandomTimeInWindow,
   initializeNotifications,
   MEDITATE_ACTION_ID,
   resolveScheduleDate,
   scheduleProverbNotification,
+  sendExampleProverbNotification,
   sendProverbNotification,
 } from "../../src/notifications/daily-proverb-notification";
 
@@ -38,12 +40,16 @@ jest.mock("expo-notifications", () => ({
 }));
 
 jest.mock("../../src/notifications/notification-preferences", () => ({
-  setNotificationSentDate: jest.fn(),
+  addNotificationSentDate: jest.fn(),
+  getNotificationSentDates: jest.fn().mockResolvedValue([]),
 }));
 
-const mockSetNotificationSentDate =
+const mockAddNotificationSentDate =
   require("../../src/notifications/notification-preferences")
-    .setNotificationSentDate as jest.Mock;
+    .addNotificationSentDate as jest.Mock;
+const mockGetNotificationSentDates =
+  require("../../src/notifications/notification-preferences")
+    .getNotificationSentDates as jest.Mock;
 
 const mockProverb: Proverb = {
   ref: "Proverbs 3:5",
@@ -53,6 +59,7 @@ const mockProverb: Proverb = {
 describe("Notification Functions", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockGetNotificationSentDates.mockResolvedValue([]);
     (Notifications.requestPermissionsAsync as jest.Mock).mockResolvedValue({
       status: "granted",
     });
@@ -365,7 +372,7 @@ describe("Notification Functions", () => {
       };
       await scheduleProverbNotification(mockProverb, trigger, "2026-06-16");
 
-      expect(mockSetNotificationSentDate).toHaveBeenCalledWith("2026-06-16");
+      expect(mockAddNotificationSentDate).toHaveBeenCalledWith("2026-06-16");
     });
 
     it("should NOT record sent date when scheduling is skipped (duplicate)", async () => {
@@ -381,11 +388,11 @@ describe("Notification Functions", () => {
       };
       await scheduleProverbNotification(mockProverb, trigger, "2026-06-16");
 
-      expect(mockSetNotificationSentDate).not.toHaveBeenCalled();
+      expect(mockAddNotificationSentDate).not.toHaveBeenCalled();
     });
 
     it("should NOT record sent date when permissions are denied", async () => {
-      mockSetNotificationSentDate.mockClear();
+      mockAddNotificationSentDate.mockClear();
       (Notifications.requestPermissionsAsync as jest.Mock).mockResolvedValue({
         status: "denied",
       });
@@ -396,7 +403,7 @@ describe("Notification Functions", () => {
       };
       await scheduleProverbNotification(mockProverb, trigger, "2026-06-16");
 
-      expect(mockSetNotificationSentDate).not.toHaveBeenCalled();
+      expect(mockAddNotificationSentDate).not.toHaveBeenCalled();
     });
 
     it("should still schedule when notification for a different date exists", async () => {
@@ -422,6 +429,15 @@ describe("Notification Functions", () => {
   });
 
   describe("sendProverbNotification", () => {
+    const localTodayStr = () => {
+      const now = new Date();
+      return [
+        now.getFullYear(),
+        String(now.getMonth() + 1).padStart(2, "0"),
+        String(now.getDate()).padStart(2, "0"),
+      ].join("-");
+    };
+
     it("should send immediately with null trigger", async () => {
       await sendProverbNotification(mockProverb, "2026-06-16");
       expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith(
@@ -432,13 +448,12 @@ describe("Notification Functions", () => {
       );
     });
 
-    it("should use today's date when no dateString is provided", async () => {
-      const todayStr = new Date().toISOString().split("T")[0];
+    it("should use today's local date when no dateString is provided", async () => {
       await sendProverbNotification(mockProverb);
 
       expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith(
         expect.objectContaining({
-          identifier: `daily-proverb-meditation-${todayStr}`,
+          identifier: `daily-proverb-meditation-${localTodayStr()}`,
           trigger: null,
         }),
       );
@@ -462,29 +477,70 @@ describe("Notification Functions", () => {
     });
 
     it("should not send if permissions are not granted", async () => {
-      mockSetNotificationSentDate.mockClear();
+      mockAddNotificationSentDate.mockClear();
       (Notifications.requestPermissionsAsync as jest.Mock).mockResolvedValue({
         status: "denied",
       });
 
       await sendProverbNotification(mockProverb, "2026-06-16");
       expect(Notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
-      expect(mockSetNotificationSentDate).not.toHaveBeenCalled();
+      expect(mockAddNotificationSentDate).not.toHaveBeenCalled();
+    });
+
+    it("should skip sending when the date has already been handled", async () => {
+      mockGetNotificationSentDates.mockResolvedValue(["2026-06-16"]);
+
+      await sendProverbNotification(mockProverb, "2026-06-16");
+
+      expect(Notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
+      expect(mockAddNotificationSentDate).not.toHaveBeenCalled();
     });
 
     it("should record sent date after successful immediate send", async () => {
-      mockSetNotificationSentDate.mockClear();
+      mockAddNotificationSentDate.mockClear();
       await sendProverbNotification(mockProverb, "2026-06-16");
 
-      expect(mockSetNotificationSentDate).toHaveBeenCalledWith("2026-06-16");
+      expect(mockAddNotificationSentDate).toHaveBeenCalledWith("2026-06-16");
     });
 
     it("should record today's date when no dateString is provided", async () => {
-      mockSetNotificationSentDate.mockClear();
-      const todayStr = new Date().toISOString().split("T")[0];
+      mockAddNotificationSentDate.mockClear();
       await sendProverbNotification(mockProverb);
 
-      expect(mockSetNotificationSentDate).toHaveBeenCalledWith(todayStr);
+      expect(mockAddNotificationSentDate).toHaveBeenCalledWith(localTodayStr());
+    });
+  });
+
+  describe("sendExampleProverbNotification", () => {
+    beforeEach(() => {
+      mockGetNotificationSentDates.mockResolvedValue([]);
+    });
+
+    it("should send immediately using the dedicated example identifier", async () => {
+      await sendExampleProverbNotification(mockProverb);
+
+      expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          identifier: EXAMPLE_NOTIFICATION_ID,
+          trigger: null,
+        }),
+      );
+    });
+
+    it("should NOT touch the real sent-dates list", async () => {
+      await sendExampleProverbNotification(mockProverb);
+
+      expect(mockAddNotificationSentDate).not.toHaveBeenCalled();
+    });
+
+    it("should not send if permissions are not granted", async () => {
+      (Notifications.requestPermissionsAsync as jest.Mock).mockResolvedValue({
+        status: "denied",
+      });
+
+      await sendExampleProverbNotification(mockProverb);
+
+      expect(Notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
     });
   });
 
