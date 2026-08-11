@@ -9,7 +9,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
 import { Stack, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { Alert, Image, StyleSheet, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { registerPushToken } from "../src/api/push-token";
@@ -17,6 +17,7 @@ import { AuthProvider } from "../src/auth/auth-context";
 import { HeaderMenu } from "../src/components/header-menu";
 import { COLORS } from "../src/constants/theme";
 import {
+  getMeditationRouteParams,
   initializeNotifications,
   MEDITATE_ACTION_ID,
 } from "../src/notifications/daily-proverb-notification";
@@ -37,6 +38,26 @@ function AppContent() {
 
   const router = useRouter();
 
+  const handleNotificationResponse = useCallback(
+    (response: Notifications.NotificationResponse) => {
+      const isProverbAction =
+        response.actionIdentifier === MEDITATE_ACTION_ID ||
+        response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER;
+      if (!isProverbAction) return;
+
+      const routeParams = getMeditationRouteParams(
+        response.notification.request.content.data as Record<string, unknown>,
+      );
+      if (!routeParams) return;
+
+      router.push(routeParams);
+      Notifications.dismissNotificationAsync(
+        response.notification.request.identifier,
+      );
+    },
+    [router],
+  );
+
   useEffect(() => {
     initializePushHandler();
     initializeNotifications();
@@ -45,21 +66,7 @@ function AppContent() {
     ensureNotificationsScheduled(5);
 
     const meditateSub = Notifications.addNotificationResponseReceivedListener(
-      (response) => {
-        if (response.actionIdentifier === MEDITATE_ACTION_ID) {
-          const { proverb, ref } = response.notification.request.content
-            .data as Record<string, unknown>;
-          if (typeof proverb === "string" && typeof ref === "string") {
-            router.push({
-              pathname: "/meditation",
-              params: { proverb, ref },
-            });
-          }
-          Notifications.dismissNotificationAsync(
-            response.notification.request.identifier,
-          );
-        }
-      },
+      handleNotificationResponse,
     );
 
     const tokenSub = setupTokenListener();
@@ -67,7 +74,7 @@ function AppContent() {
       tokenSub.remove();
       meditateSub.remove();
     };
-  }, []);
+  }, [handleNotificationResponse]);
 
   useEffect(() => {
     if (fontsLoaded || fontError) {
@@ -98,6 +105,15 @@ function AppContent() {
       }
     })();
   }, [fontsLoaded, fontError, router]);
+
+  useEffect(() => {
+    if (!fontsLoaded && !fontError) return;
+
+    const lastResponse = Notifications.getLastNotificationResponse();
+    if (!lastResponse) return;
+    handleNotificationResponse(lastResponse);
+    Notifications.clearLastNotificationResponse();
+  }, [fontsLoaded, fontError, handleNotificationResponse]);
 
   if (!fontsLoaded && !fontError) {
     return null;

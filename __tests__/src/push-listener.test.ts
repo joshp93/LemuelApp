@@ -139,6 +139,23 @@ describe("push-listener", () => {
         );
       });
 
+      it("should include the proverb date in the scheduled notification content data", async () => {
+        const futureDate = "2099-06-16";
+        await scheduleNotificationForModeAndDate(
+          "scheduled",
+          futureDate,
+          mockProverb,
+        );
+
+        const call = (Notifications.scheduleNotificationAsync as jest.Mock).mock
+          .calls[0][0];
+        expect(call.content.data).toEqual({
+          proverb: mockProverb.proverb,
+          ref: mockProverb.ref,
+          date: futureDate,
+        });
+      });
+
       it("should NOT call cancelScheduledNotificationAsync (scheduling is separate from cancellation)", async () => {
         const futureDate = "2099-06-16";
         await scheduleNotificationForModeAndDate(
@@ -265,6 +282,25 @@ describe("push-listener", () => {
         Notifications.cancelScheduledNotificationAsync,
       ).toHaveBeenCalledWith(`daily-proverb-meditation-${todayStr}`);
       expect(Notifications.scheduleNotificationAsync).toHaveBeenCalled();
+    });
+
+    it("should schedule today's notification with today's date in content data", async () => {
+      (
+        Notifications.getAllScheduledNotificationsAsync as jest.Mock
+      ).mockResolvedValue([]);
+
+      await handleDailyProverbPush();
+
+      const todayStr = getTodayStr();
+      const scheduleCall = (
+        Notifications.scheduleNotificationAsync as jest.Mock
+      ).mock.calls.find(
+        (c: unknown[]) =>
+          (c[0] as { identifier: string }).identifier ===
+          `daily-proverb-meditation-${todayStr}`,
+      );
+      expect(scheduleCall).toBeDefined();
+      expect(scheduleCall![0].content.data.date).toBe(todayStr);
     });
 
     it("should skip today's scheduling when today notification already exists (matches by ID)", async () => {

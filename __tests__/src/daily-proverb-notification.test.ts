@@ -4,6 +4,7 @@ import {
   cancelProverbNotification,
   cleanupNotifications,
   EXAMPLE_NOTIFICATION_ID,
+  getMeditationRouteParams,
   getNotificationIdForDate,
   getRandomTimeInWindow,
   initializeNotifications,
@@ -54,6 +55,15 @@ const mockGetNotificationSentDates =
 const mockProverb: Proverb = {
   ref: "Proverbs 3:5",
   proverb: "Trust in the LORD",
+};
+
+const getLocalTodayStr = (): string => {
+  const now = new Date();
+  return [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, "0"),
+    String(now.getDate()).padStart(2, "0"),
+  ].join("-");
 };
 
 describe("Notification Functions", () => {
@@ -127,97 +137,91 @@ describe("Notification Functions", () => {
     });
   });
 
+  describe("snooze reschedule", () => {
+    it("should preserve the proverb date when rescheduling a snoozed notification", async () => {
+      initializeNotifications();
+
+      const snoozeListener = (
+        Notifications.addNotificationResponseReceivedListener as jest.Mock
+      ).mock.calls[0][0];
+
+      const response = {
+        actionIdentifier: "snooze",
+        notification: {
+          request: {
+            identifier: "daily-proverb-meditation-2026-06-16",
+            content: {
+              data: {
+                proverb: "Trust in the LORD",
+                ref: "Proverbs 3:5",
+                date: "2026-06-16",
+              },
+            },
+          },
+        },
+      };
+
+      snoozeListener(response);
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      const call = (Notifications.scheduleNotificationAsync as jest.Mock).mock
+        .calls[0][0];
+      expect(call.identifier).toBe("daily-proverb-snoozed");
+      expect(call.content.data).toEqual({
+        proverb: "Trust in the LORD",
+        ref: "Proverbs 3:5",
+        date: "2026-06-16",
+      });
+    });
+  });
+
   describe("MEDITATE_ACTION_ID", () => {
     it("should export the meditate action identifier", () => {
       expect(MEDITATE_ACTION_ID).toBe("meditate");
     });
   });
 
-  describe("notification response handling", () => {
-    it("should navigate to meditation when meditate action is triggered", () => {
-      initializeNotifications();
+  describe("getMeditationRouteParams", () => {
+    it("should return meditation route params including the proverb date", () => {
+      const result = getMeditationRouteParams({
+        proverb: "Trust in the LORD",
+        ref: "Proverbs 3:5",
+        date: "2026-06-16",
+      });
 
-      const listenerCallback = (
-        Notifications.addNotificationResponseReceivedListener as jest.Mock
-      ).mock.calls[0][0];
-
-      const push = jest.fn();
-      const response = {
-        actionIdentifier: MEDITATE_ACTION_ID,
-        notification: {
-          request: {
-            content: {
-              data: { proverb: "Trust in the LORD", ref: "Proverbs 3:5" },
-            },
-          },
+      expect(result).toEqual({
+        pathname: "/meditation",
+        params: {
+          proverb: "Trust in the LORD",
+          ref: "Proverbs 3:5",
+          date: "2026-06-16",
         },
-      };
+      });
+    });
 
-      if (response.actionIdentifier === MEDITATE_ACTION_ID) {
-        const { proverb, ref } = response.notification.request.content
-          .data as Record<string, unknown>;
-        if (typeof proverb === "string" && typeof ref === "string") {
-          push({ pathname: "/meditation", params: { proverb, ref } });
-        }
-      }
+    it("should return params without a date when date is missing (legacy notifications)", () => {
+      const result = getMeditationRouteParams({
+        proverb: "Trust in the LORD",
+        ref: "Proverbs 3:5",
+      });
 
-      expect(push).toHaveBeenCalledWith({
+      expect(result).toEqual({
         pathname: "/meditation",
         params: { proverb: "Trust in the LORD", ref: "Proverbs 3:5" },
       });
     });
 
-    it("should not navigate for non-meditate actions", () => {
-      initializeNotifications();
-
-      const push = jest.fn();
-      const response = {
-        actionIdentifier: "snooze",
-        notification: {
-          request: {
-            content: {
-              data: { proverb: "Trust in the LORD", ref: "Proverbs 3:5" },
-            },
-          },
-        },
-      };
-
-      if (
-        response.actionIdentifier === "meditate" &&
-        typeof response.notification.request.content.data.proverb ===
-          "string" &&
-        typeof response.notification.request.content.data.ref === "string"
-      ) {
-        push({ pathname: "/meditation", params: { proverb: "", ref: "" } });
-      }
-
-      expect(push).not.toHaveBeenCalled();
-    });
-
-    it("should not navigate when proverb data is missing", () => {
-      initializeNotifications();
-
-      const push = jest.fn();
-      const response = {
-        actionIdentifier: MEDITATE_ACTION_ID,
-        notification: {
-          request: {
-            content: {
-              data: {},
-            },
-          },
-        },
-      };
-
-      if (response.actionIdentifier === MEDITATE_ACTION_ID) {
-        const { proverb, ref } = response.notification.request.content
-          .data as Record<string, unknown>;
-        if (typeof proverb === "string" && typeof ref === "string") {
-          push({ pathname: "/meditation", params: { proverb, ref } });
-        }
-      }
-
-      expect(push).not.toHaveBeenCalled();
+    it("should return null when proverb or ref is missing", () => {
+      expect(getMeditationRouteParams({ date: "2026-06-16" })).toBeNull();
+      expect(
+        getMeditationRouteParams({
+          proverb: "Trust in the LORD",
+          date: "2026-06-16",
+        }),
+      ).toBeNull();
+      expect(getMeditationRouteParams({})).toBeNull();
     });
   });
 
@@ -264,6 +268,22 @@ describe("Notification Functions", () => {
           trigger,
         }),
       );
+    });
+
+    it("should include the proverb date in the notification content data", async () => {
+      const trigger = {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: new Date("2026-06-16T09:00:00"),
+      };
+      await scheduleProverbNotification(mockProverb, trigger, "2026-06-16");
+
+      const call = (Notifications.scheduleNotificationAsync as jest.Mock).mock
+        .calls[0][0];
+      expect(call.content.data).toEqual({
+        proverb: mockProverb.proverb,
+        ref: mockProverb.ref,
+        date: "2026-06-16",
+      });
     });
 
     it("should NOT cancel existing scheduled notifications (split from scheduling)", async () => {
@@ -448,6 +468,30 @@ describe("Notification Functions", () => {
       );
     });
 
+    it("should include the proverb date in the immediate send content data", async () => {
+      await sendProverbNotification(mockProverb, "2026-06-16");
+
+      const call = (Notifications.scheduleNotificationAsync as jest.Mock).mock
+        .calls[0][0];
+      expect(call.content.data).toEqual({
+        proverb: mockProverb.proverb,
+        ref: mockProverb.ref,
+        date: "2026-06-16",
+      });
+    });
+
+    it("should include today's local date when no dateString is provided", async () => {
+      await sendProverbNotification(mockProverb);
+
+      const call = (Notifications.scheduleNotificationAsync as jest.Mock).mock
+        .calls[0][0];
+      expect(call.content.data).toEqual({
+        proverb: mockProverb.proverb,
+        ref: mockProverb.ref,
+        date: getLocalTodayStr(),
+      });
+    });
+
     it("should use today's local date when no dateString is provided", async () => {
       await sendProverbNotification(mockProverb);
 
@@ -531,6 +575,18 @@ describe("Notification Functions", () => {
       await sendExampleProverbNotification(mockProverb);
 
       expect(mockAddNotificationSentDate).not.toHaveBeenCalled();
+    });
+
+    it("should include today's local date in the example content data", async () => {
+      await sendExampleProverbNotification(mockProverb);
+
+      const call = (Notifications.scheduleNotificationAsync as jest.Mock).mock
+        .calls[0][0];
+      expect(call.content.data).toEqual({
+        proverb: mockProverb.proverb,
+        ref: mockProverb.ref,
+        date: getLocalTodayStr(),
+      });
     });
 
     it("should not send if permissions are not granted", async () => {

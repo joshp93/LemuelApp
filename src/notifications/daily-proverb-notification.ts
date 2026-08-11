@@ -31,11 +31,13 @@ export type NonNullNotificationTrigger =
 /**
  * Creates an object to be used as the payload of a notification
  * @param proverb The proverb to include in the notification.
+ * @param dateString The ISO date string (YYYY-MM-DD) of the daily proverb,
+ * used to navigate to the correct proverb when the notification is tapped.
  */
-const _createNotificationContent = (proverb: Proverb) => ({
+const _createNotificationContent = (proverb: Proverb, dateString: string) => ({
   title: "Daily Proverb Meditation",
   body: `Tap to begin meditation on ${proverb.ref}`,
-  data: { proverb: proverb.proverb, ref: proverb.ref },
+  data: { proverb: proverb.proverb, ref: proverb.ref, date: dateString },
   categoryIdentifier: CATEGORY_ID,
   ...(Platform.OS === "android"
     ? { priorityAndroid: Notifications.AndroidNotificationPriority.MAX }
@@ -103,7 +105,7 @@ export const scheduleProverbNotification = async (
   });
   await Notifications.scheduleNotificationAsync({
     identifier: notificationId,
-    content: _createNotificationContent(proverb),
+    content: _createNotificationContent(proverb, dateString),
     trigger,
   });
   await addNotificationSentDate(dateString);
@@ -187,16 +189,20 @@ let _snoozeSubscription: Notifications.EventSubscription | null = null;
  * @param notification The notification in question
  */
 const _handleSnooze = async (notification: Notifications.Notification) => {
-  const { data } = notification.request.content;
+  const data = notification.request.content.data;
+  if (!data) return;
   const proverb = ProverbSchema.safeParse(data);
   if (!proverb.success) return;
+
+  const date =
+    typeof data.date === "string" ? data.date : toLocalDateString(new Date());
 
   const snoozeDate = new Date();
   snoozeDate.setMinutes(snoozeDate.getMinutes() + 10);
 
   await Notifications.scheduleNotificationAsync({
     identifier: SNOOZE_NOTIFICATION_ID,
-    content: _createNotificationContent(proverb.data),
+    content: _createNotificationContent(proverb.data, date),
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DATE,
       date: snoozeDate,
@@ -302,7 +308,7 @@ export const sendProverbNotification = async (
     });
     await Notifications.scheduleNotificationAsync({
       identifier: notificationId,
-      content: _createNotificationContent(proverb),
+      content: _createNotificationContent(proverb, ds),
       trigger: null,
     });
     await addNotificationSentDate(ds);
@@ -342,7 +348,10 @@ export const sendExampleProverbNotification = async (proverb: Proverb) => {
     });
     await Notifications.scheduleNotificationAsync({
       identifier: EXAMPLE_NOTIFICATION_ID,
-      content: _createNotificationContent(proverb),
+      content: _createNotificationContent(
+        proverb,
+        toLocalDateString(new Date()),
+      ),
       trigger: null,
     });
     remoteLog("debug", "[Notifications] Example notification sent", {
@@ -353,4 +362,27 @@ export const sendExampleProverbNotification = async (proverb: Proverb) => {
       error,
     });
   }
+};
+
+/**
+ * Navigation params for the meditation screen derived from a notification's
+ * content data. Includes the proverb date when present so tapping the
+ * notification lands on the correct daily proverb rather than today's.
+ *
+ * Returns null when the data cannot be used to navigate (missing proverb/ref).
+ * @param data The `content.data` payload of a notification response.
+ */
+export type MeditationRouteParams = {
+  pathname: "/meditation";
+  params: { proverb: string; ref: string; date?: string };
+};
+
+export const getMeditationRouteParams = (
+  data: Record<string, unknown>,
+): MeditationRouteParams | null => {
+  const { proverb, ref, date } = data;
+  if (typeof proverb !== "string" || typeof ref !== "string") return null;
+  const params: MeditationRouteParams["params"] = { proverb, ref };
+  if (typeof date === "string") params.date = date;
+  return { pathname: "/meditation", params };
 };
