@@ -9,8 +9,11 @@ let cachedTier: DeviceTier | null = null;
 function classifyTier(totalMemory: number | null): DeviceTier {
   if (totalMemory == null) return "low";
 
-  // 3 GB (3,221,225,472), 5 GB (5,368,709,120)
-  if (totalMemory >= 5_368_709_120) return "high";
+  // High tier requires flagship-class RAM (8 GB). The previous 5 GB cutoff
+  // admitted mid-range devices like the Pixel 6a (6 GB) whose GPU struggles
+  // with the high-tier shader.
+  // 3 GB (3,221,225,472), 8 GB (8,589,934,592)
+  if (totalMemory >= 8_589_934_592) return "high";
   if (totalMemory >= 3_221_225_472) return "medium";
   return "low";
 }

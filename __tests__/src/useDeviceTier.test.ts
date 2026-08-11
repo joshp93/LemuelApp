@@ -2,7 +2,7 @@ import type { DeviceTier } from "../../src/hooks/useDeviceTier";
 
 let mockTotalMemory: number | null = null;
 const mockDeviceYearClass = 7;
-const mockModelName = "iPhone 15 Pro";
+const mockModelName = "Pixel 6a";
 
 jest.mock("expo-device", () => ({
   __esModule: true,
@@ -16,10 +16,10 @@ jest.mock("expo-device", () => ({
     return mockModelName;
   },
   get osName() {
-    return "iOS";
+    return "Android";
   },
   get osVersion() {
-    return "17.0";
+    return "14.0";
   },
 }));
 
@@ -57,18 +57,18 @@ describe("useDeviceTier", () => {
       expect(getTierInIsolation()).toBe("medium");
     });
 
-    it("returns medium when totalMemory is between 3GB and 5GB", () => {
-      mockTotalMemory = 4_294_967_296; // 4 GB
+    it("returns medium when totalMemory is between 3GB and 8GB", () => {
+      mockTotalMemory = 6_442_450_944; // 6 GB (Pixel 6a)
       expect(getTierInIsolation()).toBe("medium");
     });
 
-    it("returns high when totalMemory is exactly 5GB", () => {
-      mockTotalMemory = 5_368_709_120; // 5 GB
+    it("returns high when totalMemory is exactly 8GB", () => {
+      mockTotalMemory = 8_589_934_592; // 8 GB
       expect(getTierInIsolation()).toBe("high");
     });
 
-    it("returns high when totalMemory is above 5GB", () => {
-      mockTotalMemory = 8_589_934_592; // 8 GB
+    it("returns high when totalMemory is above 8GB", () => {
+      mockTotalMemory = 12_884_901_888; // 12 GB
       expect(getTierInIsolation()).toBe("high");
     });
 
@@ -81,7 +81,7 @@ describe("useDeviceTier", () => {
         tier1 = mod.getDeviceTierSync();
 
         // Change memory within same module instance
-        mockTotalMemory = 8_589_934_592; // 8 GB
+        mockTotalMemory = 12_884_901_888; // 12 GB
         tier2 = mod.getDeviceTierSync();
       });
 
