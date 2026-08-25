@@ -503,9 +503,7 @@ describe("MyMeditations", () => {
 
     fireEvent.press(getByTestId("close-search"));
 
-    expect(
-      queryByPlaceholderText("Search by date or proverb"),
-    ).toBeNull();
+    expect(queryByPlaceholderText("Search by date or proverb")).toBeNull();
     expect(getByTestId("open-search")).toBeTruthy();
   });
 
