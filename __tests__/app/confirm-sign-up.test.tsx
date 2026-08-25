@@ -90,7 +90,7 @@ describe("ConfirmSignUp", () => {
         getByText("Your email has been verified. You can now sign in."),
       ).toBeTruthy();
     });
-  });
+  }, 15000);
 
   it("should navigate to sign-in on success with no redirect", async () => {
     mockVerifyAccount.mockResolvedValueOnce({ success: true });

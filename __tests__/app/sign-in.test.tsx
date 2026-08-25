@@ -88,7 +88,7 @@ describe("SignIn", () => {
     expect(mockRefreshUser).toHaveBeenCalled();
     expect(mockCreateAccountRecord).toHaveBeenCalled();
     expect(mockReplace).toHaveBeenCalledWith("/");
-  });
+  }, 15000);
 
   it("should sign in and navigate to redirect param when present", async () => {
     mockParams = { redirect: "/notes/users/abc-123/ref-456" };

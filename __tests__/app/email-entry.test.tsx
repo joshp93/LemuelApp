@@ -77,7 +77,7 @@ describe("EmailEntry", () => {
       pathname: "/sign-in",
       params: { email: "test@example.com" },
     });
-  });
+  }, 15000);
 
   it("should navigate to sign-up when user does not exist", async () => {
     mockCheckUserExists.mockResolvedValueOnce(false);

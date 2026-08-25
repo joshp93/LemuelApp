@@ -20,6 +20,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "emulator": "C:\\android_sdk\\emulator\\emulator.exe -avd %npm_package_config_emulatorDevice% -use-keycode-forwarding",
+    "emulator:cold": "C:\\android_sdk\\emulator\\emulator.exe -avd %npm_package_config_emulatorDevice% -use-keycode-forwarding -no-snapshot-load -wipe-data",
     "deploy": "eas build -p android --profile production"
   },
   "config": {

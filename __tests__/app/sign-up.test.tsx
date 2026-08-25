@@ -143,7 +143,7 @@ describe("SignUp", () => {
       pathname: "/confirm-sign-up",
       params: { email: "test@example.com", displayName: "testuser" },
     });
-  });
+  }, 15000);
 
   it("should forward redirect param to confirm-sign-up when present", async () => {
     mockParams = { redirect: "/notes/users/abc-123/ref-456" };

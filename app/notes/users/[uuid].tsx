@@ -1,3 +1,4 @@
+import { MaterialIcons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -5,6 +6,7 @@ import {
   FlatList,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -28,6 +30,8 @@ function MyMeditationsPage(_props: WithAuthProps) {
   const [notes, setNotes] = useState<NoteRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     if (!uuid) return;
@@ -42,7 +46,7 @@ function MyMeditationsPage(_props: WithAuthProps) {
         const rows = data.items.map((item: NoteEntity) => ({
           ref: item.ref,
           displayRef: convertProverbKeyToDisplayProverb(item.ref),
-          date: formatDate(item.dateCreated),
+          date: formatDate(item.date),
           proverbDate: item.date,
         }));
         setNotes(rows);
@@ -69,6 +73,16 @@ function MyMeditationsPage(_props: WithAuthProps) {
     [uuid, router],
   );
 
+  const trimmedQuery = query.trim().toLowerCase();
+  const filteredNotes = trimmedQuery
+    ? notes.filter(
+        (n) =>
+          n.date.toLowerCase().includes(trimmedQuery) ||
+          n.displayRef.toLowerCase().includes(trimmedQuery) ||
+          n.ref.toLowerCase().includes(trimmedQuery),
+      )
+    : notes;
+
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ title: "My Meditations" }} />
@@ -90,9 +104,67 @@ function MyMeditationsPage(_props: WithAuthProps) {
       {!loading && !error && notes.length > 0 && (
         <FlatList
           contentInsetAdjustmentBehavior="automatic"
-          data={notes}
+          data={filteredNotes}
           keyExtractor={(item) => item.ref}
           contentContainerStyle={styles.listContent}
+          ListHeaderComponent={
+            <View>
+              <View style={styles.searchContainer}>
+                {searchOpen ? (
+                  <View style={styles.searchBox}>
+                    <MaterialIcons
+                      name="search"
+                      size={20}
+                      color="#999"
+                      style={styles.searchIconInside}
+                    />
+                    <TextInput
+                      style={styles.searchInput}
+                      placeholder="Search by date or proverb"
+                      placeholderTextColor="#999"
+                      value={query}
+                      onChangeText={setQuery}
+                      autoFocus
+                    />
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (query.length > 0) {
+                          setQuery("");
+                        } else {
+                          setSearchOpen(false);
+                        }
+                      }}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      testID="close-search"
+                    >
+                      <MaterialIcons name="close" size={20} color="#999" />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.searchIconButton}
+                    onPress={() => setSearchOpen(true)}
+                    testID="open-search"
+                  >
+                    <MaterialIcons name="search" size={24} color="#333" />
+                  </TouchableOpacity>
+                )}
+              </View>
+              <View style={styles.headerRow}>
+                <Text style={styles.headerCell}>Daily proverb date</Text>
+                <Text style={[styles.headerCell, styles.headerCellRight]}>
+                  Proverb
+                </Text>
+              </View>
+            </View>
+          }
+          ListEmptyComponent={
+            trimmedQuery ? (
+              <View style={styles.centered}>
+                <Text style={styles.emptyText}>No matches found</Text>
+              </View>
+            ) : null
+          }
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.row}
@@ -132,6 +204,47 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 16,
+  },
+  searchContainer: {
+    marginBottom: 8,
+  },
+  searchIconButton: {
+    alignSelf: "flex-start",
+    padding: 4,
+  },
+  searchBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "white",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    height: 44,
+  },
+  searchIconInside: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: "#333",
+    paddingVertical: 0,
+  },
+  headerRow: {
+    flexDirection: "row",
+    backgroundColor: "transparent",
+    paddingVertical: 8,
+    marginBottom: 4,
+    alignItems: "center",
+  },
+  headerCell: {
+    flex: 1,
+    fontSize: 12,
+    color: "#666",
+    fontWeight: "700",
+    marginRight: 8,
+  },
+  headerCellRight: {
+    textAlign: "right",
   },
   row: {
     flexDirection: "row",
