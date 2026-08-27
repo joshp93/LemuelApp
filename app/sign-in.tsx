@@ -46,7 +46,9 @@ export default function SignIn() {
 
     if (result.success) {
       await refreshUser();
-      await createAccountRecord(params.displayName || "");
+      if (params.displayName) {
+        await createAccountRecord(params.displayName);
+      }
       const authenticatedUser = await getAuthenticatedUser();
       const resolvedRedirect =
         redirect?.replace("{{uuid}}", authenticatedUser?.userId ?? "") || "/";

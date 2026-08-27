@@ -67,6 +67,21 @@ describe("withAuth", () => {
     });
   });
 
+  it("should preserve extra query params like date in the redirect path", () => {
+    mockPathname = "/notes/users/abc-123/ref-456";
+    mockSearchParams = { uuid: "abc-123", date: "2026-08-27" };
+    mockUseAuth.mockReturnValue({
+      user: null,
+      loading: false,
+    } as any);
+
+    render(<WrappedComponent />);
+
+    expect(mockRedirect).toHaveBeenCalledWith({
+      href: "/email-entry?redirect=%2Fnotes%2Fusers%2F%7B%7Buuid%7D%7D%2Fref-456%3Fdate%3D2026-08-27",
+    });
+  });
+
   it("should render the wrapped component when authenticated", () => {
     const mockUser = {
       userId: "uuid-123",

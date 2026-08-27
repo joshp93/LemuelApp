@@ -25,11 +25,12 @@ const CLIENT_ID = COGNITO_CONFIG.clientId;
  * @returns The result of the SignUpCommand from Cognito.
  */
 export async function signUp(email: string, password: string) {
+  const normalized = email.toLowerCase();
   const command = new SignUpCommand({
     ClientId: CLIENT_ID,
-    Username: email,
+    Username: normalized,
     Password: password,
-    UserAttributes: [{ Name: "email", Value: email }],
+    UserAttributes: [{ Name: "email", Value: normalized }],
   });
   return cognitoClient.send(command);
 }
@@ -43,7 +44,7 @@ export async function signUp(email: string, password: string) {
 export async function confirmSignUp(email: string, code: string) {
   const command = new ConfirmSignUpCommand({
     ClientId: CLIENT_ID,
-    Username: email,
+    Username: email.toLowerCase(),
     ConfirmationCode: code,
   });
   return cognitoClient.send(command);
@@ -58,7 +59,7 @@ export async function confirmSignUp(email: string, code: string) {
 export async function resendConfirmationCode(email: string) {
   const command = new ResendConfirmationCodeCommand({
     ClientId: CLIENT_ID,
-    Username: email,
+    Username: email.toLowerCase(),
   });
   return cognitoClient.send(command);
 }
@@ -75,7 +76,7 @@ export async function signIn(email: string, password: string) {
     new InitiateAuthCommand({
       AuthFlow: "USER_PASSWORD_AUTH",
       AuthParameters: {
-        USERNAME: email,
+        USERNAME: email.toLowerCase(),
         PASSWORD: password,
       },
       ClientId: CLIENT_ID,

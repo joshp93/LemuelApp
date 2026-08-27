@@ -30,7 +30,7 @@ export async function checkUserExists(email: string): Promise<boolean> {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: email.toLowerCase() }),
       },
     );
     const data = (await response.json()) as { exists: boolean };

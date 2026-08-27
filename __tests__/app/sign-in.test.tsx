@@ -86,7 +86,7 @@ describe("SignIn", () => {
     });
 
     expect(mockRefreshUser).toHaveBeenCalled();
-    expect(mockCreateAccountRecord).toHaveBeenCalled();
+    expect(mockCreateAccountRecord).not.toHaveBeenCalled();
     expect(mockReplace).toHaveBeenCalledWith("/");
   }, 15000);
 
@@ -106,8 +106,27 @@ describe("SignIn", () => {
     });
 
     expect(mockRefreshUser).toHaveBeenCalled();
-    expect(mockCreateAccountRecord).toHaveBeenCalled();
+    expect(mockCreateAccountRecord).not.toHaveBeenCalled();
     expect(mockReplace).toHaveBeenCalledWith("/notes/users/abc-123/ref-456");
+  });
+
+  it("should create account record when displayName is present", async () => {
+    mockParams = { displayName: "TestUser" };
+    mockSignIn.mockResolvedValueOnce({ success: true });
+
+    const { getByPlaceholderText, getAllByText } = render(<SignIn />);
+
+    fireEvent.changeText(getByPlaceholderText("Password"), "password123");
+
+    const signInButtons = getAllByText("Sign In");
+    fireEvent.press(signInButtons[1]);
+
+    await waitFor(() => {
+      expect(mockSignIn).toHaveBeenCalledWith("", "password123");
+    });
+
+    expect(mockCreateAccountRecord).toHaveBeenCalledWith("TestUser");
+    expect(mockReplace).toHaveBeenCalledWith("/");
   });
 
   it("should sign in and navigate to home when redirect param is empty", async () => {

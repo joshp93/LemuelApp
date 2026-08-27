@@ -29,6 +29,31 @@ export interface WithAuthProps {
 }
 
 /**
+ * Builds a query string from route params that are NOT consumed by route template
+ * segments. These are "extra" params (like `date`) that don't correspond to any
+ * `[paramName]` segment in the route path and must be preserved as query
+ * parameters so they survive the authentication redirect round-trip.
+ *
+ * @param params - All local search params from the route (e.g. `{ uuid, ref, date }`).
+ * @param routeTemplate - The route's path template (e.g. `/notes/users/[uuid]/[ref]`),
+ *                        or `null` if unavailable.
+ * @returns A query string like `?date=2026-08-27` or an empty string if no extra params.
+ */
+function buildExtraQueryString(
+  params: Record<string, unknown>,
+  routeTemplate: string | null,
+): string {
+  const parts: string[] = [];
+  for (const [key, value] of Object.entries(params)) {
+    if (typeof value !== "string") continue;
+    if (key === "uuid") continue;
+    if (routeTemplate?.includes(`[${key}]`)) continue;
+    parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
+  }
+  return parts.length > 0 ? `?${parts.join("&")}` : "";
+}
+
+/**
  * Builds the redirect path to pass as a query param during unauthenticated redirects.
  *
  * When a `uuid` local search param is present, its value is replaced with the
@@ -49,33 +74,41 @@ function useRedirectPath(): string {
     return pathname;
   }
 
-  if (uuid && pathname.includes(uuid)) {
-    return pathname.replace(uuid, "{{uuid}}");
-  }
-
   const state = navigation.getState();
   const route = state?.routes?.[state.index ?? 0];
-  if (!route) return pathname;
+  const routeTemplate = route ? `/${route.name}` : null;
 
-  let result = `/${route.name}`;
-  const uuidInRouteName = result.includes("[uuid]");
+  let result: string;
 
-  for (const [key, value] of Object.entries(params)) {
-    if (typeof value === "string" && result.includes(`[${key}]`)) {
-      result = result.replace(`[${key}]`, key === "uuid" ? "{{uuid}}" : value);
+  if (uuid && pathname.includes(uuid)) {
+    result = pathname.replace(uuid, "{{uuid}}");
+  } else if (route) {
+    result = `/${route.name}`;
+    const uuidInRouteName = result.includes("[uuid]");
+
+    for (const [key, value] of Object.entries(params)) {
+      if (typeof value === "string" && result.includes(`[${key}]`)) {
+        result = result.replace(
+          `[${key}]`,
+          key === "uuid" ? "{{uuid}}" : value,
+        );
+      }
     }
+
+    if (!uuidInRouteName) {
+      const segments = result.split("/");
+      const usersIdx = segments.indexOf("users");
+      if (usersIdx !== -1 && usersIdx + 1 < segments.length) {
+        segments.splice(usersIdx + 1, 0, "{{uuid}}");
+        result = segments.join("/");
+      }
+    }
+  } else {
+    return pathname;
   }
 
-  if (!uuidInRouteName) {
-    const segments = result.split("/");
-    const usersIdx = segments.indexOf("users");
-    if (usersIdx !== -1 && usersIdx + 1 < segments.length) {
-      segments.splice(usersIdx + 1, 0, "{{uuid}}");
-      result = segments.join("/");
-    }
-  }
-
-  return result;
+  const extraQuery = buildExtraQueryString(params, routeTemplate);
+  return result + extraQuery;
 }
 
 /**

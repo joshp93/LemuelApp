@@ -81,7 +81,7 @@ export default function EmailEntry() {
               placeholder="Email"
               placeholderTextColor="#999"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(text) => setEmail(text.toLowerCase())}
               onBlur={() => validateField(email)}
               autoCapitalize="none"
               keyboardType="email-address"

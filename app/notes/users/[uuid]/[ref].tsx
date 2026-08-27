@@ -18,6 +18,7 @@ import {
   RichToolbar,
 } from "react-native-pell-rich-editor";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { recordMeditationCompletion } from "../../../../src/api/meditation";
 import {
   deleteUserNote,
   getUserNote,
@@ -78,6 +79,9 @@ function UserNotePage({ user: _user }: WithAuthProps) {
   useEffect(() => {
     if (!uuid || !ref) return;
     setNotesLoading(true);
+
+    recordMeditationCompletion(uuid, date ?? "");
+
     getUserNote(uuid, ref, date)
       .then((data) => {
         if (data) {
@@ -92,7 +96,7 @@ function UserNotePage({ user: _user }: WithAuthProps) {
       .finally(() => {
         setNotesLoading(false);
       });
-  }, [uuid, ref]);
+  }, [uuid, ref, date]);
 
   const handleEditorChange = useCallback((html: string) => {
     setEditorContent(html);
