@@ -27,6 +27,7 @@ import {
   initializePushHandler,
   setupTokenListener,
 } from "../src/notifications/push-listener";
+import { initializeWidget } from "../src/widgets/initializeWidget";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -75,6 +76,10 @@ function AppContent() {
       meditateSub.remove();
     };
   }, [handleNotificationResponse]);
+
+  useEffect(() => {
+    initializeWidget();
+  }, []);
 
   useEffect(() => {
     if (fontsLoaded || fontError) {

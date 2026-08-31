@@ -9,7 +9,6 @@ import { remoteLog } from "../api/remote-logger";
 import { getChosenVersion } from "../api/version-storage";
 import type { Proverb } from "../models/proverb";
 import { toLocalDateString } from "../utils/date";
-import { updateProverbWidget } from "../widgets";
 import {
   cancelProverbNotification,
   getNotificationIdForDate,
@@ -210,7 +209,6 @@ async function runEnsureNotificationsScheduled(
     const todayStr = toLocalDateString(today);
 
     const todayProverb = await getProverbForTheDay(version, todayStr);
-    await updateProverbWidget(todayProverb);
 
     const enabled = await getNotificationsEnabled();
     if (!enabled) {

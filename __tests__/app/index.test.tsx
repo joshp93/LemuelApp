@@ -9,7 +9,6 @@ import {
 import Index from "../../app/index";
 import { getProverbNotes } from "../../src/api/notes";
 import { useProverbForTheDay } from "../../src/hooks/useProverbForTheDay";
-import { updateProverbWidget } from "../../src/widgets";
 
 let appStateCallback: ((state: AppStateStatus) => void) | null = null;
 
@@ -55,6 +54,7 @@ jest.mock("react-native-reanimated", () => {
 jest.mock("../../src/hooks/useProverbForTheDay");
 jest.mock("../../src/widgets", () => ({
   updateProverbWidget: jest.fn(),
+  initializeWidget: jest.fn(),
 }));
 jest.mock("../../src/api/notes", () => ({
   ...jest.requireActual("../../src/api/notes"),
@@ -84,9 +84,6 @@ jest.mock("expo-router", () => ({
 
 const mockUseProverbForTheDay = useProverbForTheDay as jest.MockedFunction<
   typeof useProverbForTheDay
->;
-const mockUpdateProverbWidget = updateProverbWidget as jest.MockedFunction<
-  typeof updateProverbWidget
 >;
 const mockGetProverbNotes = getProverbNotes as jest.MockedFunction<
   typeof getProverbNotes
@@ -179,36 +176,22 @@ describe("Index", () => {
     });
   });
 
-  it("should update widget when proverb loads", () => {
-    mockUseProverbForTheDay.mockReturnValue({
-      ...defaultHookReturn,
-      loading: false,
-      proverb: mockProverb,
-    });
+  it("should render loading state when proverb is loading", () => {
+    const { getByText } = render(<Index />);
 
-    render(<Index />);
-
-    expect(mockUpdateProverbWidget).toHaveBeenCalledWith(mockProverb);
+    expect(getByText("Loading proverb...")).toBeTruthy();
   });
 
-  it("should not update widget when still loading", () => {
-    mockUseProverbForTheDay.mockReturnValue(defaultHookReturn);
-
-    render(<Index />);
-
-    expect(mockUpdateProverbWidget).not.toHaveBeenCalled();
-  });
-
-  it("should not update widget on error", () => {
+  it("should render error message on error", () => {
     mockUseProverbForTheDay.mockReturnValue({
       ...defaultHookReturn,
       loading: false,
       error: "Failed to load",
     });
 
-    render(<Index />);
+    const { getByText } = render(<Index />);
 
-    expect(mockUpdateProverbWidget).not.toHaveBeenCalled();
+    expect(getByText("Failed to load")).toBeTruthy();
   });
 
   it("should render Start Meditation button when proverb is loaded", async () => {
@@ -276,8 +259,10 @@ describe("Index", () => {
         {
           pk: "uuid-1",
           sk: "Proverbs3:5",
+          displayName: "Proverbs 3:5",
           note: "<p>My meditation note</p>",
           dateCreated: "2026-06-02T12:00:00.000Z",
+          date: "2026-06-02T12:00:00.000Z",
           uuid: "uuid-1",
           ref: "Proverbs3:5",
         },

@@ -18,7 +18,6 @@ import {
   resetNotificationEnsureChain,
   scheduleNotificationForModeAndDate,
 } from "../../src/notifications/push-listener";
-import { updateProverbWidget } from "../../src/widgets";
 
 jest.mock("expo-background-task", () => ({
   getStatusAsync: jest.fn().mockResolvedValue(2),
@@ -60,6 +59,7 @@ jest.mock("../../src/api/proverbs");
 jest.mock("../../src/api/version-storage");
 jest.mock("../../src/widgets", () => ({
   updateProverbWidget: jest.fn(),
+  initializeWidget: jest.fn(),
 }));
 jest.mock("../../src/notifications/notification-preferences", () => ({
   getNotificationMode: jest.fn(),
@@ -102,7 +102,6 @@ describe("push-listener", () => {
 
     (getChosenVersion as jest.Mock).mockResolvedValue("niv");
     (getProverbForTheDay as jest.Mock).mockResolvedValue(mockProverb);
-    (updateProverbWidget as jest.Mock).mockResolvedValue(undefined);
     (getNotificationsEnabled as jest.Mock).mockResolvedValue(true);
     (getNotificationSentDates as jest.Mock).mockResolvedValue([]);
     (
@@ -247,7 +246,7 @@ describe("push-listener", () => {
       (getScheduledTimeMinute as jest.Mock).mockResolvedValue(0);
     });
 
-    it("should update widget with today's proverb", async () => {
+    it("should fetch today's proverb", async () => {
       (getProverbForTheDay as jest.Mock).mockResolvedValue(mockProverb);
       (
         Notifications.getAllScheduledNotificationsAsync as jest.Mock
@@ -255,7 +254,6 @@ describe("push-listener", () => {
 
       await handleDailyProverbPush();
 
-      expect(updateProverbWidget).toHaveBeenCalledWith(mockProverb);
       expect(getProverbForTheDay).toHaveBeenCalledWith(
         "niv",
         expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),

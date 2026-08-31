@@ -5,7 +5,7 @@ A daily proverb mobile app (Android + iOS) built with Expo SDK 56, React Native 
 ## What the app does
 
 - Fetches and displays a **daily proverb** from a remote API (multiple Bible versions)
-- Shows a **home screen widget** (Android, via Voltra / Jetpack Compose Glance) updated on app launch, background fetch, and FCM silent push
+- Shows a **home screen widget** (Android, via Voltra server-driven widgets with WorkManager). Updates every 60 minutes independently of the app, or on-demand when the app launches via `reloadWidgets`. Credentials are stored at app launch via `initializeWidget`.
 - Schedules **push notifications** at configurable times (random window or exact time) via `expo-notifications`, with sent-date deduplication to prevent duplicates
 - Provides a **meditation timer** with Skia-animated full-screen experience (nebula shader, progress arc), adapting shader complexity to device performance tier
 - Supports **rich-text notes/journaling** per proverb (viewable as community notes)
@@ -38,7 +38,11 @@ src/
   notifications/              # Scheduling logic, preference storage, FCM push listener
   settings/                   # Meditation preferences (AsyncStorage)
   utils/                      # date, email, password, format, proverb-helper
-  widgets/                    # Voltra Android widget (proverb-widget.tsx)
+  widgets/                    # Voltra Android widget
+    proverb-widget.tsx         # Widget UI component (VoltraAndroid JSX)
+    proverb-widget-initial.tsx # Pre-rendered initial state (shown before first server fetch)
+    initializeWidget.ts        # Sets server credentials + triggers immediate refresh on app launch
+    index.tsx                  # legacy updateProverbWidget (client-side push, kept for reference)
   constants/
     theme.ts
 
@@ -52,7 +56,7 @@ __tests__/                    # Jest + @testing-library/react-native tests
 | Daily proverb display | ✅ Complete | `src/hooks/useProverbForTheDay.ts`, `src/api/proverbs.ts`, `src/components/proverb-card.tsx` |
 | Multiple Bible versions | ✅ Complete | `src/api/available-versions.ts`, `src/api/version-storage.ts`, `src/components/version-dropdown.tsx` |
 | Monthly proverb calendar | ✅ Complete | `src/api/daily-proverbs.ts`, `src/components/month-picker.tsx` |
-| Home screen widget (Android) | ✅ Complete | `src/widgets/proverb-widget.tsx`, `src/widgets/index.tsx` |
+| Home screen widget (Android) | ✅ Complete | `src/widgets/proverb-widget.tsx`, `src/widgets/initializeWidget.ts`, `src/widgets/proverb-widget-initial.tsx` |
 | Push notifications | ✅ Complete | `src/notifications/daily-proverb-notification.ts`, `src/notifications/notification-preferences.ts`, `src/notifications/push-listener.ts` |
 | Notification dedup (sent-date set) | ✅ Complete | `src/notifications/notification-preferences.ts` (`getNotificationSentDates`/`addNotificationSentDate`, JSON array, legacy-scalar migration, stale-date pruning); skipped per-day in `ensureNotificationsScheduled`; concurrent runs serialized; UTC/local date strings normalised via `src/utils/date.ts:toLocalDateString` |
 | Authentication (Cognito) | ✅ Complete | `src/auth/auth-context.tsx`, `src/auth/token-storage.ts`, `src/auth/token-utils.ts`, `src/api/auth.ts`, `src/api/cognito.ts` |
@@ -72,11 +76,34 @@ __tests__/                    # Jest + @testing-library/react-native tests
 - **Linting**: Biome (`pnpm lint`) + ESLint (`pnpm lint:eslint`)
 - **Typecheck**: `pnpm typecheck` (tsc --noEmit)
 - **Pre-test**: `pnpm pretest` runs typecheck + lint + eslint
-- **Do NOT** run tests unless asked — it slows the feedback loop
 - **Do NOT** modify `android/` — it's regenerated on prebuild
 - **Do NOT** build/run the app unless asked
 - **Do NOT** use Expo Go — native plugins (Voltra, notifications) require a dev build
 - Detect the OS shell before running commands (PowerShell on Windows — no `grep`)
+
+## Server-driven widget architecture
+
+The proverb widget (`proverb_widget`) is a [Voltra server-driven widget](https://www.use-voltra.dev/v1/android/development/server-driven-widgets). It does **not** use `updateAndroidWidget()` for production updates — that was replaced by WorkManager-based background fetching.
+
+**How it works:**
+
+1. `app.config.ts` configures `serverUpdate.url` pointing at `GET /widgets/render` on the backend, with `intervalMinutes: 60` and `refresh: true` (provides a native refresh button). The widget HMAC key is read from `process.env.WIDGET_HMAC_KEY` at build time and injected into `expo.extra.widgetServerHmacKey`.
+2. The Voltra Expo plugin generates a `VoltraWidgetUpdateWorker` + `VoltraWidgetUpdateScheduler` that run independently of the app process via Android WorkManager.
+3. On **app launch**, `initializeWidget(hmacKey)` in `src/widgets/initializeWidget.ts` calls `setWidgetServerCredentials()` (storing the shared HMAC + `X-Bible-Version` header in Tink-encrypted DataStore) then `reloadWidgets(["proverb_widget"])` to trigger an immediate server fetch.
+4. WorkManager reads the credentials, sends `Authorization: Bearer <hmacKey>` + `X-Bible-Version` to the backend, receives Voltra JSON, and pushes `RemoteViews` to `AppWidgetManager`.
+5. Before the first server fetch, the pre-rendered initial state (`proverb-widget-initial.tsx`) shows "Lemuel — Loading your daily proverb...".
+
+**Key files:**
+
+| File | Role |
+|---|---|
+| `app.config.ts` | Expo config with `serverUpdate` + `widgetServerHmacKey` from env |
+| `src/widgets/initializeWidget.ts` | Sets credentials + triggers immediate refresh |
+| `src/widgets/proverb-widget.tsx` | Widget UI (mirrored server-side in `proverbWidget.tsx`) |
+| `src/widgets/proverb-widget-initial.tsx` | Pre-rendered placeholder |
+| `app/_layout.tsx:82-87` | Calls `initializeWidget` on mount |
+
+**Removed**: The old `updateProverbWidget()` call in `app/index.tsx` (useEffect on proverb), and the `updateProverbWidget` call in `push-listener.ts:213` (background fetch / FCM push handler). These were non-functional because the OS-gated `expo-background-task` couldn't reliably push widget updates. The widget is now purely server-driven.
 
 ## Auth flow
 

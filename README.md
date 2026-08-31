@@ -5,7 +5,7 @@ Lemuel is a mobile app (Android & iOS) that brings you a new proverb every day. 
 ## What you can do
 
 - **Daily proverb** — Each day a new proverb appears on the home screen. Choose from multiple Bible versions (KJV, NIV, ESV, etc.).
-- **Home screen widget** (Android) — The day's proverb is always visible on your home screen, updating automatically.
+- **Home screen widget** (Android) — The day's proverb is always visible on your home screen. Powered by Voltra's [server-driven widgets](https://www.use-voltra.dev/v1/android/development/server-driven-widgets), the widget fetches fresh content automatically every hour without the app being open.
 - **Notifications** — Get a daily reminder to read the proverb. Choose a fixed time or a random window.
 - **Meditation timer** — Focus on the proverb with a full-screen animated meditation experience. Afterward, capture your thoughts.
 - **Notes & journaling** — Write rich-text notes for any proverb. See what others have written too (community notes).
@@ -26,7 +26,23 @@ sequenceDiagram
     DB-->>API: Proverb ref + citation
     API-->>App: { ref, proverb, citation }
     App->>App: Display in ProverbCard
-    App->>App: Update home screen widget
+```
+
+### Widget init flow
+
+```mermaid
+sequenceDiagram
+    participant App
+    participant Voltra as Voltra client
+    participant WM as WorkManager
+    participant API as Backend API
+
+    App->>Voltra: initializeWidget(hmacKey)
+    Voltra->>Voltra: setWidgetServerCredentials({ token, headers })
+    Voltra->>WM: reloadWidgets(["proverb_widget"])
+    WM->>API: GET /widgets/render
+    API-->>WM: Widget JSON
+    WM->>WM: Push RemoteViews update
 ```
 
 ### Authentication flow
@@ -65,6 +81,27 @@ sequenceDiagram
     API->>DB: Create account record
 ```
 
+### Server-driven widget flow
+
+```mermaid
+sequenceDiagram
+    participant WM as WorkManager (background)
+    participant API as Backend API
+    participant Secrets as Secrets Manager
+    participant DB as DynamoDB
+
+    Note over WM: Runs every 60 min (or on-demand)
+    WM->>API: GET /widgets/render?widgetId=proverb_widget&platform=android
+    Note over WM,API: Authorization: Bearer &lt;HMAC&gt;<br/>X-Bible-Version: kjv
+    API->>Secrets: Fetch shared HMAC secret
+    Secrets-->>API: Secret value
+    API->>API: ValidateAuthorization header
+    API->>DB: Fetch daily-proverb for version
+    DB-->>API: Proverb data
+    API-->>WM: Voltra JSON payload
+    WM->>WM: Render RemoteViews update
+```
+
 ### Push notification flow
 
 ```mermaid
@@ -84,7 +121,6 @@ sequenceDiagram
     Lambda->>DB: Query all device tokens
     Lambda->>FCM: Send silent push to all devices
     FCM-->>App: data: { type: "daily-proverb" }
-    App->>App: Update widget
     App->>App: Schedule local notification
     App->>User: Notification at preferred time
 ```
@@ -127,7 +163,7 @@ sequenceDiagram
 - **Expo Router** (file-based navigation)
 - **AWS Cognito** (authentication)
 - **AWS Lambda + API Gateway** (backend, managed separately)
-- **Voltra** (Android widgets)
+- **Voltra** (server-driven Android widgets via WorkManager)
 - **react-native-reanimated** + **@shopify/react-native-skia** (animations)
 
 ## Getting started

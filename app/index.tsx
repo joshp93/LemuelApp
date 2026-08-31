@@ -33,7 +33,6 @@ import { ProverbReferenceHeaderText } from "../src/components/proverb-reference-
 import { Text } from "../src/components/themed-text";
 import { useFitFontSize } from "../src/hooks/useFitFontSize";
 import { useProverbForTheDay } from "../src/hooks/useProverbForTheDay";
-import { updateProverbWidget } from "../src/widgets";
 
 const FONT_SIZES = [56, 40, 24];
 
@@ -133,12 +132,6 @@ export default function Index() {
     });
     return () => sub.remove();
   }, [refresh]);
-
-  useEffect(() => {
-    if (proverb) {
-      updateProverbWidget(proverb);
-    }
-  }, [proverb]);
 
   const textBoxHeight = windowHeight * 0.6 - insets.bottom;
 
