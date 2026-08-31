@@ -89,7 +89,7 @@ const config: ExpoConfig = {
               serverUpdate: {
                 url: "https://vua1tbtwtd.execute-api.eu-west-2.amazonaws.com/prod/widgets/render",
                 intervalMinutes: 60,
-                refresh: false,
+                refresh: true,
               },
             },
           ],
