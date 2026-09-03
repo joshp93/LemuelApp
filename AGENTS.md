@@ -5,7 +5,7 @@ A daily proverb mobile app (Android + iOS) built with Expo SDK 56, React Native 
 ## What the app does
 
 - Fetches and displays a **daily proverb** from a remote API (multiple Bible versions)
-- Shows a **home screen widget** (Android, via Voltra server-driven widgets with WorkManager). Updates every 60 minutes independently of the app, or on-demand when the app launches via `reloadWidgets`. Credentials are stored at app launch via `initializeWidget`.
+- Shows a **home screen widget** (Android, via Voltra server-driven widgets with WorkManager). Updates every 60 minutes independently of the app, or on-demand when the app launches via `reloadWidgets`. The widget endpoint is unauthenticated and rate-limited at the API Gateway level.
 - Schedules **push notifications** at configurable times (random window or exact time) via `expo-notifications`, with sent-date deduplication to prevent duplicates
 - Provides a **meditation timer** with Skia-animated full-screen experience (nebula shader, progress arc), adapting shader complexity to device performance tier
 - Supports **rich-text notes/journaling** per proverb (viewable as community notes)
@@ -87,18 +87,18 @@ The proverb widget (`proverb_widget`) is a [Voltra server-driven widget](https:/
 
 **How it works:**
 
-1. `app.config.ts` configures `serverUpdate.url` pointing at `GET /widgets/render` on the backend, with `intervalMinutes: 60` and `refresh: true` (provides a native refresh button). The widget HMAC key is read from `process.env.WIDGET_HMAC_KEY` at build time and injected into `expo.extra.widgetServerHmacKey`.
+1. `app.config.ts` configures `serverUpdate.url` pointing at `GET /widgets/render` on the backend, with `intervalMinutes: 60` and `refresh: true` (provides a native refresh button).
 2. The Voltra Expo plugin generates a `VoltraWidgetUpdateWorker` + `VoltraWidgetUpdateScheduler` that run independently of the app process via Android WorkManager.
-3. On **app launch**, `initializeWidget(hmacKey)` in `src/widgets/initializeWidget.ts` calls `setWidgetServerCredentials()` (storing the shared HMAC + `X-Bible-Version` header in Tink-encrypted DataStore) then `reloadWidgets(["proverb_widget"])` to trigger an immediate server fetch.
-4. WorkManager reads the credentials, sends `Authorization: Bearer <hmacKey>` + `X-Bible-Version` to the backend, receives Voltra JSON, and pushes `RemoteViews` to `AppWidgetManager`.
+3. On **app launch**, `initializeWidget()` in `src/widgets/initializeWidget.ts` calls `reloadAndroidWidgets(["proverb_widget"])` to trigger an immediate server fetch. No credentials are required — the widget endpoint is unauthenticated.
+4. WorkManager sends `X-Bible-Version` header to the backend, receives Voltra JSON, and pushes `RemoteViews` to `AppWidgetManager`.
 5. Before the first server fetch, the pre-rendered initial state (`proverb-widget-initial.tsx`) shows "Lemuel — Loading your daily proverb...".
 
 **Key files:**
 
 | File | Role |
 |---|---|
-| `app.config.ts` | Expo config with `serverUpdate` + `widgetServerHmacKey` from env |
-| `src/widgets/initializeWidget.ts` | Sets credentials + triggers immediate refresh |
+| `app.config.ts` | Expo config with `serverUpdate` URL |
+| `src/widgets/initializeWidget.ts` | Triggers immediate widget refresh on app launch |
 | `src/widgets/proverb-widget.tsx` | Widget UI (mirrored server-side in `proverbWidget.tsx`) |
 | `src/widgets/proverb-widget-initial.tsx` | Pre-rendered placeholder |
 | `app/_layout.tsx:82-87` | Calls `initializeWidget` on mount |

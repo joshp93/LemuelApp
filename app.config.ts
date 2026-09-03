@@ -1,28 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import type { ExpoConfig } from "@expo/config-types";
-
-// Load .env.local for local development — ignored on EAS builds where
-// environment variables are set via eas.json
-try {
-  const envPath = resolve(__dirname, ".env.local");
-  if (existsSync(envPath)) {
-    const envFile = readFileSync(envPath, "utf-8");
-    for (const line of envFile.split("\n")) {
-      const trimmed = line.trim();
-      if (trimmed === "" || trimmed.startsWith("#")) continue;
-      const eqIndex = trimmed.indexOf("=");
-      if (eqIndex === -1) continue;
-      const key = trimmed.slice(0, eqIndex).trim();
-      const value = trimmed.slice(eqIndex + 1).trim();
-      if (!process.env[key]) {
-        process.env[key] = value;
-      }
-    }
-  }
-} catch {
-  // .env.local is optional
-}
 
 const config: ExpoConfig = {
   name: "Lemuel",
@@ -118,7 +94,6 @@ const config: ExpoConfig = {
     eas: {
       projectId: "4f9b6729-a417-468d-931e-263877cf9764",
     },
-    widgetServerHmacKey: process.env.WIDGET_HMAC_KEY,
   },
   owner: "joshpr26",
 };

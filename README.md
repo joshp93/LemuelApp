@@ -37,8 +37,7 @@ sequenceDiagram
     participant WM as WorkManager
     participant API as Backend API
 
-    App->>Voltra: initializeWidget(hmacKey)
-    Voltra->>Voltra: setWidgetServerCredentials({ token, headers })
+    App->>Voltra: initializeWidget()
     Voltra->>WM: reloadWidgets(["proverb_widget"])
     WM->>API: GET /widgets/render
     API-->>WM: Widget JSON

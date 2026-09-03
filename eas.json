@@ -5,17 +5,11 @@
   },
   "build": {
     "production": {
-      "autoIncrement": true,
-      "env": {
-        "WIDGET_HMAC_KEY": "@widget_hmac_key"
-      }
+      "autoIncrement": true
     },
     "development": {
       "autoIncrement": true,
-      "developmentClient": true,
-      "env": {
-        "WIDGET_HMAC_KEY": "@widget_hmac_key"
-      }
+      "developmentClient": true
     }
   },
   "submit": {
