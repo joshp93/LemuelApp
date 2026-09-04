@@ -3,6 +3,7 @@ import ConfirmSignUp from "../../app/confirm-sign-up";
 import { resendVerificationCode, verifyAccount } from "../../src/api/auth";
 
 const mockReplace = jest.fn();
+const mockDispatch = jest.fn();
 let mockParams: Record<string, string> = {};
 
 jest.mock("expo-router", () => ({
@@ -10,6 +11,9 @@ jest.mock("expo-router", () => ({
     replace: mockReplace,
   }),
   useLocalSearchParams: () => mockParams,
+  useNavigation: () => ({
+    dispatch: mockDispatch,
+  }),
   Stack: {
     Screen: () => null,
   },
@@ -108,10 +112,15 @@ describe("ConfirmSignUp", () => {
 
     jest.advanceTimersByTime(2000);
 
-    expect(mockReplace).toHaveBeenCalledWith({
-      pathname: "/sign-in",
-      params: { email: "test@example.com" },
-    });
+    expect(mockDispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "RESET",
+        payload: {
+          index: 0,
+          routes: [{ name: "sign-in", params: { email: "test@example.com" } }],
+        },
+      }),
+    );
   });
 
   it("should forward redirect param to sign-in on success", async () => {
@@ -134,13 +143,23 @@ describe("ConfirmSignUp", () => {
 
     jest.advanceTimersByTime(2000);
 
-    expect(mockReplace).toHaveBeenCalledWith({
-      pathname: "/sign-in",
-      params: {
-        email: "test@example.com",
-        redirect: "/notes/users/abc-123/ref-456",
-      },
-    });
+    expect(mockDispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "RESET",
+        payload: {
+          index: 0,
+          routes: [
+            {
+              name: "sign-in",
+              params: {
+                email: "test@example.com",
+                redirect: "/notes/users/abc-123/ref-456",
+              },
+            },
+          ],
+        },
+      }),
+    );
   });
 
   it("should show error message on verification failure", async () => {

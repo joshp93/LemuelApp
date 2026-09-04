@@ -87,7 +87,12 @@ describe("SignIn", () => {
 
     expect(mockRefreshUser).toHaveBeenCalled();
     expect(mockCreateAccountRecord).not.toHaveBeenCalled();
-    expect(mockReplace).toHaveBeenCalledWith("/");
+    expect(mockDispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "RESET",
+        payload: { index: 0, routes: [{ name: "index" }] },
+      }),
+    );
   }, 15000);
 
   it("should sign in and navigate to redirect param when present", async () => {
@@ -107,7 +112,15 @@ describe("SignIn", () => {
 
     expect(mockRefreshUser).toHaveBeenCalled();
     expect(mockCreateAccountRecord).not.toHaveBeenCalled();
-    expect(mockReplace).toHaveBeenCalledWith("/notes/users/abc-123/ref-456");
+    expect(mockDispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "RESET",
+        payload: {
+          index: 0,
+          routes: [{ name: "notes/users/abc-123/ref-456" }],
+        },
+      }),
+    );
   });
 
   it("should create account record when displayName is present", async () => {
@@ -126,7 +139,12 @@ describe("SignIn", () => {
     });
 
     expect(mockCreateAccountRecord).toHaveBeenCalledWith("TestUser");
-    expect(mockReplace).toHaveBeenCalledWith("/");
+    expect(mockDispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "RESET",
+        payload: { index: 0, routes: [{ name: "index" }] },
+      }),
+    );
   });
 
   it("should sign in and navigate to home when redirect param is empty", async () => {
@@ -144,7 +162,12 @@ describe("SignIn", () => {
       expect(mockSignIn).toHaveBeenCalledWith("", "password123");
     });
 
-    expect(mockReplace).toHaveBeenCalledWith("/");
+    expect(mockDispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "RESET",
+        payload: { index: 0, routes: [{ name: "index" }] },
+      }),
+    );
   });
 
   it("should show error message on sign in failure", async () => {

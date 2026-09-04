@@ -1,4 +1,10 @@
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import {
+  Stack,
+  useLocalSearchParams,
+  useNavigation,
+  useRouter,
+} from "expo-router";
+import { CommonActions } from "expo-router/build/react-navigation";
 import { useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -17,6 +23,7 @@ import { LemuelButton } from "../src/components/lemuel-button";
 
 export default function SignIn() {
   const router = useRouter();
+  const navigation = useNavigation();
   const params = useLocalSearchParams<{
     email?: string;
     displayName?: string;
@@ -52,7 +59,15 @@ export default function SignIn() {
       const authenticatedUser = await getAuthenticatedUser();
       const resolvedRedirect =
         redirect?.replace("{{uuid}}", authenticatedUser?.userId ?? "") || "/";
-      router.replace(resolvedRedirect);
+      const screenName =
+        resolvedRedirect === "/"
+          ? "index"
+          : resolvedRedirect.startsWith("/")
+            ? resolvedRedirect.slice(1)
+            : resolvedRedirect;
+      navigation.dispatch(
+        CommonActions.reset({ index: 0, routes: [{ name: screenName }] }),
+      );
     } else if (result.requiresConfirmation) {
       // User account not confirmed yet, redirect to confirmation screen
       router.replace({

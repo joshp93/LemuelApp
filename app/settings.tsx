@@ -74,7 +74,7 @@ export default function SettingsScreen() {
     await setScheduledTimeHour(parseInt(scheduledHour, 10) || 9);
     await setScheduledTimeMinute(parseInt(scheduledMinute, 10) || 0);
     await setMeditationDuration(meditationDuration);
-    await ensureNotificationsScheduled(5, true);
+    await ensureNotificationsScheduled(2, true);
     snapshotRef.current = {
       enabled,
       mode,

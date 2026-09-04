@@ -160,7 +160,7 @@ export const resetNotificationEnsureChain = () => {
  * other handled day.
  */
 export function ensureNotificationsScheduled(
-  daysAhead: number = 5,
+  daysAhead: number = 2,
   force: boolean = false,
 ): Promise<void> {
   const run = () => runEnsureNotificationsScheduled(daysAhead, force);
@@ -194,7 +194,7 @@ async function hasPendingNotificationForDate(
 }
 
 async function runEnsureNotificationsScheduled(
-  daysAhead: number = 5,
+  daysAhead: number = 2,
   force: boolean = false,
 ) {
   remoteLog("debug", "[PushListener] Ensuring notifications scheduled", {
@@ -316,7 +316,7 @@ export const initializeBackgroundFetch = async () => {
     TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
       remoteLog("debug", "[PushListener] Background fetch task fired");
       try {
-        await ensureNotificationsScheduled(5);
+        await ensureNotificationsScheduled(2);
         return BackgroundTask.BackgroundTaskResult.Success;
       } catch (error) {
         remoteLog("error", "[PushListener] Background fetch task failed", {

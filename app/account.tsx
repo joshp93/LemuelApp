@@ -33,6 +33,7 @@ function Account({ user }: WithAuthProps) {
   const [displayNameDraft, setDisplayNameDraft] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [displayNameError, setDisplayNameError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [accountManagementExpanded, setAccountManagementExpanded] =
     useState(false);
@@ -55,7 +56,15 @@ function Account({ user }: WithAuthProps) {
   }, [user.userId]);
 
   const handleSaveDisplayName = async () => {
-    if (!displayNameDraft.trim() || displayNameDraft.length > 50) return;
+    if (!displayNameDraft.trim()) {
+      setDisplayNameError("Display name cannot be blank.");
+      return;
+    }
+    if (displayNameDraft.trim().length > 50) {
+      setDisplayNameError("Display name cannot exceed 50 characters.");
+      return;
+    }
+    setDisplayNameError(null);
     setSaving(true);
     setSaveError(null);
     const ok = await upsertDisplayName(user.userId, displayNameDraft.trim());
@@ -72,6 +81,7 @@ function Account({ user }: WithAuthProps) {
     setEditingDisplayName(false);
     setDisplayNameDraft(account?.displayName ?? "");
     setSaveError(null);
+    setDisplayNameError(null);
   };
 
   const handleDelete = () => {
@@ -126,13 +136,21 @@ function Account({ user }: WithAuthProps) {
             {editingDisplayName ? (
               <View>
                 <TextInput
-                  style={styles.editInput}
+                  style={[
+                    styles.editInput,
+                    displayNameError ? styles.editInputError : null,
+                  ]}
                   value={displayNameDraft}
-                  onChangeText={setDisplayNameDraft}
+                  onChangeText={(text) => {
+                    setDisplayNameDraft(text);
+                    setDisplayNameError(null);
+                  }}
                   autoCapitalize="none"
                   maxLength={50}
                 />
-                {saveError ? (
+                {displayNameError ? (
+                  <Text style={styles.saveError}>{displayNameError}</Text>
+                ) : saveError ? (
                   <Text style={styles.saveError}>{saveError}</Text>
                 ) : null}
                 <View
@@ -145,7 +163,7 @@ function Account({ user }: WithAuthProps) {
                   <Pressable
                     style={[styles.editButton, { backgroundColor: "#dc3545" }]}
                     onPress={handleSaveDisplayName}
-                    disabled={saving || !displayNameDraft.trim()}
+                    disabled={saving}
                   >
                     <Text style={styles.editButtonText}>
                       {saving ? "Saving..." : "Save"}
@@ -325,6 +343,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ddd",
     color: "#333",
+  },
+  editInputError: {
+    borderColor: "#dc3545",
   },
   editButton: {
     paddingVertical: 8,

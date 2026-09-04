@@ -51,6 +51,7 @@ function AppContent() {
       );
       if (!routeParams) return;
 
+      router.dismissAll();
       router.push(routeParams);
       Notifications.dismissNotificationAsync(
         response.notification.request.identifier,
@@ -64,7 +65,7 @@ function AppContent() {
     initializeNotifications();
     initializeBackgroundFetch();
     registerPushToken();
-    ensureNotificationsScheduled(5);
+    ensureNotificationsScheduled(2);
 
     const meditateSub = Notifications.addNotificationResponseReceivedListener(
       handleNotificationResponse,

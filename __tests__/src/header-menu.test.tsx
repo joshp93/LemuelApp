@@ -2,6 +2,7 @@ import { act, fireEvent, render } from "@testing-library/react-native";
 import { HeaderMenu } from "../../src/components/header-menu";
 
 const mockPush = jest.fn();
+const mockDispatch = jest.fn();
 const mockSignOut = jest.fn();
 
 const mockAuthUser: {
@@ -19,6 +20,9 @@ const mockAuthUser: {
 jest.mock("expo-router", () => ({
   useRouter: () => ({
     push: mockPush,
+  }),
+  useNavigation: () => ({
+    dispatch: mockDispatch,
   }),
 }));
 
@@ -126,7 +130,12 @@ describe("HeaderMenu", () => {
       fireEvent.press(getByText("Home"));
       jest.advanceTimersByTime(300);
     });
-    expect(mockPush).toHaveBeenCalledWith("/");
+    expect(mockDispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "RESET",
+        payload: { index: 0, routes: [{ name: "index" }] },
+      }),
+    );
   });
 
   it("should show Home even when not authenticated", () => {

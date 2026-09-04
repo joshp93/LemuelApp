@@ -1,4 +1,10 @@
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import {
+  Stack,
+  useLocalSearchParams,
+  useNavigation,
+  useRouter,
+} from "expo-router";
+import { CommonActions } from "expo-router/build/react-navigation";
 import { useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -15,6 +21,7 @@ import { LemuelButton } from "../src/components/lemuel-button";
 
 export default function ConfirmSignUp() {
   const router = useRouter();
+  const navigation = useNavigation();
   const params = useLocalSearchParams<{
     email?: string;
     displayName?: string;
@@ -53,10 +60,21 @@ export default function ConfirmSignUp() {
       setSuccessMessage("Your email has been verified. You can now sign in.");
       setTimeout(
         () =>
-          router.replace({
-            pathname: "/sign-in",
-            params: { email, displayName, ...(redirect && { redirect }) },
-          }),
+          navigation.dispatch(
+            CommonActions.reset({
+              index: 0,
+              routes: [
+                {
+                  name: "sign-in",
+                  params: {
+                    email,
+                    ...(displayName && { displayName }),
+                    ...(redirect && { redirect }),
+                  },
+                },
+              ],
+            }),
+          ),
         2000,
       );
     } else {

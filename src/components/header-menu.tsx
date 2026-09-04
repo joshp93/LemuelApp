@@ -1,4 +1,5 @@
-import { type Href, useRouter } from "expo-router";
+import { type Href, useNavigation, useRouter } from "expo-router";
+import { CommonActions } from "expo-router/build/react-navigation";
 import type React from "react";
 import { useState } from "react";
 import {
@@ -25,6 +26,7 @@ export function HeaderMenu({ children }: { children?: React.ReactNode }) {
   const [visible, setVisible] = useState(false);
   const [slideAnimation] = useState(new Animated.Value(300));
   const router = useRouter();
+  const navigation = useNavigation();
   const { user, signOut } = useAuth();
   const insets = useSafeAreaInsets();
 
@@ -50,13 +52,16 @@ export function HeaderMenu({ children }: { children?: React.ReactNode }) {
     });
   };
 
-  const navigateTo = (path: Href, replace?: boolean) => {
-    remoteLog("debug", "[HeaderMenu] Navigating", { path, replace });
+  const navigateTo = (path: string, reset?: boolean) => {
+    remoteLog("debug", "[HeaderMenu] Navigating", { path, reset });
     closeMenu();
-    if (replace) {
-      router.replace(path);
+    if (reset) {
+      const screenName = path === "/" ? "index" : path.slice(1);
+      navigation.dispatch(
+        CommonActions.reset({ index: 0, routes: [{ name: screenName }] }),
+      );
     } else {
-      router.push(path);
+      router.push(path as Href);
     }
   };
 
@@ -115,7 +120,7 @@ export function HeaderMenu({ children }: { children?: React.ReactNode }) {
                 )}
                 <TouchableOpacity
                   style={styles.menuItem}
-                  onPress={() => navigateTo("/")}
+                  onPress={() => navigateTo("/", true)}
                 >
                   <Text style={styles.menuText}>Home</Text>
                 </TouchableOpacity>
