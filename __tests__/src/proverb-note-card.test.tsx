@@ -2,6 +2,33 @@ import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import type { NoteEntity } from "../../src/api/notes";
 import ProverbNoteCard from "../../src/components/proverb-note-card";
 
+jest.mock("../../src/auth/auth-context", () => ({
+  useAuth: () => ({
+    user: { userId: "test-user", username: "test", email: "test@test.com" },
+    loading: false,
+  }),
+  AuthContext: {
+    Provider: ({ children }: { children: React.ReactNode }) => children,
+  },
+}));
+
+jest.mock("../../src/api/notes", () => {
+  const actual = jest.requireActual("../../src/api/notes");
+  return {
+    ...actual,
+    getReplies: jest.fn().mockResolvedValue({ items: [], lastKey: undefined }),
+    postReply: jest.fn().mockResolvedValue({}),
+    deleteReply: jest.fn().mockResolvedValue(undefined),
+    putReaction: jest.fn().mockResolvedValue(undefined),
+    deleteReaction: jest.fn().mockResolvedValue(undefined),
+  };
+});
+
+jest.mock("expo-haptics", () => ({
+  impactAsync: jest.fn(),
+  ImpactFeedbackStyle: { Light: "light", Medium: "medium", Heavy: "heavy" },
+}));
+
 jest.mock("react-native-reanimated", () => {
   const { View } = require("react-native");
   const Reanimated = {
@@ -88,13 +115,15 @@ describe("ProverbNoteCard", () => {
     });
 
     const treeBefore = JSON.stringify(toJSON());
-    expect(treeBefore).toContain("60");
+    expect(treeBefore).toMatch(/"maxHeight":60\b/);
+    expect(treeBefore).not.toMatch(/"maxHeight":0\b/);
 
     const allElements = getAllByText(/Discipline and correction/);
     fireEvent.press(allElements[allElements.length - 1]);
 
     const treeAfter = JSON.stringify(toJSON());
-    expect(treeAfter).not.toContain("60");
+    expect(treeAfter).toMatch(/"maxHeight":0\b/);
+    expect(treeAfter).not.toMatch(/"maxHeight":60\b/);
   });
 
   it("should show author name with person icon when displayName is set", async () => {

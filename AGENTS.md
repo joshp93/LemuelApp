@@ -32,7 +32,7 @@ app/                          # Expo Router pages (file-based routing)
 src/
   api/                        # API clients (proverbs, auth, notes, account, meditation, push-token, remote-logger, available-versions, daily-proverbs, version-storage)
   auth/                       # Cognito auth: context, token storage, token utils, with-auth HOC
-  components/                 # Reusable UI: proverb-card, proverb-note-card, header-menu, themed-text, lemuel-button, time-picker, month-picker, version-dropdown, fade-in-down, dividing-line, error-boundary, expandable-section
+  components/                 # Reusable UI: proverb-card, proverb-note-card, reaction-bar, reply-thread, reply-card, reply-input, header-menu, themed-text, lemuel-button, time-picker, month-picker, version-dropdown, fade-in-down, dividing-line, error-boundary, expandable-section
   hooks/                      # useProverbForTheDay, useSettingsPreferences, useFitFontSize, useKeyboardHeight, useUnsavedChanges, useDeviceTier
   models/                     # Zod schemas: proverb, daily-proverb
   notifications/              # Scheduling logic, preference storage, FCM push listener
@@ -61,6 +61,7 @@ __tests__/                    # Jest + @testing-library/react-native tests
 | Notification dedup (sent-date set) | ✅ Complete | `src/notifications/notification-preferences.ts` (`getNotificationSentDates`/`addNotificationSentDate`, JSON array, legacy-scalar migration, stale-date pruning); skipped per-day in `ensureNotificationsScheduled`; concurrent runs serialized; UTC/local date strings normalised via `src/utils/date.ts:toLocalDateString` |
 | Authentication (Cognito) | ✅ Complete | `src/auth/auth-context.tsx`, `src/auth/token-storage.ts`, `src/auth/token-utils.ts`, `src/api/auth.ts`, `src/api/cognito.ts` |
 | Notes system (rich text journaling) | ✅ Complete | `src/api/notes.ts`, `src/components/proverb-note-card.tsx`, `app/notes/users/[uuid]/[ref].tsx`, `app/notes/users/[uuid].tsx` |
+| Comment reactions & replies | ✅ Complete | `src/api/notes.ts`, `src/components/reaction-bar.tsx`, `src/components/reply-thread.tsx`, `src/components/reply-card.tsx`, `src/components/reply-input.tsx`, `src/components/proverb-note-card.tsx` |
 | Meditation timer (Skia) | ✅ Complete | `app/meditation.tsx`, `src/api/meditation.ts`, `src/settings/meditation-preferences.ts`, `src/hooks/useDeviceTier.ts` |
 | Device performance tier detection | ✅ Complete | `src/hooks/useDeviceTier.ts` (classifies low/medium/high via `expo-device` totalMemory) |
 | Account management | ✅ Complete | `app/account.tsx`, `src/api/account.ts` |

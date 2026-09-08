@@ -16,7 +16,9 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
+  type GetReactionsResponse,
   getProverbNotes,
+  getReactions,
   getUserNote,
   type NoteEntity,
   type UserNoteResponse,
@@ -62,6 +64,10 @@ export default function Index() {
   const [dataReady, setDataReady] = useState(false);
   const [userNote, setUserNote] = useState<UserNoteResponse | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [reactionData, setReactionData] = useState<
+    Record<string, GetReactionsResponse>
+  >({});
+  const [reactionVersion, setReactionVersion] = useState(0);
 
   const loadPageData = useCallback(async () => {
     if (!proverb?.ref) return;
@@ -91,6 +97,46 @@ export default function Index() {
     remoteLog("info", "[Index] Page data loaded", { ref: proverb.ref });
     setDataReady(true);
   }, [proverb, user, date, todayString]);
+
+  const loadReactions = useCallback(async () => {
+    if (!user || notes.length === 0) return;
+
+    try {
+      const results = await Promise.allSettled(
+        notes.map((n) => getReactions(n.uuid, n.ref, n.date, user.userId)),
+      );
+      const data: Record<string, GetReactionsResponse> = {};
+      results.forEach((result, i) => {
+        if (result.status === "fulfilled") {
+          data[`${notes[i].uuid}#${notes[i].ref}#${notes[i].date}`] =
+            result.value;
+        }
+      });
+      setReactionData(data);
+    } catch {
+      setReactionData({});
+    }
+  }, [notes, user]);
+
+  useEffect(() => {
+    if (dataReady) {
+      loadReactions();
+    }
+  }, [dataReady, loadReactions, reactionVersion]);
+
+  const triggerReactionsRefresh = useCallback(() => {
+    setReactionVersion((v) => v + 1);
+  }, []);
+
+  const updateNoteReplyCount = useCallback((pk: string, delta: number) => {
+    setNotes((prev) =>
+      prev.map((n) =>
+        n.pk === pk
+          ? { ...n, replyCount: Math.max(0, (n.replyCount ?? 0) + delta) }
+          : n,
+      ),
+    );
+  }, []);
 
   useEffect(() => {
     if (!proverb || loading) return;
@@ -245,22 +291,35 @@ export default function Index() {
                     No meditations yet
                   </Text>
                 )}
-                {notes.map((note) => (
-                  <ProverbNoteCard
-                    key={note.pk}
-                    note={note}
-                    contentWidth={contentWidth}
-                    showEdit={note.uuid === user?.userId}
-                    onEdit={
-                      note.uuid === user?.userId
-                        ? () =>
-                            router.push(
-                              `/notes/users/${user!.userId}/${note.ref}?date=${note.date}`,
-                            )
-                        : undefined
-                    }
-                  />
-                ))}
+                {notes.map((note) => {
+                  const rk = `${note.uuid}#${note.ref}#${note.date}`;
+                  const rd = reactionData[rk];
+                  return (
+                    <ProverbNoteCard
+                      key={note.pk}
+                      note={note}
+                      contentWidth={contentWidth}
+                      showEdit={note.uuid === user?.userId}
+                      reactionCounts={
+                        rd?.reactionCounts ?? note.reactionCounts ?? {}
+                      }
+                      replyCount={note.replyCount ?? 0}
+                      userReaction={rd?.userReaction}
+                      onReactionChange={triggerReactionsRefresh}
+                      onReplyCountChange={(delta) =>
+                        updateNoteReplyCount(note.pk, delta)
+                      }
+                      onEdit={
+                        note.uuid === user?.userId
+                          ? () =>
+                              router.push(
+                                `/notes/users/${user!.userId}/${note.ref}?date=${note.date}`,
+                              )
+                          : undefined
+                      }
+                    />
+                  );
+                })}
               </>
             )}
             <DividingLine />

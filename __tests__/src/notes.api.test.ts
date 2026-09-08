@@ -132,11 +132,14 @@ describe("saveUserNote", () => {
       ok: false,
       status: 500,
       statusText: "Internal Server Error",
+      text: async () => "server error",
     } as Response);
 
     await expect(
       saveUserNote("uuid-123", "Proverbs3:5", "<p>note</p>", "2026-06-02"),
-    ).rejects.toThrow("Failed to save user note: 500 Internal Server Error");
+    ).rejects.toThrow(
+      "Failed to save user note: 500 Internal Server Error — server error",
+    );
   });
 
   it("should throw if not authenticated", async () => {

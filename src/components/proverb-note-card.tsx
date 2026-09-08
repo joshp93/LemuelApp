@@ -1,10 +1,15 @@
 import { MaterialIcons } from "@expo/vector-icons";
-import { memo, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import Animated from "react-native-reanimated";
 import RenderHtml from "react-native-render-html";
 import type { NoteEntity } from "../api/notes";
+import { deleteReaction, putReaction } from "../api/notes";
+import type { ReactionCounts } from "../models/reactions-and-replies";
+import { DividingLine } from "./dividing-line";
 import { LemuelButton } from "./lemuel-button";
+import ReactionBar from "./reaction-bar";
+import ReplyThread, { ReplyToggle } from "./reply-thread";
 
 const CLAMP = 60;
 
@@ -13,15 +18,45 @@ const ProverbNoteCard = memo(function ProverbNoteCard({
   contentWidth,
   showEdit,
   onEdit,
+  reactionCounts,
+  replyCount,
+  userReaction,
+  onReactionChange,
+  onReplyCountChange,
 }: {
   note: NoteEntity;
   contentWidth: number;
   showEdit?: boolean;
   onEdit?: () => void;
+  reactionCounts?: ReactionCounts;
+  replyCount?: number;
+  userReaction?: string | null;
+  onReactionChange?: () => void;
+  onReplyCountChange?: (delta: number) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [contentHeight, setContentHeight] = useState(0);
+  const [repliesVisible, setRepliesVisible] = useState(false);
   const source = useMemo(() => ({ html: note.note }), [note.note]);
+
+  const handleReactionChange = useCallback(
+    async (emoji: string | null) => {
+      if (!emoji) {
+        await deleteReaction(note.uuid, note.ref, note.date);
+      } else {
+        await putReaction(note.uuid, note.ref, note.date, emoji);
+      }
+      onReactionChange?.();
+    },
+    [note.uuid, note.ref, note.date, onReactionChange],
+  );
+
+  const handleReplyCountChange = useCallback(
+    (delta: number) => {
+      onReplyCountChange?.(delta);
+    },
+    [onReplyCountChange],
+  );
 
   return (
     <View
@@ -154,6 +189,32 @@ const ProverbNoteCard = memo(function ProverbNoteCard({
           )}
         </View>
       )}
+      <DividingLine />
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <ReplyToggle
+          replyCount={replyCount ?? 0}
+          expanded={repliesVisible}
+          onToggle={() => setRepliesVisible((v) => !v)}
+        />
+        <ReactionBar
+          reactionCounts={reactionCounts ?? {}}
+          userReaction={userReaction ?? null}
+          onReactionChange={handleReactionChange}
+        />
+      </View>
+      <ReplyThread
+        noteAuthorUuid={note.uuid}
+        noteRef={note.ref}
+        noteDate={note.date}
+        expanded={repliesVisible}
+        onCountChange={handleReplyCountChange}
+      />
     </View>
   );
 });
