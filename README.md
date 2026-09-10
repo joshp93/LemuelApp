@@ -191,6 +191,6 @@ pnpm ios
 
 ## Project status
 
-All core features are complete and working. Future plans include adding privacy controls for notes (public/private).
+The app ships daily proverbs, an Android home-screen widget, configurable push notifications, a Skia-animated meditation timer, rich-text community notes, and Cognito-based authentication. Future plans include adding privacy controls for notes (public/private).
 
 _Questions or feedback? Open an issue on the repository._

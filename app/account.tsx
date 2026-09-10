@@ -5,12 +5,12 @@ import {
   ActivityIndicator,
   Alert,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   type AccountDetails,
@@ -114,13 +114,15 @@ function Account({ user }: WithAuthProps) {
   return (
     <>
       <Stack.Screen options={{ title: "Account" }} />
-      <ScrollView
+      <KeyboardAwareScrollView
         style={styles.container}
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={[
           styles.content,
           { paddingBottom: insets.bottom + 20 },
         ]}
+        bottomOffset={insets.bottom + 8}
+        keyboardShouldPersistTaps="handled"
       >
         {loading ? (
           <ActivityIndicator size="large" color="#333" />
@@ -275,7 +277,7 @@ function Account({ user }: WithAuthProps) {
             )}
           </View>
         )}
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       {deleting && (
         <View style={styles.overlay}>

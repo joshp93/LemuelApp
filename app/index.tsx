@@ -10,10 +10,10 @@ import {
   AppState,
   type AppStateStatus,
   RefreshControl,
-  ScrollView,
   useWindowDimensions,
   View,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   type GetReactionsResponse,
@@ -29,6 +29,7 @@ import { DividingLine } from "../src/components/dividing-line";
 import { FadeInDown } from "../src/components/fade-in-down";
 import { LemuelButton } from "../src/components/lemuel-button";
 import { MonthPicker } from "../src/components/month-picker";
+import { NotTodayBanner } from "../src/components/not-today-banner";
 import { ProverbCard } from "../src/components/proverb-card";
 import ProverbNoteCard from "../src/components/proverb-note-card";
 import { ProverbReferenceHeaderText } from "../src/components/proverb-reference-header-text";
@@ -53,7 +54,6 @@ export default function Index() {
     availableVersions,
     date,
     changeVersion,
-    refresh,
     goToDate,
   } = useProverbForTheDay();
   const { date: paramDate } = useLocalSearchParams<{ date?: string }>();
@@ -163,21 +163,23 @@ export default function Index() {
   }, [paramDate, selectedVersion]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onRefresh = useCallback(async () => {
-    remoteLog("debug", "[Index] Pull-to-refresh triggered");
+    remoteLog("debug", "[Index] Pull-to-refresh triggered", { date });
     setRefreshing(true);
-    await refresh();
+    await goToDate(date);
     setRefreshing(false);
-  }, [refresh]);
+  }, [goToDate, date]);
 
   useEffect(() => {
     const sub = AppState.addEventListener("change", (state: AppStateStatus) => {
       if (state === "active") {
-        remoteLog("debug", "[Index] App returned to foreground, refreshing");
-        refresh();
+        remoteLog("debug", "[Index] App returned to foreground, refreshing", {
+          date,
+        });
+        goToDate(date);
       }
     });
     return () => sub.remove();
-  }, [refresh]);
+  }, [goToDate, date]);
 
   const textBoxHeight = windowHeight * 0.6 - insets.bottom;
 
@@ -219,7 +221,7 @@ export default function Index() {
           ),
         }}
       />
-      <ScrollView
+      <KeyboardAwareScrollView
         contentInsetAdjustmentBehavior="automatic"
         refreshControl={
           <RefreshControl
@@ -236,6 +238,8 @@ export default function Index() {
         style={{
           flex: 1,
         }}
+        bottomOffset={insets.bottom + 8}
+        keyboardShouldPersistTaps="handled"
       >
         {!dataReady && !error && (
           <Text
@@ -249,6 +253,15 @@ export default function Index() {
         {error && <Text>{error}</Text>}
         {dataReady && proverb && !error && (
           <FadeInDown key={proverb.ref}>
+            {!isToday && (
+              <NotTodayBanner
+                date={date!}
+                onPressReturnToToday={() => {
+                  setDataReady(false);
+                  goToDate(undefined);
+                }}
+              />
+            )}
             <ProverbCard
               proverb={proverb}
               fontSize={fontSize}
@@ -418,7 +431,7 @@ export default function Index() {
             </View>
           </FadeInDown>
         )}
-      </ScrollView>
+      </KeyboardAwareScrollView>
       <MonthPicker
         visible={showDatePicker}
         onClose={() => setShowDatePicker(false)}

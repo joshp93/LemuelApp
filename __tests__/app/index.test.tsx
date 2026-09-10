@@ -102,7 +102,6 @@ const defaultHookReturn = {
   availableVersions: [] as string[],
   date: undefined as string | undefined,
   changeVersion: jest.fn(),
-  refresh: jest.fn(),
   goToDate: jest.fn(),
 };
 
@@ -284,23 +283,15 @@ describe("Index", () => {
 
   it("should refresh proverb and notes on foreground", async () => {
     mockUseAuth.mockReturnValue({ user: { userId: "user-1" } });
-    const mockRefresh = jest.fn().mockImplementation(() => {
-      mockUseProverbForTheDay.mockReturnValue({
-        ...defaultHookReturn,
-        loading: false,
-        proverb: { ...mockProverb, ref: "Proverbs 4:7" },
-        refresh: mockRefresh,
-        date: "2026-06-16",
-      });
-    });
+    const mockGoToDate = jest.fn();
     mockUseProverbForTheDay.mockReturnValue({
       ...defaultHookReturn,
       loading: false,
       proverb: mockProverb,
-      refresh: mockRefresh,
+      goToDate: mockGoToDate,
     });
 
-    const { rerender } = render(<Index />);
+    render(<Index />);
 
     await waitFor(() => {
       expect(mockGetProverbNotes).toHaveBeenCalledTimes(1);
@@ -310,13 +301,7 @@ describe("Index", () => {
       appStateCallback?.("active");
     });
 
-    expect(mockRefresh).toHaveBeenCalledTimes(1);
-
-    rerender(<Index />);
-
-    await waitFor(() => {
-      expect(mockGetProverbNotes).toHaveBeenCalledTimes(2);
-    });
+    expect(mockGoToDate).toHaveBeenCalledWith(undefined);
   });
 
   it("should register AppState listener on mount and remove on unmount", () => {

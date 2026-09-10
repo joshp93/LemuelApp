@@ -50,9 +50,7 @@ const ReactionBar = memo(function ReactionBar({
 
   const handlePress = useCallback(
     async (emoji: string) => {
-      if (process.env.EXPO_OS === "ios") {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setPending(emoji);
       await new Promise((r) => setTimeout(r, 400));
       closePopup();

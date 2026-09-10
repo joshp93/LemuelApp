@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import type { NoteEntity } from "../../../src/api/notes";
 import { getUserNotes } from "../../../src/api/notes";
 import { remoteLog } from "../../../src/api/remote-logger";
@@ -84,99 +85,101 @@ function MyMeditationsPage(_props: WithAuthProps) {
     : notes;
 
   return (
-    <View style={styles.container}>
-      <Stack.Screen options={{ title: "My Meditations" }} />
-      {loading && (
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#000" testID="loading" />
-        </View>
-      )}
-      {error && (
-        <View style={styles.centered}>
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      )}
-      {!loading && !error && notes.length === 0 && (
-        <View style={styles.centered}>
-          <Text style={styles.emptyText}>No meditations yet</Text>
-        </View>
-      )}
-      {!loading && !error && notes.length > 0 && (
-        <FlatList
-          contentInsetAdjustmentBehavior="automatic"
-          data={filteredNotes}
-          keyExtractor={(item) => item.ref}
-          contentContainerStyle={styles.listContent}
-          ListHeaderComponent={
-            <View>
-              <View style={styles.searchContainer}>
-                {searchOpen ? (
-                  <View style={styles.searchBox}>
-                    <MaterialIcons
-                      name="search"
-                      size={20}
-                      color="#999"
-                      style={styles.searchIconInside}
-                    />
-                    <TextInput
-                      style={styles.searchInput}
-                      placeholder="Search by date or proverb"
-                      placeholderTextColor="#999"
-                      value={query}
-                      onChangeText={setQuery}
-                      autoFocus
-                    />
+    <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
+      <View style={styles.container}>
+        <Stack.Screen options={{ title: "My Meditations" }} />
+        {loading && (
+          <View style={styles.centered}>
+            <ActivityIndicator size="large" color="#000" testID="loading" />
+          </View>
+        )}
+        {error && (
+          <View style={styles.centered}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+        {!loading && !error && notes.length === 0 && (
+          <View style={styles.centered}>
+            <Text style={styles.emptyText}>No meditations yet</Text>
+          </View>
+        )}
+        {!loading && !error && notes.length > 0 && (
+          <FlatList
+            contentInsetAdjustmentBehavior="automatic"
+            data={filteredNotes}
+            keyExtractor={(item) => item.ref}
+            contentContainerStyle={styles.listContent}
+            ListHeaderComponent={
+              <View>
+                <View style={styles.searchContainer}>
+                  {searchOpen ? (
+                    <View style={styles.searchBox}>
+                      <MaterialIcons
+                        name="search"
+                        size={20}
+                        color="#999"
+                        style={styles.searchIconInside}
+                      />
+                      <TextInput
+                        style={styles.searchInput}
+                        placeholder="Search by date or proverb"
+                        placeholderTextColor="#999"
+                        value={query}
+                        onChangeText={setQuery}
+                        autoFocus
+                      />
+                      <TouchableOpacity
+                        onPress={() => {
+                          if (query.length > 0) {
+                            setQuery("");
+                          } else {
+                            setSearchOpen(false);
+                          }
+                        }}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        testID="close-search"
+                      >
+                        <MaterialIcons name="close" size={20} color="#999" />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
                     <TouchableOpacity
-                      onPress={() => {
-                        if (query.length > 0) {
-                          setQuery("");
-                        } else {
-                          setSearchOpen(false);
-                        }
-                      }}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      testID="close-search"
+                      style={styles.searchIconButton}
+                      onPress={() => setSearchOpen(true)}
+                      testID="open-search"
                     >
-                      <MaterialIcons name="close" size={20} color="#999" />
+                      <MaterialIcons name="search" size={24} color="#333" />
                     </TouchableOpacity>
-                  </View>
-                ) : (
-                  <TouchableOpacity
-                    style={styles.searchIconButton}
-                    onPress={() => setSearchOpen(true)}
-                    testID="open-search"
-                  >
-                    <MaterialIcons name="search" size={24} color="#333" />
-                  </TouchableOpacity>
-                )}
+                  )}
+                </View>
+                <View style={styles.headerRow}>
+                  <Text style={styles.headerCell}>Daily proverb date</Text>
+                  <Text style={[styles.headerCell, styles.headerCellRight]}>
+                    Proverb
+                  </Text>
+                </View>
               </View>
-              <View style={styles.headerRow}>
-                <Text style={styles.headerCell}>Daily proverb date</Text>
-                <Text style={[styles.headerCell, styles.headerCellRight]}>
-                  Proverb
-                </Text>
-              </View>
-            </View>
-          }
-          ListEmptyComponent={
-            trimmedQuery ? (
-              <View style={styles.centered}>
-                <Text style={styles.emptyText}>No matches found</Text>
-              </View>
-            ) : null
-          }
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.row}
-              onPress={() => handlePress(item.ref, item.proverbDate)}
-            >
-              <Text style={styles.dateCell}>{item.date}</Text>
-              <Text style={styles.refCell}>{item.displayRef}</Text>
-            </TouchableOpacity>
-          )}
-        />
-      )}
-    </View>
+            }
+            ListEmptyComponent={
+              trimmedQuery ? (
+                <View style={styles.centered}>
+                  <Text style={styles.emptyText}>No matches found</Text>
+                </View>
+              ) : null
+            }
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.row}
+                onPress={() => handlePress(item.ref, item.proverbDate)}
+              >
+                <Text style={styles.dateCell}>{item.date}</Text>
+                <Text style={styles.refCell}>{item.displayRef}</Text>
+              </TouchableOpacity>
+            )}
+          />
+        )}
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 

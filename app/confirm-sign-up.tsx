@@ -6,15 +6,8 @@ import {
 } from "expo-router";
 import { CommonActions } from "expo-router/build/react-navigation";
 import { useState } from "react";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { resendVerificationCode, verifyAccount } from "../src/api/auth";
 import { LemuelButton } from "../src/components/lemuel-button";
@@ -100,10 +93,7 @@ export default function ConfirmSignUp() {
   return (
     <>
       <Stack.Screen options={{ title: "Confirm Sign Up" }} />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
-      >
+      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
         <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
           <View style={styles.container}>
             <Text style={styles.title}>Confirm Sign Up</Text>

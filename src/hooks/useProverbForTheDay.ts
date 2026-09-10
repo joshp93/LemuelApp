@@ -102,12 +102,6 @@ export function useProverbForTheDay(initialDate?: string) {
     [fetchProverb, date],
   );
 
-  const refresh = useCallback(async () => {
-    if (!selectedVersion) return;
-    await fetchProverb(selectedVersion, undefined);
-    setDate(undefined);
-  }, [selectedVersion, fetchProverb]);
-
   const goToDate = useCallback(
     async (d: string | undefined) => {
       if (!selectedVersion) return;
@@ -125,7 +119,6 @@ export function useProverbForTheDay(initialDate?: string) {
     availableVersions,
     date,
     changeVersion,
-    refresh,
     goToDate,
   };
 }

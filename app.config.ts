@@ -19,6 +19,7 @@ const config: ExpoConfig = {
       foregroundImage: "./assets/images/icon.png",
       backgroundColor: "#000000",
     },
+    softwareKeyboardLayoutMode: "resize",
     predictiveBackGestureEnabled: false,
     permissions: [
       "INTERNET",
