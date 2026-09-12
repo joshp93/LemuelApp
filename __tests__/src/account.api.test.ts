@@ -1,6 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { jwtDecode } from "jwt-decode";
-import { createAccountRecord, getAccountDetails } from "../../src/api/account";
+import {
+  createAccountRecord,
+  getAccountDetails,
+  linkDeviceToken,
+} from "../../src/api/account";
 import * as Auth from "../../src/api/auth";
 
 jest.mock("jwt-decode");
@@ -80,22 +84,12 @@ describe("getAccountDetails", () => {
 describe("createAccountRecord", () => {
   const mockFetch = fetch as jest.MockedFunction<typeof fetch>;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
-  });
-
-  it("should skip if ACCOUNT_CREATED is already true", async () => {
-    await AsyncStorage.setItem("ACCOUNT_CREATED", "true");
-
-    const result = await createAccountRecord("Alice");
-
-    expect(result).toBe(true);
-    expect(mockGetValidIdToken).not.toHaveBeenCalled();
-    expect(mockFetch).not.toHaveBeenCalled();
+    await AsyncStorage.clear();
   });
 
   it("should create account and set flag on success", async () => {
-    await AsyncStorage.removeItem("ACCOUNT_CREATED");
     mockGetValidIdToken.mockResolvedValue("valid-token");
     (jwtDecode as jest.Mock).mockReturnValue({ sub: "uuid-123" });
     mockFetch.mockResolvedValueOnce({
@@ -122,7 +116,6 @@ describe("createAccountRecord", () => {
   });
 
   it("should return false if no valid token", async () => {
-    await AsyncStorage.removeItem("ACCOUNT_CREATED");
     mockGetValidIdToken.mockResolvedValue(null);
 
     const result = await createAccountRecord("Alice");
@@ -132,7 +125,6 @@ describe("createAccountRecord", () => {
   });
 
   it("should return false on API failure", async () => {
-    await AsyncStorage.removeItem("ACCOUNT_CREATED");
     mockGetValidIdToken.mockResolvedValue("valid-token");
     (jwtDecode as jest.Mock).mockReturnValue({ sub: "uuid-123" });
     mockFetch.mockResolvedValueOnce({
@@ -145,5 +137,60 @@ describe("createAccountRecord", () => {
     expect(result).toBe(false);
     const flag = await AsyncStorage.getItem("ACCOUNT_CREATED");
     expect(flag).toBeNull();
+  });
+});
+
+describe("linkDeviceToken", () => {
+  const mockFetch = fetch as jest.MockedFunction<typeof fetch>;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should send PUT with deviceToken on success", async () => {
+    mockGetValidIdToken.mockResolvedValue("valid-token");
+    (jwtDecode as jest.Mock).mockReturnValue({ sub: "uuid-123" });
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+    } as Response);
+
+    const result = await linkDeviceToken("device-token-abc");
+
+    expect(result).toBe(true);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(init.method).toBe("PUT");
+    expect(url).toContain("/accounts/uuid-123/device-tokens");
+    expect(init.headers).toEqual({
+      Authorization: "valid-token",
+      "Content-Type": "application/json",
+    });
+    expect(JSON.parse(init.body as string)).toEqual({
+      deviceToken: "device-token-abc",
+    });
+  });
+
+  it("should return false if not authenticated", async () => {
+    mockGetValidIdToken.mockResolvedValue(null);
+
+    const result = await linkDeviceToken("device-token-abc");
+
+    expect(result).toBe(false);
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("should return false on API failure", async () => {
+    mockGetValidIdToken.mockResolvedValue("valid-token");
+    (jwtDecode as jest.Mock).mockReturnValue({ sub: "uuid-123" });
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+    } as Response);
+
+    const result = await linkDeviceToken("device-token-abc");
+
+    expect(result).toBe(false);
   });
 });

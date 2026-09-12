@@ -39,14 +39,20 @@ jest.mock("../../src/api/auth", () => ({
   getAuthenticatedUser: jest.fn(),
 }));
 
+jest.mock("expo-notifications", () => ({
+  getDevicePushTokenAsync: () => Promise.resolve({ data: "test-push-token" }),
+}));
+
 jest.mock("../../src/api/account", () => ({
   createAccountRecord: jest.fn(),
+  linkDeviceToken: jest.fn(),
 }));
 
 const mockSignIn = apiSignIn as jest.MockedFunction<typeof apiSignIn>;
-const { createAccountRecord: mockCreateAccountRecord } = jest.requireMock(
-  "../../src/api/account",
-);
+const {
+  createAccountRecord: mockCreateAccountRecord,
+  linkDeviceToken: mockLinkDeviceToken,
+} = jest.requireMock("../../src/api/account");
 
 describe("SignIn", () => {
   beforeEach(() => {
@@ -87,6 +93,7 @@ describe("SignIn", () => {
 
     expect(mockRefreshUser).toHaveBeenCalled();
     expect(mockCreateAccountRecord).not.toHaveBeenCalled();
+    expect(mockLinkDeviceToken).toHaveBeenCalledWith("test-push-token");
     expect(mockDispatch).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "RESET",
@@ -112,6 +119,7 @@ describe("SignIn", () => {
 
     expect(mockRefreshUser).toHaveBeenCalled();
     expect(mockCreateAccountRecord).not.toHaveBeenCalled();
+    expect(mockLinkDeviceToken).toHaveBeenCalledWith("test-push-token");
     expect(mockDispatch).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "RESET",
@@ -139,6 +147,7 @@ describe("SignIn", () => {
     });
 
     expect(mockCreateAccountRecord).toHaveBeenCalledWith("TestUser");
+    expect(mockLinkDeviceToken).toHaveBeenCalledWith("test-push-token");
     expect(mockDispatch).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "RESET",

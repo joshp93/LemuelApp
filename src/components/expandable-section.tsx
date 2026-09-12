@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Animated,
+  type StyleProp,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  type ViewStyle,
 } from "react-native";
 
 interface ExpandableSectionProps {
@@ -12,6 +14,7 @@ interface ExpandableSectionProps {
   onSelect: () => void;
   label: string;
   children: React.ReactNode;
+  containerStyle?: StyleProp<ViewStyle>;
 }
 
 export function ExpandableSection({
@@ -19,6 +22,7 @@ export function ExpandableSection({
   onSelect,
   label,
   children,
+  containerStyle,
 }: ExpandableSectionProps) {
   const [animValue] = useState(() => new Animated.Value(selected ? 1 : 0));
 
@@ -40,7 +44,7 @@ export function ExpandableSection({
   }, [selected]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <View style={styles.sectionCard}>
+    <View style={[styles.sectionCard, containerStyle]}>
       <TouchableOpacity
         style={styles.radioRow}
         onPress={onSelect}

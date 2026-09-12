@@ -3,6 +3,7 @@ import * as Notifications from "expo-notifications";
 import * as TaskManager from "expo-task-manager";
 import { Platform } from "react-native";
 import { z } from "zod";
+import { getAuthenticatedUser } from "../api/auth";
 import { LEMUEL_API_BASE_URL } from "../api/constants";
 import { getProverbForTheDay } from "../api/proverbs";
 import { remoteLog } from "../api/remote-logger";
@@ -52,10 +53,15 @@ export const setupTokenListener = () => {
  */
 const registerPushTokenWithBackend = async (token: string) => {
   try {
+    const user = await getAuthenticatedUser();
+    const body: Record<string, string> = { token, platform: Platform.OS };
+    if (user?.userId) {
+      body.uuid = user.userId;
+    }
     await fetch(`${LEMUEL_API_BASE_URL}/push/register-token`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token, platform: Platform.OS }),
+      body: JSON.stringify(body),
     });
     remoteLog("debug", "[PushListener] Token re-registered after change");
   } catch (error) {
@@ -429,3 +435,25 @@ export async function scheduleNotificationForModeAndDate(
     dateString,
   });
 }
+
+/**
+ * Registers the reply notification category with a single "View" action.
+ * Both the default tap and the View action route through handleNotificationResponse
+ * to the index page with the correct proverb loaded.
+ */
+export const registerReplyNotificationCategory = async () => {
+  try {
+    await Notifications.setNotificationCategoryAsync("replyNotifications", [
+      {
+        identifier: "VIEW_NOTE_ACTION_ID",
+        buttonTitle: "View",
+        options: { opensAppToForeground: true },
+      },
+    ]);
+    remoteLog("info", "[PushListener] Reply notification category registered");
+  } catch (error) {
+    remoteLog("error", "[PushListener] Failed to register reply category", {
+      error,
+    });
+  }
+};
