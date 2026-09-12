@@ -88,9 +88,9 @@ const ReactionBar = memo(function ReactionBar({
         <Pressable
           onPress={() => (popupOpen ? closePopup() : openPopup())}
           style={{
-            width: 30,
-            height: 30,
-            borderRadius: 15,
+            width: 34,
+            height: 34,
+            borderRadius: 17,
             backgroundColor: userReaction ? GREY : BLUE,
             alignItems: "center",
             justifyContent: "center",
@@ -286,8 +286,8 @@ function EmojiOverIcon({
     <View
       style={{
         position: "absolute",
-        width: 30,
-        height: 30,
+        width: 34,
+        height: 34,
         overflow: "hidden",
       }}
     >
@@ -297,14 +297,14 @@ function EmojiOverIcon({
             position: "absolute",
             alignItems: "center",
             justifyContent: "center",
-            width: 30,
-            height: 30,
+            width: 34,
+            height: 34,
             opacity: visible ? 0 : 1,
           },
           iconAnim,
         ]}
       >
-        <MaterialIcons name="add-reaction" size={16} color="#fff" />
+        <MaterialIcons name="add-reaction" size={18} color="#fff" />
       </Animated.View>
       <Animated.View
         style={[
@@ -312,14 +312,14 @@ function EmojiOverIcon({
             position: "absolute",
             alignItems: "center",
             justifyContent: "center",
-            width: 30,
-            height: 30,
+            width: 34,
+            height: 34,
             opacity: visible ? 1 : 0,
           },
           emojiAnim,
         ]}
       >
-        <Text style={{ fontSize: 15 }}>{emoji}</Text>
+        <Text style={{ fontSize: 18 }}>{emoji}</Text>
       </Animated.View>
     </View>
   );

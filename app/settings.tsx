@@ -1,7 +1,7 @@
 import { Picker } from "@react-native-picker/picker";
 import * as Notifications from "expo-notifications";
 import { Stack, useNavigation } from "expo-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   ScrollView,
@@ -11,14 +11,17 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { getProverbForTheDay } from "../src/api/proverbs";
+import {
+  getReplyNotificationsEnabled,
+  updateAccount,
+} from "../src/api/account";
 import { remoteLog } from "../src/api/remote-logger";
-import { getChosenVersion } from "../src/api/version-storage";
+import { useAuth } from "../src/auth/auth-context";
 import { ExpandableSection } from "../src/components/expandable-section";
 import { LemuelButton } from "../src/components/lemuel-button";
 import { TimePicker } from "../src/components/time-picker";
 import { useSettingsPreferences } from "../src/hooks/useSettingsPreferences";
-import { sendExampleProverbNotification } from "../src/notifications/daily-proverb-notification";
+
 import {
   type NotificationMode,
   setNotificationMode,
@@ -39,6 +42,11 @@ import {
 export default function SettingsScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+  const [replyNotificationsEnabled, setReplyNotificationsEnabled] =
+    useState<boolean>(true);
+  const [replyNotificationsLoading, setReplyNotificationsLoading] =
+    useState(true);
   const {
     loading,
     enabled,
@@ -128,16 +136,32 @@ export default function SettingsScreen() {
     setMode(newMode);
   };
 
-  const handleSendExample = async () => {
+  useEffect(() => {
+    if (!user) {
+      setReplyNotificationsLoading(false);
+      return;
+    }
+    getReplyNotificationsEnabled(user.userId).then((enabled) => {
+      setReplyNotificationsEnabled(enabled);
+      setReplyNotificationsLoading(false);
+    });
+  }, [user]);
+
+  const handleReplyNotificationsToggle = async (value: boolean) => {
+    setReplyNotificationsEnabled(value);
     try {
-      const storedVersion = await getChosenVersion();
-      const version = storedVersion || "niv";
-      const proverb = await getProverbForTheDay(version);
-      await sendExampleProverbNotification(proverb);
+      const success = await updateAccount(user!.userId, {
+        replyNotificationsEnabled: value,
+      });
+      remoteLog("info", "[Settings] Reply notifications toggled", { value });
+      if (!success) {
+        setReplyNotificationsEnabled(!value);
+      }
     } catch (error) {
-      remoteLog("error", "[Settings] Failed to send example notification", {
+      remoteLog("error", "[Settings] Failed to toggle reply notifications", {
         error,
       });
+      setReplyNotificationsEnabled(!value);
     }
   };
 
@@ -162,69 +186,85 @@ export default function SettingsScreen() {
       >
         <Text style={styles.sectionHeader}>Notifications</Text>
 
-        <View style={styles.settingItem}>
-          <View style={styles.labelContainer}>
-            <Text style={styles.label}>
-              Enable daily proverb meditation notifications
-            </Text>
+        <View style={styles.infoBox}>
+          <Text style={styles.infoText}>
+            {getBatteryOptimizationWarningText()}
+          </Text>
+          <LemuelButton onPress={openBatteryOptimizationSettings}>
+            Open battery settings
+          </LemuelButton>
+        </View>
+
+        <View style={styles.notificationsCard}>
+          <View style={styles.settingItemRow}>
+            <View style={styles.labelContainer}>
+              <Text style={styles.label}>
+                Enable daily proverb meditation notifications
+              </Text>
+            </View>
+            {!loading && (
+              <Switch
+                value={enabled}
+                onValueChange={handleToggle}
+                trackColor={{ false: "#d3d3d3", true: "black" }}
+                thumbColor={enabled ? "black" : "#f4f3f4"}
+              />
+            )}
           </View>
-          {!loading && (
-            <Switch
-              value={enabled}
-              onValueChange={handleToggle}
-              trackColor={{ false: "#d3d3d3", true: "black" }}
-              thumbColor={enabled ? "black" : "#f4f3f4"}
-            />
+
+          {enabled && !loading && (
+            <View>
+              <ExpandableSection
+                selected={mode === "random"}
+                onSelect={() => handleModeChange("random")}
+                label="Send at a random time"
+              >
+                <TimePicker
+                  mode="random"
+                  hour={windowStartHour}
+                  minute={windowStartMinute}
+                  endHour={windowEndHour}
+                  endMinute={windowEndMinute}
+                  onHourChange={setWindowStartHour}
+                  onMinuteChange={setWindowStartMinute}
+                  onEndHourChange={setWindowEndHour}
+                  onEndMinuteChange={setWindowEndMinute}
+                />
+              </ExpandableSection>
+
+              <ExpandableSection
+                selected={mode === "scheduled"}
+                onSelect={() => handleModeChange("scheduled")}
+                label="Send at a specific time"
+              >
+                <TimePicker
+                  mode="scheduled"
+                  hour={scheduledHour}
+                  minute={scheduledMinute}
+                  onHourChange={setScheduledHour}
+                  onMinuteChange={setScheduledMinute}
+                />
+              </ExpandableSection>
+            </View>
           )}
         </View>
 
-        {enabled && !loading && (
-          <View>
-            <ExpandableSection
-              selected={mode === "random"}
-              onSelect={() => handleModeChange("random")}
-              label="Send at a random time"
-            >
-              <TimePicker
-                mode="random"
-                hour={windowStartHour}
-                minute={windowStartMinute}
-                endHour={windowEndHour}
-                endMinute={windowEndMinute}
-                onHourChange={setWindowStartHour}
-                onMinuteChange={setWindowStartMinute}
-                onEndHourChange={setWindowEndHour}
-                onEndMinuteChange={setWindowEndMinute}
-              />
-            </ExpandableSection>
-
-            <ExpandableSection
-              selected={mode === "scheduled"}
-              onSelect={() => handleModeChange("scheduled")}
-              label="Send at a specific time"
-            >
-              <TimePicker
-                mode="scheduled"
-                hour={scheduledHour}
-                minute={scheduledMinute}
-                onHourChange={setScheduledHour}
-                onMinuteChange={setScheduledMinute}
-              />
-            </ExpandableSection>
-
-            <View style={{ marginBottom: 16 }}>
-              <LemuelButton onPress={handleSendExample}>
-                Send example notification
-              </LemuelButton>
-            </View>
-
-            <View style={styles.infoBox}>
-              <Text style={styles.infoText}>
-                {getBatteryOptimizationWarningText()}
-              </Text>
-              <LemuelButton onPress={openBatteryOptimizationSettings}>
-                Open battery settings
-              </LemuelButton>
+        {user && (
+          <View style={styles.notificationsCard}>
+            <View style={styles.replyToggleRow}>
+              <View style={styles.labelContainer}>
+                <Text style={styles.label}>
+                  Notify me when someone replies to my note
+                </Text>
+              </View>
+              {!replyNotificationsLoading && (
+                <Switch
+                  value={replyNotificationsEnabled}
+                  onValueChange={handleReplyNotificationsToggle}
+                  trackColor={{ false: "#d3d3d3", true: "black" }}
+                  thumbColor={replyNotificationsEnabled ? "black" : "#f4f3f4"}
+                />
+              )}
             </View>
           </View>
         )}
@@ -322,5 +362,27 @@ const styles = StyleSheet.create({
     color: "#333",
     lineHeight: 20,
     marginBottom: 12,
+  },
+  notificationsCard: {
+    backgroundColor: "white",
+    borderRadius: 8,
+    overflow: "hidden",
+    marginBottom: 20,
+  },
+  settingItemRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  replyToggleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 12,
   },
 });

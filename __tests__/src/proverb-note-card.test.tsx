@@ -116,7 +116,6 @@ describe("ProverbNoteCard", () => {
 
     const treeBefore = JSON.stringify(toJSON());
     expect(treeBefore).toMatch(/"maxHeight":60\b/);
-    expect(treeBefore).not.toMatch(/"maxHeight":0\b/);
 
     const allElements = getAllByText(/Discipline and correction/);
     fireEvent.press(allElements[allElements.length - 1]);

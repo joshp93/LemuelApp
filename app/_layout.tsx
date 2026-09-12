@@ -26,6 +26,7 @@ import {
   ensureNotificationsScheduled,
   initializeBackgroundFetch,
   initializePushHandler,
+  registerReplyNotificationCategory,
   setupTokenListener,
 } from "../src/notifications/push-listener";
 import { initializeWidget } from "../src/widgets/initializeWidget";
@@ -42,21 +43,38 @@ function AppContent() {
 
   const handleNotificationResponse = useCallback(
     (response: Notifications.NotificationResponse) => {
+      const data = response.notification.request.content.data as
+        | Record<string, unknown>
+        | undefined;
+
       const isProverbAction =
         response.actionIdentifier === MEDITATE_ACTION_ID ||
         response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER;
-      if (!isProverbAction) return;
+      if (
+        isProverbAction &&
+        data &&
+        (data as Record<string, string>).type === undefined
+      ) {
+        const routeParams = getMeditationRouteParams(
+          response.notification.request.content.data as Record<string, unknown>,
+        );
+        if (!routeParams) return;
 
-      const routeParams = getMeditationRouteParams(
-        response.notification.request.content.data as Record<string, unknown>,
-      );
-      if (!routeParams) return;
+        router.dismissAll();
+        router.push(routeParams);
+        Notifications.dismissNotificationAsync(
+          response.notification.request.identifier,
+        );
+        return;
+      }
 
-      router.dismissAll();
-      router.push(routeParams);
-      Notifications.dismissNotificationAsync(
-        response.notification.request.identifier,
-      );
+      if (data?.type === "reply") {
+        router.dismissAll();
+        router.push(`/?date=${data.date}`);
+        Notifications.dismissNotificationAsync(
+          response.notification.request.identifier,
+        );
+      }
     },
     [router],
   );
@@ -67,6 +85,7 @@ function AppContent() {
     initializeBackgroundFetch();
     registerPushToken();
     ensureNotificationsScheduled(2);
+    registerReplyNotificationCategory();
 
     const meditateSub = Notifications.addNotificationResponseReceivedListener(
       handleNotificationResponse,

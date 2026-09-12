@@ -122,7 +122,7 @@ const ProverbNoteCard = memo(function ProverbNoteCard({
           <RenderHtml
             contentWidth={contentWidth}
             source={source}
-            baseStyle={{ color: "#333", fontSize: 18 }}
+            baseStyle={{ color: "#333", fontSize: 19 }}
           />
         </View>
       </View>
@@ -138,7 +138,7 @@ const ProverbNoteCard = memo(function ProverbNoteCard({
           <RenderHtml
             contentWidth={contentWidth}
             source={source}
-            baseStyle={{ color: "#333", fontSize: 18 }}
+            baseStyle={{ color: "#333", fontSize: 19 }}
           />
         </Animated.View>
       </Pressable>

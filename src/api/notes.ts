@@ -407,12 +407,13 @@ export async function getReactions(
 }
 
 /**
- * Creates a reply on a note.
+ * Creates or updates a reply on a note.
  *
  * @param noteAuthorUuid - The note author's Cognito UUID.
  * @param ref - The proverb reference, e.g. `Proverbs3:5`.
  * @param date - The date of the daily proverb, e.g. "2026-06-16".
  * @param content - Plain-text reply content.
+ * @param isUpdate - When true, skips notification on the backend.
  * @returns The created reply entity.
  * @throws If the request fails or if not authenticated.
  */
@@ -421,6 +422,7 @@ export async function postReply(
   ref: string,
   date: string,
   content: string,
+  isUpdate?: boolean,
 ): Promise<ReplyEntity> {
   const token = await getValidIdToken();
   if (!token) {
@@ -428,7 +430,7 @@ export async function postReply(
   }
 
   const url = `${LEMUEL_API_BASE_URL}/notes/users/${noteAuthorUuid}/${convertDisplayProverbToProverbKey(ref)}/replies`;
-  const body = JSON.stringify({ content, date });
+  const body = JSON.stringify({ content, date, isUpdate });
 
   console.log("[postReply] POST", url, body);
 

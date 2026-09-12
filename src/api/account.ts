@@ -6,9 +6,6 @@ import { remoteLog } from "./remote-logger";
 
 const ACCOUNT_CREATED_KEY = "ACCOUNT_CREATED";
 
-/**
- * Account details returned by the backend DynamoDB table.
- */
 export interface AccountDetails {
   pk: string;
   sk: string;
@@ -16,14 +13,9 @@ export interface AccountDetails {
   totalMeditations: number;
   totalNotes: number;
   displayName: string;
+  replyNotificationsEnabled?: boolean;
 }
 
-/**
- * Fetches the authenticated user's account details from the backend.
- * @param uuid The user's Cognito sub (userId).
- * @returns AccountDetails on success, null if the record does not exist (404).
- * @throws If the request fails for a reason other than 404.
- */
 export async function getAccountDetails(
   uuid: string,
 ): Promise<AccountDetails | null> {
@@ -50,22 +42,9 @@ export async function getAccountDetails(
   return response.json() as Promise<AccountDetails>;
 }
 
-/**
- * Creates a backend account record for the currently authenticated user.
- * Guarded by an AsyncStorage flag so the API call is only made once per device.
- * Decodes the user's Cognito sub from the ID token internally.
- * @param displayName The user's display name to store on the account entity.
- * @returns true if the record was created or already existed.
- */
 export async function createAccountRecord(
   displayName: string,
 ): Promise<boolean> {
-  const created = await AsyncStorage.getItem(ACCOUNT_CREATED_KEY);
-  if (created === "true") {
-    remoteLog("info", "[Account] Account record already created, skipping");
-    return true;
-  }
-
   const token = await getValidIdToken();
   if (!token) {
     remoteLog("error", "[Account] No valid ID token, cannot create account");
@@ -76,8 +55,7 @@ export async function createAccountRecord(
   const uuid = decoded.sub;
 
   try {
-    const body = JSON.stringify({ displayName });
-    remoteLog("debug", "[Account] Creating account record", { body });
+    remoteLog("debug", "[Account] Creating account record", { displayName });
     const response = await fetch(
       `${LEMUEL_API_BASE_URL}/accounts/${uuid}/create`,
       {
@@ -86,7 +64,7 @@ export async function createAccountRecord(
           Authorization: token,
           "Content-Type": "application/json",
         },
-        body,
+        body: JSON.stringify({ displayName }),
       },
     );
 
@@ -107,18 +85,47 @@ export async function createAccountRecord(
 }
 
 /**
- * Creates or updates the display name for a user.
- * Writes to both Cognito and DynamoDB (via backend).
- * @param uuid The user's Cognito sub (userId).
- * @param displayName The display name to set.
- * @returns true if successful.
+ * The device token is the token which is used to identify this device when sending notifications. All users receive a device token and they don't have to be logged in,
+ * but in order for us to send them account specific notifications (such as reply notifications) we need to link their device token to their account.
+ * This function updates the device token record, attaching their uuid to it.
+ * Requires the user to be logged in.
+ * @param The user's device token
  */
-/**
- * Permanently deletes the authenticated user's account, including all associated data
- * (notes, meditations, device tokens) and the Cognito user record.
- * @param uuid The user's Cognito sub (userId).
- * @returns true if deletion was successful.
- */
+export async function linkDeviceToken(deviceToken: string): Promise<boolean> {
+  const token = await getValidIdToken();
+  if (!token) {
+    return false;
+  }
+
+  const decoded = jwtDecode<{ sub: string }>(token);
+  const uuid = decoded.sub;
+
+  try {
+    remoteLog("debug", "[Account] Linking device token to account", {
+      deviceToken,
+      uuid,
+    });
+    const response = await fetch(
+      `${LEMUEL_API_BASE_URL}/accounts/${uuid}/device-tokens`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: token,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ deviceToken }),
+      },
+    );
+    remoteLog("info", "[Account] Device token linked to account successfully");
+    return response.ok;
+  } catch (error) {
+    remoteLog("error", "[Account] Failed to link device token to account", {
+      error,
+    });
+    return false;
+  }
+}
+
 export async function deleteAccount(uuid: string): Promise<boolean> {
   const token = await getValidIdToken();
   if (!token) {
@@ -149,43 +156,44 @@ export async function deleteAccount(uuid: string): Promise<boolean> {
   }
 }
 
-export async function upsertDisplayName(
+export async function updateAccount(
   uuid: string,
-  displayName: string,
+  fields: { displayName?: string; replyNotificationsEnabled?: boolean },
 ): Promise<boolean> {
   const token = await getValidIdToken();
   if (!token) {
-    remoteLog(
-      "error",
-      "[Account] No valid ID token, cannot update display name",
-    );
+    remoteLog("error", "[Account] No valid ID token, cannot update account");
     return false;
   }
 
   try {
-    const response = await fetch(
-      `${LEMUEL_API_BASE_URL}/accounts/${uuid}/display-name`,
-      {
-        method: "PUT",
-        headers: {
-          Authorization: token,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ displayName }),
+    const response = await fetch(`${LEMUEL_API_BASE_URL}/accounts/${uuid}`, {
+      method: "PUT",
+      headers: {
+        Authorization: token,
+        "Content-Type": "application/json",
       },
-    );
+      body: JSON.stringify(fields),
+    });
 
     if (!response.ok) {
-      remoteLog("error", "[Account] Display name update failed", {
+      remoteLog("error", "[Account] Account update failed", {
         status: response.status,
       });
       return false;
     }
 
-    remoteLog("info", "[Account] Display name updated successfully");
+    remoteLog("info", "[Account] Account updated successfully");
     return true;
   } catch (error) {
-    remoteLog("error", "[Account] Display name update error", { error });
+    remoteLog("error", "[Account] Account update error", { error });
     return false;
   }
+}
+
+export async function getReplyNotificationsEnabled(
+  uuid: string,
+): Promise<boolean> {
+  const account = await getAccountDetails(uuid);
+  return account?.replyNotificationsEnabled ?? true;
 }

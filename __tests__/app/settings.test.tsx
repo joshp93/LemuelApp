@@ -1,8 +1,5 @@
-import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
+import { act, render, waitFor } from "@testing-library/react-native";
 import SettingsScreen from "../../app/settings";
-import { getProverbForTheDay } from "../../src/api/proverbs";
-import { getChosenVersion } from "../../src/api/version-storage";
-import { sendExampleProverbNotification } from "../../src/notifications/daily-proverb-notification";
 import {
   getNotificationMode,
   getNotificationsEnabled,
@@ -22,6 +19,14 @@ jest.mock("expo-router", () => ({
   Stack: {
     Screen: () => null,
   },
+}));
+
+jest.mock("../../src/auth/auth-context", () => ({
+  useAuth: () => ({
+    user: null,
+    refreshUser: jest.fn(),
+    loading: false,
+  }),
 }));
 
 jest.mock("expo-notifications");
@@ -63,16 +68,6 @@ const mockGetScheduledTimeHour = getScheduledTimeHour as jest.MockedFunction<
 >;
 const mockGetScheduledTimeMinute =
   getScheduledTimeMinute as jest.MockedFunction<typeof getScheduledTimeMinute>;
-const mockSendExampleProverbNotification =
-  sendExampleProverbNotification as jest.MockedFunction<
-    typeof sendExampleProverbNotification
-  >;
-const mockGetProverbForTheDay = getProverbForTheDay as jest.MockedFunction<
-  typeof getProverbForTheDay
->;
-const mockGetChosenVersion = getChosenVersion as jest.MockedFunction<
-  typeof getChosenVersion
->;
 const mockGetMeditationDuration = getMeditationDuration as jest.MockedFunction<
   typeof getMeditationDuration
 >;
@@ -94,9 +89,6 @@ describe("SettingsScreen", () => {
     mockGetRandomWindowEndMinute.mockResolvedValue(0);
     mockGetScheduledTimeHour.mockResolvedValue(8);
     mockGetScheduledTimeMinute.mockResolvedValue(0);
-    mockSendExampleProverbNotification.mockResolvedValue(undefined);
-    mockGetProverbForTheDay.mockResolvedValue(mockProverb);
-    mockGetChosenVersion.mockResolvedValue("niv");
     mockGetMeditationDuration.mockResolvedValue(60000);
   });
 
@@ -174,21 +166,6 @@ describe("SettingsScreen", () => {
 
     await waitFor(() => {
       expect(getByText("14:30")).toBeTruthy();
-    });
-  });
-
-  it("sends an example notification when button pressed", async () => {
-    mockGetNotificationsEnabled.mockResolvedValue(true);
-    const { findByText } = render(<SettingsScreen />);
-    await act(async () => {
-      jest.advanceTimersByTime(300);
-    });
-
-    const sendButton = await findByText("Send example notification");
-    fireEvent.press(sendButton);
-
-    await waitFor(() => {
-      expect(mockSendExampleProverbNotification).toHaveBeenCalled();
     });
   });
 });

@@ -51,11 +51,11 @@ const ReplyInput = memo(function ReplyInput({
         editable={!submitting && !disabled}
         style={{
           flex: 1,
-          fontSize: 15,
+          fontSize: 18,
           fontFamily: "Nunito_400Regular",
           color: "#333",
-          paddingVertical: 6,
-          paddingHorizontal: 12,
+          paddingVertical: 8,
+          paddingHorizontal: 14,
           backgroundColor: "#f5f5f5",
           borderRadius: 20,
           borderCurve: "continuous",
@@ -64,10 +64,11 @@ const ReplyInput = memo(function ReplyInput({
       <Pressable
         onPress={handleSubmit}
         disabled={!text.trim() || submitting || disabled}
+        hitSlop={12}
         style={({ pressed }) => ({
-          width: 32,
-          height: 32,
-          borderRadius: 16,
+          width: 36,
+          height: 36,
+          borderRadius: 18,
           backgroundColor:
             !text.trim() || submitting || disabled ? "#ccc" : "#000",
           alignItems: "center",
@@ -75,7 +76,7 @@ const ReplyInput = memo(function ReplyInput({
           opacity: pressed ? 0.7 : 1,
         })}
       >
-        <MaterialIcons name="arrow-upward" size={18} color="white" />
+        <MaterialIcons name="arrow-upward" size={22} color="white" />
       </Pressable>
     </View>
   );

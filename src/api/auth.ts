@@ -223,7 +223,7 @@ export async function refreshAccessToken(): Promise<boolean> {
 
     if (!newTokens) {
       remoteLog(
-        "error",
+        "debug",
         "[Auth API] Refresh token call failed or returned no tokens",
       );
       await clearTokens();

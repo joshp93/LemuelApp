@@ -130,7 +130,12 @@ export async function refreshTokens(refreshToken: string): Promise<{
 
     return null;
   } catch (error) {
-    remoteLog("error", "[Cognito] Token refresh failed", { error });
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorMessage.includes("Refresh Token has been revoked")) {
+      remoteLog("debug", "[Cognito] Refresh token has been revoked", { error });
+    } else {
+      remoteLog("error", "[Cognito] Token refresh failed", { error });
+    }
     return null;
   }
 }

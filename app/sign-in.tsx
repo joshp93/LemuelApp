@@ -1,3 +1,4 @@
+import * as Notifications from "expo-notifications";
 import {
   Stack,
   useLocalSearchParams,
@@ -9,7 +10,7 @@ import { useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { createAccountRecord } from "../src/api/account";
+import { createAccountRecord, linkDeviceToken } from "../src/api/account";
 import { getAuthenticatedUser, signIn } from "../src/api/auth";
 import { useAuth } from "../src/auth/auth-context";
 import { LemuelButton } from "../src/components/lemuel-button";
@@ -46,9 +47,11 @@ export default function SignIn() {
 
     if (result.success) {
       await refreshUser();
+      const token = (await Notifications.getDevicePushTokenAsync()).data;
       if (params.displayName) {
         await createAccountRecord(params.displayName);
       }
+      linkDeviceToken(token);
       const authenticatedUser = await getAuthenticatedUser();
       const resolvedRedirect =
         redirect?.replace("{{uuid}}", authenticatedUser?.userId ?? "") || "/";

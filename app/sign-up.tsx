@@ -1,19 +1,21 @@
+import { MaterialIcons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { createAccount } from "../src/api/auth";
+import { BottomSheetMenu } from "../src/components/bottom-sheet-menu";
 import { LemuelButton } from "../src/components/lemuel-button";
 import { isValidEmail } from "../src/utils/email";
 import { getPasswordError } from "../src/utils/password";
 
 function isValidDisplayName(value: string): string | undefined {
-  if (!value) return "Username is required";
-  if (value.length < 3) return "Username must be at least 3 characters";
-  if (value.length > 50) return "Username must be at most 50 characters";
+  if (!value) return "Display name is required";
+  if (value.length < 3) return "Display name must be at least 3 characters";
+  if (value.length > 50) return "Display name must be at most 50 characters";
   if (!/^[a-zA-Z0-9 _-]+$/.test(value))
-    return "Username can only contain letters, numbers, spaces, hyphens, and underscores";
+    return "Display name can only contain letters, numbers, spaces, hyphens, and underscores";
   return undefined;
 }
 
@@ -29,6 +31,7 @@ export default function SignUp() {
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [helpVisible, setHelpVisible] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<{
     email?: string;
     displayName?: string;
@@ -44,7 +47,7 @@ export default function SignUp() {
     let error: string | undefined;
 
     if (!value) {
-      error = `${field === "confirmPassword" ? "Confirm password" : field === "displayName" ? "Username" : field === "email" ? "Email" : "Password"} is required`;
+      error = `${field === "confirmPassword" ? "Confirm password" : field === "displayName" ? "Display name" : field === "email" ? "Email" : "Password"} is required`;
     } else if (field === "email" && !isValidEmail(value)) {
       error = "Please enter a valid email address";
     } else if (field === "displayName") {
@@ -131,19 +134,29 @@ export default function SignUp() {
               <Text style={styles.fieldError}>{fieldErrors.email}</Text>
             ) : null}
 
-            <TextInput
-              style={[
-                styles.input,
-                fieldErrors.displayName ? styles.inputError : null,
-              ]}
-              placeholder="Username"
-              placeholderTextColor="#999"
-              value={displayName}
-              onChangeText={setDisplayName}
-              onBlur={() => validateField("displayName", displayName)}
-              autoCapitalize="none"
-              autoComplete="username"
-            />
+            <View style={styles.displayNameContainer}>
+              <TextInput
+                style={[
+                  styles.input,
+                  styles.displayNameInput,
+                  fieldErrors.displayName ? styles.inputError : null,
+                ]}
+                placeholder="Display name"
+                placeholderTextColor="#999"
+                value={displayName}
+                onChangeText={setDisplayName}
+                onBlur={() => validateField("displayName", displayName)}
+                autoCapitalize="none"
+                autoComplete="username"
+              />
+              <Pressable
+                style={styles.helpButton}
+                onPress={() => setHelpVisible(true)}
+                hitSlop={8}
+              >
+                <MaterialIcons name="help-outline" size={22} color="#007AFF" />
+              </Pressable>
+            </View>
             {fieldErrors.displayName ? (
               <Text style={styles.fieldError}>{fieldErrors.displayName}</Text>
             ) : null}
@@ -208,6 +221,19 @@ export default function SignUp() {
           </View>
         </SafeAreaView>
       </KeyboardAvoidingView>
+
+      <BottomSheetMenu
+        visible={helpVisible}
+        onClose={() => setHelpVisible(false)}
+        options={[
+          {
+            label:
+              "Display name is the name which will appear next to your public notes and replies. It is required, but you don't need to use your real name if you don't want to. You can change this at any time from your account page.",
+            onPress: () => setHelpVisible(false),
+            align: "left",
+          },
+        ]}
+      />
     </>
   );
 }
@@ -257,6 +283,19 @@ const styles = StyleSheet.create({
   inputError: {
     borderColor: "#dc3545",
   },
+  displayNameContainer: {
+    position: "relative",
+  },
+  displayNameInput: {
+    paddingRight: 44,
+  },
+  helpButton: {
+    position: "absolute",
+    right: 12,
+    top: 0,
+    bottom: 15,
+    justifyContent: "center",
+  },
   passwordContainer: {
     position: "relative",
   },
@@ -271,14 +310,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   showPasswordText: {
-    color: "#007AFF",
-    fontSize: 16,
-  },
-  links: {
-    marginTop: 20,
-    alignItems: "center",
-  },
-  link: {
     color: "#007AFF",
     fontSize: 16,
   },

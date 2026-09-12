@@ -16,7 +16,7 @@ import {
   type AccountDetails,
   deleteAccount,
   getAccountDetails,
-  upsertDisplayName,
+  updateAccount,
 } from "../src/api/account";
 import { useAuth } from "../src/auth/auth-context";
 import { type WithAuthProps, withAuth } from "../src/auth/with-auth";
@@ -67,7 +67,9 @@ function Account({ user }: WithAuthProps) {
     setDisplayNameError(null);
     setSaving(true);
     setSaveError(null);
-    const ok = await upsertDisplayName(user.userId, displayNameDraft.trim());
+    const ok = await updateAccount(user.userId, {
+      displayName: displayNameDraft.trim(),
+    });
     setSaving(false);
     if (ok) {
       setEditingDisplayName(false);
