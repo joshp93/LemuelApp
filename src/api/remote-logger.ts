@@ -9,6 +9,8 @@ export function remoteLog(
   message: string,
   context?: Record<string, unknown>,
 ): void {
+  if (!__DEV__ && level !== "warn" && level !== "error") return;
+
   console[level](`[RemoteLog] ${message}`, context ?? "");
   fetch(LOGS_API_URL, {
     method: "POST",
