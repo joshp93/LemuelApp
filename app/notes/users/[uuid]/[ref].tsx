@@ -251,10 +251,12 @@ function UserNotePage({ user: _user }: WithAuthProps) {
             >
               <MaterialIcons
                 name={isPrivate ? "lock" : "lock-open"}
-                size={18}
+                size={24}
                 color="#666"
               />
-              <Text style={{ color: "#666", fontSize: 14 }}>Keep private</Text>
+              <Text style={{ color: "#666", fontSize: 14 }}>
+                Make this a private note
+              </Text>
             </View>
             <Switch
               value={isPrivate}
