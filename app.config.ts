@@ -49,7 +49,7 @@ const config: ExpoConfig = {
       },
     ],
     [
-      "voltra/app.plugin.js",
+      "@use-voltra/android-client/app.plugin.js",
       {
         android: {
           widgets: [

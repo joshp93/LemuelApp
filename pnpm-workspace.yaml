@@ -1,4 +1,5 @@
 allowBuilds:
+  '@parcel/watcher': true
   '@shopify/react-native-skia': true
   msgpackr-extract: true
   unrs-resolver: true
@@ -7,4 +8,8 @@ allowBuilds:
 nodeLinker: hoisted
 
 onlyBuiltDependencies:
+  - "@parcel/watcher"
   - "@shopify/react-native-skia"
+  - msgpackr-extract
+  - unrs-resolver
+  - vd-tool

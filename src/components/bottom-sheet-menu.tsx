@@ -5,7 +5,6 @@ import {
   Modal,
   Pressable,
   Text,
-  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -66,22 +65,26 @@ export function BottomSheetMenu({
     <Modal transparent animationType="none" onRequestClose={onClose}>
       <Pressable
         onPress={onClose}
-        style={{
-          flex: 1,
-          backgroundColor: "rgba(0,0,0,0.4)",
-          justifyContent: "flex-end",
-        }}
+        style={
+          {
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.4)",
+            justifyContent: "flex-end",
+          } as const
+        }
       >
         <Animated.View
-          style={{
-            backgroundColor: "#fff",
-            borderTopLeftRadius: 16,
-            borderTopRightRadius: 16,
-            paddingTop: 20,
-            paddingBottom: insets.bottom + 20,
-            paddingHorizontal: 20,
-            transform: [{ translateY: slideAnim }],
-          }}
+          style={
+            {
+              backgroundColor: "#fff",
+              borderTopLeftRadius: 16,
+              borderTopRightRadius: 16,
+              paddingTop: 20,
+              paddingBottom: insets.bottom + 20,
+              paddingHorizontal: 20,
+              transform: [{ translateY: slideAnim }],
+            } as const
+          }
         >
           {options.map((option, index) => (
             <Pressable
@@ -97,12 +100,14 @@ export function BottomSheetMenu({
               }}
             >
               <Text
-                style={{
-                  fontSize: 17,
-                  color: option.destructive ? "#dc3545" : "#333",
-                  textAlign: option.align ?? "center",
-                  fontWeight: option.align === "left" ? "400" : "500",
-                }}
+                style={
+                  {
+                    fontSize: 17,
+                    color: option.destructive ? "#dc3545" : "#333",
+                    textAlign: option.align ?? "center",
+                    fontWeight: option.align === "left" ? "400" : "500",
+                  } as const
+                }
               >
                 {option.label}
               </Text>

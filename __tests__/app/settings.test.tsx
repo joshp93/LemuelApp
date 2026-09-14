@@ -31,7 +31,7 @@ jest.mock("../../src/auth/auth-context", () => ({
 
 jest.mock("expo-notifications");
 
-jest.mock("voltra/android/client", () => ({
+jest.mock("@use-voltra/android-client", () => ({
   updateAndroidWidget: jest.fn(),
 }));
 

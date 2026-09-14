@@ -1,4 +1,4 @@
-import { reloadAndroidWidgets } from "voltra/android/client";
+import { reloadAndroidWidgets } from "@use-voltra/android-client";
 import { remoteLog } from "../api/remote-logger";
 
 /**

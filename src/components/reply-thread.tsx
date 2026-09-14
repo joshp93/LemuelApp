@@ -129,7 +129,9 @@ const ReplyThread = memo(function ReplyThread({
         true,
       );
       setReplies((prev) =>
-        prev.map((r) => (r.sk === replySk ? { ...r, content: updated.content } : r)),
+        prev.map((r) =>
+          r.sk === replySk ? { ...r, content: updated.content } : r,
+        ),
       );
     },
     [noteAuthorUuid, noteRef, noteDate],
@@ -138,7 +140,11 @@ const ReplyThread = memo(function ReplyThread({
   const content = (
     <View style={{ gap: 4, marginTop: 8 }}>
       {loading && (
-        <ActivityIndicator size="small" color="#999" style={{ marginLeft: 12 }} />
+        <ActivityIndicator
+          size="small"
+          color="#999"
+          style={{ marginLeft: 12 }}
+        />
       )}
       {!loading && replies.length === 0 && (
         <Text

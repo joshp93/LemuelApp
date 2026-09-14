@@ -115,7 +115,13 @@ const ReplyCard = memo(function ReplyCard({
               borderCurve: "continuous",
             }}
           />
-          <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 6 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              marginTop: 6,
+            }}
+          >
             <Pressable
               onPress={handleCancelEdit}
               hitSlop={8}
@@ -138,8 +144,7 @@ const ReplyCard = memo(function ReplyCard({
                 width: 32,
                 height: 32,
                 borderRadius: 16,
-                backgroundColor:
-                  !editText.trim() || saving ? "#ccc" : "#000",
+                backgroundColor: !editText.trim() || saving ? "#ccc" : "#000",
                 alignItems: "center",
                 justifyContent: "center",
                 opacity: pressed ? 0.7 : 1,

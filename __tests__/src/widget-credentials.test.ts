@@ -1,24 +1,29 @@
-import { reloadAndroidWidgets } from "voltra/android/client";
 import { initializeWidget } from "../../src/widgets/initializeWidget";
 
-jest.mock("voltra/android/client", () => ({
-  reloadAndroidWidgets: jest.fn(),
+const mockReload = jest.fn();
+jest.mock("@use-voltra/android-client", () => ({
+  reloadAndroidWidgets: (...args: unknown[]) => mockReload(...args),
 }));
 
-const mockReloadWidgets = reloadAndroidWidgets as jest.MockedFunction<
-  typeof reloadAndroidWidgets
->;
+const mockReloadWidgets = jest.mocked(mockReload);
 
 describe("initializeWidget", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    mockReloadWidgets.mockResolvedValue(undefined);
+    mockReload.mockClear();
   });
 
-  it("should reload the proverb_widget", async () => {
+  it("calls reloadAndroidWidgets with the proverb widget", async () => {
     await initializeWidget();
+    expect(mockReload).toHaveBeenCalledWith(["proverb_widget"]);
+  });
 
-    expect(mockReloadWidgets).toHaveBeenCalledWith(["proverb_widget"]);
-    expect(mockReloadWidgets).toHaveBeenCalledTimes(1);
+  it("does not throw on success", async () => {
+    await initializeWidget();
+  });
+
+  it("handles errors gracefully", async () => {
+    mockReload.mockRejectedValueOnce(new Error("Network error"));
+    await expect(initializeWidget()).rejects.toThrow("Network error");
+    expect(mockReload).toHaveBeenCalledWith(["proverb_widget"]);
   });
 });

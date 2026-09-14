@@ -1,4 +1,4 @@
-import { VoltraAndroid } from "voltra";
+import { VoltraAndroid } from "@use-voltra/android-client";
 import { Proverb } from "../models/proverb";
 import { COLORS } from "../constants/theme";
 
@@ -22,6 +22,7 @@ export const ProverbWidget = ({ proverb }: ProverbWidgetProps) => (
       <VoltraAndroid.Column
         verticalAlignment="center-vertically"
         horizontalAlignment="start"
+        style={{ gap: 12 }}
       >
         <VoltraAndroid.Text
           style={{
@@ -37,7 +38,6 @@ export const ProverbWidget = ({ proverb }: ProverbWidgetProps) => (
           style={{
             fontSize: 18,
             color: "#1a1a1a",
-            marginTop: 12,
             fontFamily: "nunito_400regular",
           }}
         >
@@ -48,7 +48,6 @@ export const ProverbWidget = ({ proverb }: ProverbWidgetProps) => (
             style={{
               fontSize: 10,
               color: "#666666",
-              marginTop: 15,
               textAlign: "left",
               fontFamily: "nunito_400regular",
             }}
