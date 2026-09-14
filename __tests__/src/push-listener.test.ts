@@ -574,21 +574,30 @@ describe("push-listener", () => {
       );
     });
 
-    it("should skip future days already handled when force=false", async () => {
-      (getNotificationSentDates as jest.Mock).mockResolvedValue([
-        getTomorrowStr(),
-      ]);
+    it("should skip future days that are still pending when force=false", async () => {
+      const tomorrowStr = getTomorrowStr();
+      const tomorrowMidday = new Date();
+      tomorrowMidday.setDate(tomorrowMidday.getDate() + 1);
+      tomorrowMidday.setHours(12, 0, 0, 0);
+      const pendingTomorrow = {
+        identifier: `daily-proverb-meditation-${tomorrowStr}`,
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: tomorrowMidday,
+        },
+      };
+      (getNotificationSentDates as jest.Mock).mockResolvedValue([]);
       (
         Notifications.getAllScheduledNotificationsAsync as jest.Mock
-      ).mockResolvedValue([]);
+      ).mockResolvedValue([pendingTomorrow]);
 
-      await ensureNotificationsScheduled(3, false);
+      await ensureNotificationsScheduled(2, false);
 
       const cancelCalls = (
         Notifications.cancelScheduledNotificationAsync as jest.Mock
       ).mock.calls.map((c: unknown[]) => c[0]);
       expect(cancelCalls).not.toContain(
-        `daily-proverb-meditation-${getTomorrowStr()}`,
+        `daily-proverb-meditation-${tomorrowStr}`,
       );
       expect(cancelCalls).toContain(
         `daily-proverb-meditation-${getTodayStr()}`,

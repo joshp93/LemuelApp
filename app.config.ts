@@ -85,6 +85,7 @@ const config: ExpoConfig = {
     "expo-image",
     "expo-status-bar",
     "expo-background-task",
+    "./plugins/with-unique-notification-ids",
   ],
   experiments: {
     typedRoutes: true,

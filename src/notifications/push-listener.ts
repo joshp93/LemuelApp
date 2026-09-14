@@ -231,15 +231,6 @@ async function runEnsureNotificationsScheduled(
       const dateStr = toLocalDateString(date);
       const isToday = i === 0;
 
-      if (!isToday && !force && handledDates.includes(dateStr)) {
-        remoteLog(
-          "debug",
-          "[PushListener] Future day already handled, skipping",
-          { dateStr },
-        );
-        continue;
-      }
-
       if (isToday) {
         const hasPending = await hasPendingNotificationForDate(dateStr, date);
 
@@ -270,6 +261,31 @@ async function runEnsureNotificationsScheduled(
         await cancelProverbNotification(dateStr);
         await scheduleNotificationForModeAndDate(mode, dateStr, todayProverb);
       } else {
+        const hasPending = await hasPendingNotificationForDate(dateStr, date);
+
+        if (hasPending && !force) {
+          remoteLog(
+            "debug",
+            "[PushListener] Future day already pending, skipping",
+            { dateStr },
+          );
+          continue;
+        }
+
+        if (hasPending && force) {
+          await cancelProverbNotification(dateStr);
+          try {
+            const proverb = await getProverbForTheDay(version, dateStr);
+            await scheduleNotificationForModeAndDate(mode, dateStr, proverb);
+          } catch (error) {
+            remoteLog("warn", "[PushListener] Failed to schedule for date", {
+              dateStr,
+              error,
+            });
+          }
+          continue;
+        }
+
         await cancelProverbNotification(dateStr);
         try {
           const proverb = await getProverbForTheDay(version, dateStr);
