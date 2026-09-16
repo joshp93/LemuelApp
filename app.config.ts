@@ -51,26 +51,24 @@ const config: ExpoConfig = {
     [
       "@use-voltra/android-client/app.plugin.js",
       {
-        android: {
-          widgets: [
-            {
-              id: "proverb_widget",
-              displayName: "Lemuel",
-              description:
-                "Get a daily proverb and take a short moment to meditate on it.",
-              minCellWidth: 2,
-              minCellHeight: 2,
-              targetCellWidth: 2,
-              targetCellHeight: 2,
-              initialStatePath: "./src/widgets/proverb-widget-initial.js",
-              serverUpdate: {
-                url: "https://vua1tbtwtd.execute-api.eu-west-2.amazonaws.com/prod/widgets/render",
-                intervalMinutes: 60,
-                refresh: true,
-              },
+        widgets: [
+          {
+            id: "proverb_widget",
+            displayName: "Lemuel",
+            description:
+              "Get a daily proverb and take a short moment to meditate on it.",
+            minCellWidth: 2,
+            minCellHeight: 2,
+            targetCellWidth: 2,
+            targetCellHeight: 2,
+            initialStatePath: "./src/widgets/proverb-widget-initial.js",
+            serverUpdate: {
+              url: "https://vua1tbtwtd.execute-api.eu-west-2.amazonaws.com/prod/widgets/render",
+              intervalMinutes: 60,
+              refresh: true,
             },
-          ],
-        },
+          },
+        ],
       },
     ],
     "expo-web-browser",

@@ -7,59 +7,67 @@ export interface ProverbWidgetProps {
 }
 
 export const ProverbWidget = ({ proverb }: ProverbWidgetProps) => (
-  <VoltraAndroid.Box
-    deepLinkUrl="lemuel://"
-    style={{
-      padding: 16,
-      backgroundColor: COLORS.lightBackground,
-      borderRadius: 16,
-      width: "100%",
-      height: "100%",
-      justifyContent: "center",
-    }}
-  >
+  <VoltraAndroid.Box deepLinkUrl="lemuel://">
     {proverb ? (
       <VoltraAndroid.Column
-        verticalAlignment="center-vertically"
-        horizontalAlignment="start"
-        style={{ gap: 12 }}
+        style={{
+          padding: 16,
+          backgroundColor: COLORS.lightBackground,
+          borderRadius: 16,
+          width: "100%",
+          height: "100%",
+        }}
       >
-        <VoltraAndroid.Text
-          style={{
-            fontSize: 18,
-            fontWeight: "bold",
-            color: "#333333",
-            fontFamily: "nunito_400regular",
-          }}
+        <VoltraAndroid.LazyColumn
+          horizontalAlignment="start"
+          style={{ width: "100%", height: "100%" }}
         >
-          {proverb.ref}
-        </VoltraAndroid.Text>
-        <VoltraAndroid.Text
-          style={{
-            fontSize: 18,
-            color: "#1a1a1a",
-            fontFamily: "nunito_400regular",
-          }}
-        >
-          {proverb.proverb}
-        </VoltraAndroid.Text>
-        {proverb.citation && (
           <VoltraAndroid.Text
             style={{
-              fontSize: 10,
-              color: "#666666",
-              textAlign: "left",
+              fontSize: 18,
+              fontWeight: "bold",
+              color: "#333333",
               fontFamily: "nunito_400regular",
+              paddingBottom: 12,
             }}
           >
-            {proverb.citation}
+            {proverb.ref}
           </VoltraAndroid.Text>
-        )}
+          <VoltraAndroid.Text
+            style={{
+              fontSize: 18,
+              color: "#1a1a1a",
+              fontFamily: "nunito_400regular",
+              paddingBottom: 12,
+            }}
+          >
+            {proverb.proverb}
+          </VoltraAndroid.Text>
+          {proverb.citation && (
+            <VoltraAndroid.Text
+              style={{
+                fontSize: 10,
+                color: "#666666",
+                textAlign: "left",
+                fontFamily: "nunito_400regular",
+              }}
+            >
+              {proverb.citation}
+            </VoltraAndroid.Text>
+          )}
+        </VoltraAndroid.LazyColumn>
       </VoltraAndroid.Column>
     ) : (
       <VoltraAndroid.Column
         verticalAlignment="center-vertically"
         horizontalAlignment="center-horizontally"
+        style={{
+          padding: 16,
+          backgroundColor: COLORS.lightBackground,
+          borderRadius: 16,
+          width: "100%",
+          height: "100%",
+        }}
       >
         <VoltraAndroid.Text
           style={{

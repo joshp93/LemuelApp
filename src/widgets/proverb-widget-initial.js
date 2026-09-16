@@ -1,4 +1,4 @@
-const VoltraAndroid = require("voltra").VoltraAndroid;
+const VoltraAndroid = require("@use-voltra/android").VoltraAndroid;
 const React = require("react");
 
 const content = /* @__PURE__ */ React.createElement(VoltraAndroid.Box, {
