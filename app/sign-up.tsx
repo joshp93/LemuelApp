@@ -1,12 +1,12 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { createAccount } from "../src/api/auth";
 import { BottomSheetMenu } from "../src/components/bottom-sheet-menu";
 import { LemuelButton } from "../src/components/lemuel-button";
+import { LemuelKeyboardAvoidingView } from "../src/components/lemuel-keyboard-avoiding-view";
 import { isValidEmail } from "../src/utils/email";
 import { getPasswordError } from "../src/utils/password";
 
@@ -21,9 +21,18 @@ function isValidDisplayName(value: string): string | undefined {
 
 export default function SignUp() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ email?: string; redirect?: string }>();
+  const params = useLocalSearchParams<{
+    email?: string;
+    redirect?: string;
+    route?: string;
+  }>();
   const [email, setEmail] = useState(params.email || "");
   const redirect = params.redirect;
+  const route = params.route;
+  const emailRef = useRef<TextInput>(null);
+  const displayNameRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
+  const confirmPasswordRef = useRef<TextInput>(null);
   const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -90,7 +99,12 @@ export default function SignUp() {
       setSuccessMessage("Check your email for a verification code");
       router.replace({
         pathname: "/confirm-sign-up",
-        params: { email, displayName, ...(redirect && { redirect }) },
+        params: {
+          email,
+          displayName,
+          ...(redirect && { redirect }),
+          ...(route && { route }),
+        },
       });
     } else {
       setFormError(result.message || "Sign up failed. Please try again.");
@@ -104,7 +118,11 @@ export default function SignUp() {
   return (
     <>
       <Stack.Screen options={{ title: "Sign Up" }} />
-      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
+      <LemuelKeyboardAvoidingView
+        behavior="padding"
+        style={{ flex: 1 }}
+        navigationSafeAutoFocus={displayNameRef}
+      >
         <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
           <View style={styles.container}>
             <Text style={styles.title}>Sign Up</Text>
@@ -117,6 +135,7 @@ export default function SignUp() {
             ) : null}
 
             <TextInput
+              ref={emailRef}
               style={[
                 styles.input,
                 fieldErrors.email ? styles.inputError : null,
@@ -129,6 +148,8 @@ export default function SignUp() {
               autoCapitalize="none"
               keyboardType="email-address"
               autoComplete="email"
+              returnKeyType="next"
+              onSubmitEditing={() => displayNameRef.current?.focus()}
             />
             {fieldErrors.email ? (
               <Text style={styles.fieldError}>{fieldErrors.email}</Text>
@@ -136,6 +157,7 @@ export default function SignUp() {
 
             <View style={styles.displayNameContainer}>
               <TextInput
+                ref={displayNameRef}
                 style={[
                   styles.input,
                   styles.displayNameInput,
@@ -148,6 +170,8 @@ export default function SignUp() {
                 onBlur={() => validateField("displayName", displayName)}
                 autoCapitalize="none"
                 autoComplete="username"
+                returnKeyType="next"
+                onSubmitEditing={() => passwordRef.current?.focus()}
               />
               <Pressable
                 style={styles.helpButton}
@@ -162,6 +186,7 @@ export default function SignUp() {
             ) : null}
 
             <TextInput
+              ref={passwordRef}
               style={[
                 styles.input,
                 fieldErrors.password ? styles.inputError : null,
@@ -172,6 +197,8 @@ export default function SignUp() {
               onChangeText={setPassword}
               onBlur={() => validateField("password", password)}
               secureTextEntry={!showPassword}
+              returnKeyType="next"
+              onSubmitEditing={() => confirmPasswordRef.current?.focus()}
             />
             {fieldErrors.password ? (
               <Text style={styles.fieldError}>{fieldErrors.password}</Text>
@@ -179,6 +206,7 @@ export default function SignUp() {
 
             <View style={styles.passwordContainer}>
               <TextInput
+                ref={confirmPasswordRef}
                 style={[
                   styles.input,
                   styles.passwordInput,
@@ -195,6 +223,8 @@ export default function SignUp() {
                   })
                 }
                 secureTextEntry={!showPassword}
+                returnKeyType="go"
+                onSubmitEditing={handleSignUp}
               />
               <Pressable
                 style={styles.showPasswordButton}
@@ -220,7 +250,7 @@ export default function SignUp() {
             </Pressable>
           </View>
         </SafeAreaView>
-      </KeyboardAvoidingView>
+      </LemuelKeyboardAvoidingView>
 
       <BottomSheetMenu
         visible={helpVisible}

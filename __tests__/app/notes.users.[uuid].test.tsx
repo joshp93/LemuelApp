@@ -33,6 +33,7 @@ const mockAuthUser: {
 };
 
 jest.mock("expo-router", () => ({
+  useFocusEffect: jest.fn(),
   useRouter: () => ({ push: mockPush }),
   useLocalSearchParams: () => mockSearchParams.value,
   Redirect: (props: any) => {

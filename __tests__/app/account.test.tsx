@@ -27,6 +27,7 @@ const mockAuthUser: {
 };
 
 jest.mock("expo-router", () => ({
+  useFocusEffect: jest.fn(),
   Redirect: (props: any) => {
     mockRedirect(props);
     return null;

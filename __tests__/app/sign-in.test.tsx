@@ -7,6 +7,9 @@ const mockBack = jest.fn();
 const mockReplace = jest.fn();
 const mockDispatch = jest.fn();
 let mockParams: Record<string, string> = {};
+let mockAuthenticatedUser: { userId: string } | null = {
+  userId: "authenticated-user-id",
+};
 
 jest.mock("../../src/api/cognito", () => {
   return {
@@ -15,6 +18,7 @@ jest.mock("../../src/api/cognito", () => {
 });
 
 jest.mock("expo-router", () => ({
+  useFocusEffect: jest.fn(),
   useRouter: () => ({
     back: mockBack,
     replace: mockReplace,
@@ -49,15 +53,32 @@ jest.mock("../../src/api/account", () => ({
 }));
 
 const mockSignIn = apiSignIn as jest.MockedFunction<typeof apiSignIn>;
+const mockGetAuthenticatedUser = jest.requireMock("../../src/api/auth")
+  .getAuthenticatedUser as jest.MockedFunction<
+  typeof import("../../src/api/auth").getAuthenticatedUser
+>;
 const {
   createAccountRecord: mockCreateAccountRecord,
   linkDeviceToken: mockLinkDeviceToken,
 } = jest.requireMock("../../src/api/account");
 
+const expectResetAction = (
+  routeName: string,
+  params?: Record<string, string>,
+) => {
+  const route = params ? { name: routeName, params } : { name: routeName };
+  return expect.objectContaining({
+    type: "RESET",
+    payload: { index: 0, routes: [route] },
+  });
+};
+
 describe("SignIn", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockParams = {};
+    mockAuthenticatedUser = { userId: "authenticated-user-id" };
+    mockGetAuthenticatedUser.mockResolvedValue(mockAuthenticatedUser);
   });
 
   it("should render email preview and password input", () => {
@@ -94,16 +115,14 @@ describe("SignIn", () => {
     expect(mockRefreshUser).toHaveBeenCalled();
     expect(mockCreateAccountRecord).not.toHaveBeenCalled();
     expect(mockLinkDeviceToken).toHaveBeenCalledWith("test-push-token");
-    expect(mockDispatch).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: "RESET",
-        payload: { index: 0, routes: [{ name: "index" }] },
-      }),
-    );
+    expect(mockDispatch).toHaveBeenCalledWith(expectResetAction("index"));
   }, 15000);
 
-  it("should sign in and navigate to redirect param when present", async () => {
-    mockParams = { redirect: "/notes/users/abc-123/ref-456" };
+  it("should sign in and navigate to redirect route with extracted params", async () => {
+    mockParams = {
+      redirect: "/notes/users/{{uuid}}/Pro 3:5?date=2026-09-17",
+      route: "notes/users/[uuid]/[ref]",
+    };
     mockSignIn.mockResolvedValueOnce({ success: true });
 
     const { getByPlaceholderText, getAllByText } = render(<SignIn />);
@@ -121,15 +140,31 @@ describe("SignIn", () => {
     expect(mockCreateAccountRecord).not.toHaveBeenCalled();
     expect(mockLinkDeviceToken).toHaveBeenCalledWith("test-push-token");
     expect(mockDispatch).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: "RESET",
-        payload: {
-          index: 0,
-          routes: [{ name: "notes/users/abc-123/ref-456" }],
-        },
+      expectResetAction("notes/users/[uuid]/[ref]", {
+        uuid: "authenticated-user-id",
+        ref: "Pro 3:5",
+        date: "2026-09-17",
       }),
     );
-  });
+  }, 15000);
+
+  it("should navigate to index when route param is empty (no auth gate)", async () => {
+    mockParams = { redirect: "/notes/users/abc-123/ref-456" };
+    mockSignIn.mockResolvedValueOnce({ success: true });
+
+    const { getByPlaceholderText, getAllByText } = render(<SignIn />);
+
+    fireEvent.changeText(getByPlaceholderText("Password"), "password123");
+
+    const signInButtons = getAllByText("Sign In");
+    fireEvent.press(signInButtons[1]);
+
+    await waitFor(() => {
+      expect(mockSignIn).toHaveBeenCalledWith("", "password123");
+    });
+
+    expect(mockDispatch).toHaveBeenCalledWith(expectResetAction("index"));
+  }, 15000);
 
   it("should create account record when displayName is present", async () => {
     mockParams = { displayName: "TestUser" };
@@ -148,15 +183,10 @@ describe("SignIn", () => {
 
     expect(mockCreateAccountRecord).toHaveBeenCalledWith("TestUser");
     expect(mockLinkDeviceToken).toHaveBeenCalledWith("test-push-token");
-    expect(mockDispatch).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: "RESET",
-        payload: { index: 0, routes: [{ name: "index" }] },
-      }),
-    );
+    expect(mockDispatch).toHaveBeenCalledWith(expectResetAction("index"));
   });
 
-  it("should sign in and navigate to home when redirect param is empty", async () => {
+  it("should navigate to index when redirect param is empty", async () => {
     mockParams = { redirect: "" };
     mockSignIn.mockResolvedValueOnce({ success: true });
 
@@ -171,12 +201,7 @@ describe("SignIn", () => {
       expect(mockSignIn).toHaveBeenCalledWith("", "password123");
     });
 
-    expect(mockDispatch).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: "RESET",
-        payload: { index: 0, routes: [{ name: "index" }] },
-      }),
-    );
+    expect(mockDispatch).toHaveBeenCalledWith(expectResetAction("index"));
   });
 
   it("should show error message on sign in failure", async () => {
@@ -207,5 +232,54 @@ describe("SignIn", () => {
     fireEvent.press(getByText("Show"));
 
     expect(getByText("Hide")).toBeTruthy();
+  });
+
+  it("should replace {{uuid}} placeholder with authenticated user id in ref param", async () => {
+    mockParams = {
+      redirect: "/notes/users/{{uuid}}/Some%20Ref",
+      route: "notes/users/[uuid]/[ref]",
+    };
+    mockGetAuthenticatedUser.mockResolvedValue({ userId: "custom-user-id" });
+    mockSignIn.mockResolvedValueOnce({ success: true });
+
+    const { getByPlaceholderText, getAllByText } = render(<SignIn />);
+
+    fireEvent.changeText(getByPlaceholderText("Password"), "password123");
+
+    const signInButtons = getAllByText("Sign In");
+    fireEvent.press(signInButtons[1]);
+
+    await waitFor(() => {
+      expect(mockSignIn).toHaveBeenCalledWith("", "password123");
+    });
+
+    expect(mockDispatch).toHaveBeenCalledWith(
+      expectResetAction("notes/users/[uuid]/[ref]", {
+        uuid: "custom-user-id",
+        ref: "Some%20Ref",
+      }),
+    );
+  }, 15000);
+
+  it("should redirect to confirm-sign-up when requiresConfirmation is true", async () => {
+    mockParams = { email: "test@example.com" };
+    mockSignIn.mockResolvedValueOnce({
+      success: false,
+      requiresConfirmation: true,
+    });
+
+    const { getByPlaceholderText, getAllByText } = render(<SignIn />);
+
+    fireEvent.changeText(getByPlaceholderText("Password"), "password123");
+
+    const signInButtons = getAllByText("Sign In");
+    fireEvent.press(signInButtons[1]);
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith({
+        pathname: "/confirm-sign-up",
+        params: { email: "test@example.com" },
+      });
+    });
   });
 });

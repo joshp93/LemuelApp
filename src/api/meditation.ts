@@ -9,7 +9,7 @@ export async function recordMeditationCompletion(
   try {
     const token = await getValidIdToken();
     if (!token) {
-      remoteLog("warn", "[Meditation] No valid ID token, skipping");
+      remoteLog("info", "[Meditation] No valid ID token, skipping");
       return;
     }
 

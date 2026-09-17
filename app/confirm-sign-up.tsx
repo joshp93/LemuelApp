@@ -5,12 +5,12 @@ import {
   useRouter,
 } from "expo-router";
 import { CommonActions } from "expo-router/build/react-navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { resendVerificationCode, verifyAccount } from "../src/api/auth";
 import { LemuelButton } from "../src/components/lemuel-button";
+import { LemuelKeyboardAvoidingView } from "../src/components/lemuel-keyboard-avoiding-view";
 
 export default function ConfirmSignUp() {
   const router = useRouter();
@@ -19,10 +19,13 @@ export default function ConfirmSignUp() {
     email?: string;
     displayName?: string;
     redirect?: string;
+    route?: string;
   }>();
   const email = params.email || "";
   const displayName = params.displayName;
   const redirect = params.redirect;
+  const route = params.route;
+  const codeRef = useRef<TextInput>(null);
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
@@ -63,6 +66,7 @@ export default function ConfirmSignUp() {
                     email,
                     ...(displayName && { displayName }),
                     ...(redirect && { redirect }),
+                    ...(route && { route }),
                   },
                 },
               ],
@@ -93,7 +97,11 @@ export default function ConfirmSignUp() {
   return (
     <>
       <Stack.Screen options={{ title: "Confirm Sign Up" }} />
-      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
+      <LemuelKeyboardAvoidingView
+        behavior="padding"
+        style={{ flex: 1 }}
+        navigationSafeAutoFocus={codeRef}
+      >
         <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
           <View style={styles.container}>
             <Text style={styles.title}>Confirm Sign Up</Text>
@@ -111,6 +119,7 @@ export default function ConfirmSignUp() {
             <Text style={styles.emailPreview}>{email}</Text>
 
             <TextInput
+              ref={codeRef}
               style={[styles.input, fieldError ? styles.inputError : null]}
               placeholder="Verification Code"
               placeholderTextColor="#999"
@@ -121,6 +130,8 @@ export default function ConfirmSignUp() {
               }}
               keyboardType="number-pad"
               maxLength={6}
+              returnKeyType="go"
+              onSubmitEditing={handleConfirm}
             />
             {fieldError ? (
               <Text style={styles.fieldError}>{fieldError}</Text>
@@ -148,7 +159,7 @@ export default function ConfirmSignUp() {
             </Pressable>
           </View>
         </SafeAreaView>
-      </KeyboardAvoidingView>
+      </LemuelKeyboardAvoidingView>
     </>
   );
 }

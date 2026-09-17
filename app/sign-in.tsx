@@ -6,14 +6,138 @@ import {
   useRouter,
 } from "expo-router";
 import { CommonActions } from "expo-router/build/react-navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { createAccountRecord, linkDeviceToken } from "../src/api/account";
 import { getAuthenticatedUser, signIn } from "../src/api/auth";
 import { useAuth } from "../src/auth/auth-context";
 import { LemuelButton } from "../src/components/lemuel-button";
+import { LemuelKeyboardAvoidingView } from "../src/components/lemuel-keyboard-avoiding-view";
+
+/**
+ * Splits a redirect URL into its path part and search string.
+ *
+ * @example
+ * splitRedirectUrl("/notes/users/{{uuid}}/Pro 3:5?date=2026-09-17")
+ * // => { pathPart: "/notes/users/{{uuid}}/Pro 3:5", queryPart: "date=2026-09-17" }
+ */
+const splitRedirectUrl = (
+  redirectUrl: string,
+): {
+  pathPart: string;
+  queryPart: string | null;
+} => {
+  const idx = redirectUrl.indexOf("?");
+  if (idx === -1) {
+    return { pathPart: redirectUrl, queryPart: null };
+  }
+  return {
+    pathPart: redirectUrl.slice(0, idx),
+    queryPart: redirectUrl.slice(idx + 1),
+  };
+};
+
+/**
+ * Extracts dynamic route params from a resolved path by matching its segments
+ * against a route template.
+ *
+ * Template segments in `[name]` brackets are matched by position against the
+ * resolved path. The special `uuid` param is replaced with the authenticated
+ * user's actual ID.
+ *
+ * @example
+ * extractRouteParamsFromPath(
+ *   "notes/users/abc-123/Pro 3:5",
+ *   "notes/users/[uuid]/[ref]",
+ *   { userId: "abc-123" },
+ * )
+ * // => { uuid: "abc-123", ref: "Pro 3:5" }
+ */
+const extractRouteParamsFromPath = (
+  resolvedPath: string,
+  routeTemplate: string,
+  authenticatedUserId: string,
+): Record<string, string> => {
+  const resolvedSegments = resolvedPath.replace(/^\//, "").split("/");
+  const templateSegments = routeTemplate.split("/");
+  const params: Record<string, string> = {};
+
+  for (let i = 0; i < templateSegments.length; i++) {
+    const bracketMatch = templateSegments[i].match(/^\[(.+)\]$/);
+    if (bracketMatch) {
+      const paramName = bracketMatch[1];
+      const segmentValue = resolvedSegments[i] ?? "";
+      params[paramName] =
+        paramName === "uuid" ? authenticatedUserId : segmentValue;
+    }
+  }
+
+  return params;
+};
+
+/**
+ * Extracts query string parameters that are NOT consumed by the route template's
+ * dynamic segments.
+ *
+ * @example
+ * extractExtraQueryParams("date=2026-09-17&foo=bar", "notes/users/[uuid]/[ref]")
+ * // => { date: "2026-09-17" }
+ */
+const extractExtraQueryParams = (
+  queryPart: string | null,
+  routeTemplate: string,
+): Record<string, string> => {
+  if (!queryPart) return {};
+
+  const params: Record<string, string> = {};
+  const templateParamNames = new Set(
+    routeTemplate
+      .split("/")
+      .map((s) => s.match(/^\[(.+)\]$/)?.[1])
+      .filter(Boolean),
+  );
+
+  for (const pair of queryPart.split("&")) {
+    const [k, v] = pair.split("=");
+    if (k && v !== undefined && !templateParamNames.has(k)) {
+      params[k] = decodeURIComponent(v);
+    }
+  }
+
+  return params;
+};
+
+/**
+ * Builds a reset action that navigates to the route given by `routeName` with
+ * params parsed from the redirect URL.
+ *
+ * The `redirect` URL may contain `{{uuid}}` placeholders which are replaced
+ * with the authenticated user's actual ID. Path segments are matched against
+ * `routeName`'s template brackets to extract dynamic params. Any query-string
+ * params not consumed by the route template are forwarded as additional params.
+ */
+const buildRedirectResetAction = (
+  routeName: string,
+  redirectUrl: string,
+  authenticatedUserId: string,
+) => {
+  const { pathPart, queryPart } = splitRedirectUrl(redirectUrl);
+  const replacedPath = pathPart.replace("{{uuid}}", authenticatedUserId);
+  const routeParams: Record<string, string> = {
+    ...extractRouteParamsFromPath(replacedPath, routeName, authenticatedUserId),
+    ...extractExtraQueryParams(queryPart, routeName),
+  };
+  const hasParams = Object.keys(routeParams).length > 0;
+  const route = hasParams
+    ? { name: routeName, params: routeParams }
+    : { name: routeName };
+
+  return CommonActions.reset({
+    index: 0,
+    routes: [route],
+  });
+};
 
 export default function SignIn() {
   const router = useRouter();
@@ -22,10 +146,13 @@ export default function SignIn() {
     email?: string;
     displayName?: string;
     redirect?: string;
+    route?: string;
   }>();
   const { refreshUser } = useAuth();
   const email = params.email || "";
   const redirect = params.redirect;
+  const route = params.route;
+  const passwordRef = useRef<TextInput>(null);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -53,16 +180,14 @@ export default function SignIn() {
       }
       linkDeviceToken(token);
       const authenticatedUser = await getAuthenticatedUser();
-      const resolvedRedirect =
-        redirect?.replace("{{uuid}}", authenticatedUser?.userId ?? "") || "/";
-      const screenName =
-        resolvedRedirect === "/"
-          ? "index"
-          : resolvedRedirect.startsWith("/")
-            ? resolvedRedirect.slice(1)
-            : resolvedRedirect;
+      const routeName = route || "index";
+      const redirectUrl = redirect || "/";
       navigation.dispatch(
-        CommonActions.reset({ index: 0, routes: [{ name: screenName }] }),
+        buildRedirectResetAction(
+          routeName,
+          redirectUrl,
+          authenticatedUser?.userId ?? "",
+        ),
       );
     } else if (result.requiresConfirmation) {
       // User account not confirmed yet, redirect to confirmation screen
@@ -82,7 +207,11 @@ export default function SignIn() {
   return (
     <>
       <Stack.Screen options={{ title: "Sign In" }} />
-      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
+      <LemuelKeyboardAvoidingView
+        behavior="padding"
+        style={{ flex: 1 }}
+        navigationSafeAutoFocus={passwordRef}
+      >
         <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
           <View style={styles.container}>
             <Text style={styles.title}>Sign In</Text>
@@ -94,6 +223,7 @@ export default function SignIn() {
 
             <View style={styles.passwordContainer}>
               <TextInput
+                ref={passwordRef}
                 style={[
                   styles.input,
                   styles.passwordInput,
@@ -107,6 +237,8 @@ export default function SignIn() {
                   if (!password) setFieldError("Password is required");
                 }}
                 secureTextEntry={!showPassword}
+                returnKeyType="go"
+                onSubmitEditing={handleSignIn}
               />
               <Pressable
                 style={styles.showPasswordButton}
@@ -130,7 +262,7 @@ export default function SignIn() {
             </Pressable>
           </View>
         </SafeAreaView>
-      </KeyboardAvoidingView>
+      </LemuelKeyboardAvoidingView>
     </>
   );
 }

@@ -8,7 +8,9 @@ import {
   useCanvasSize,
   useClock,
 } from "@shopify/react-native-skia";
+import { getPowerStateAsync } from "expo-battery";
 import { getCornerRadius } from "expo-device-corner-radius";
+import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -290,6 +292,13 @@ export default function MeditationScreen() {
     if (!animationStarted.current && !loading && proverbData) {
       animationStarted.current = true;
       const userId = user?.userId ?? "";
+
+      getPowerStateAsync().then(({ lowPowerMode }) => {
+        if (!lowPowerMode) {
+          activateKeepAwakeAsync("meditation");
+        }
+      });
+
       progress.value = withTiming(1, { duration: durationMs }, (finished) => {
         if (finished) {
           scheduleOnRN(setIsComplete, true);
@@ -299,6 +308,18 @@ export default function MeditationScreen() {
       textOpacity.value = withTiming(1, { duration: 1000 });
     }
   }, [loading, proverbData, durationMs]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (isComplete) {
+      deactivateKeepAwake("meditation");
+    }
+  }, [isComplete]);
+
+  useEffect(() => {
+    return () => {
+      deactivateKeepAwake("meditation");
+    };
+  }, []);
 
   const textAnimatedStyle = useAnimatedStyle(() => ({
     opacity: textOpacity.value,

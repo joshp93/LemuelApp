@@ -13,10 +13,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
-  type GetReactionsResponse,
   getProverbNotes,
   getReactions,
   getUserNote,
@@ -28,6 +25,7 @@ import { useAuth } from "../src/auth/auth-context";
 import { DividingLine } from "../src/components/dividing-line";
 import { FadeInDown } from "../src/components/fade-in-down";
 import { LemuelButton } from "../src/components/lemuel-button";
+import { LemuelKeyboardAwareScrollView } from "../src/components/lemuel-keyboard-aware-scroll-view";
 import { MonthPicker } from "../src/components/month-picker";
 import { NotTodayBanner } from "../src/components/not-today-banner";
 import { ProverbCard } from "../src/components/proverb-card";
@@ -36,13 +34,13 @@ import { ProverbReferenceHeaderText } from "../src/components/proverb-reference-
 import { Text } from "../src/components/themed-text";
 import { useFitFontSize } from "../src/hooks/useFitFontSize";
 import { useProverbForTheDay } from "../src/hooks/useProverbForTheDay";
+import type { GetReactionsResponse } from "../src/models/reactions-and-replies";
 
 const FONT_SIZES = [56, 40, 24];
 
 export default function Index() {
   const router = useRouter();
   const navigation = useNavigation();
-  const insets = useSafeAreaInsets();
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const contentWidth = useMemo(() => windowWidth - 56, [windowWidth]);
   const { user } = useAuth();
@@ -181,7 +179,7 @@ export default function Index() {
     return () => sub.remove();
   }, [goToDate, date]);
 
-  const textBoxHeight = windowHeight * 0.6 - insets.bottom;
+  const textBoxHeight = windowHeight * 0.6;
 
   const { fontSize, onTextLayout } = useFitFontSize(
     proverb?.proverb,
@@ -221,7 +219,8 @@ export default function Index() {
           ),
         }}
       />
-      <KeyboardAwareScrollView
+      <LemuelKeyboardAwareScrollView
+        style={{ flex: 1 }}
         contentInsetAdjustmentBehavior="automatic"
         refreshControl={
           <RefreshControl
@@ -233,12 +232,7 @@ export default function Index() {
         contentContainerStyle={{
           padding: 16,
           flexGrow: 1,
-          paddingBottom: insets.bottom + 36,
         }}
-        style={{
-          flex: 1,
-        }}
-        bottomOffset={insets.bottom + 8}
         keyboardShouldPersistTaps="handled"
       >
         {!dataReady && !error && (
@@ -431,7 +425,7 @@ export default function Index() {
             </View>
           </FadeInDown>
         )}
-      </KeyboardAwareScrollView>
+      </LemuelKeyboardAwareScrollView>
       <MonthPicker
         visible={showDatePicker}
         onClose={() => setShowDatePicker(false)}

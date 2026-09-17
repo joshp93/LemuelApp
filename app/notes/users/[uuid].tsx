@@ -10,11 +10,11 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import type { NoteEntity } from "../../../src/api/notes";
 import { getUserNotes } from "../../../src/api/notes";
 import { remoteLog } from "../../../src/api/remote-logger";
 import { type WithAuthProps, withAuth } from "../../../src/auth/with-auth";
+import { LemuelKeyboardAvoidingView } from "../../../src/components/lemuel-keyboard-avoiding-view";
 import { formatDate } from "../../../src/utils/date";
 import { convertProverbKeyToDisplayProverb } from "../../../src/utils/proverb-helper";
 
@@ -85,7 +85,7 @@ function MyMeditationsPage(_props: WithAuthProps) {
     : notes;
 
   return (
-    <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
+    <LemuelKeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
       <View style={styles.container}>
         <Stack.Screen options={{ title: "My Meditations" }} />
         {loading && (
@@ -179,7 +179,7 @@ function MyMeditationsPage(_props: WithAuthProps) {
           />
         )}
       </View>
-    </KeyboardAvoidingView>
+    </LemuelKeyboardAvoidingView>
   );
 }
 

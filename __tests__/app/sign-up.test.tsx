@@ -6,6 +6,7 @@ const mockReplace = jest.fn();
 let mockParams: Record<string, string> = {};
 
 jest.mock("expo-router", () => ({
+  useFocusEffect: jest.fn(),
   useRouter: () => ({
     replace: mockReplace,
   }),

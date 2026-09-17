@@ -9,13 +9,11 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import {
   actions,
   RichEditor,
   RichToolbar,
 } from "react-native-pell-rich-editor";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { recordMeditationCompletion } from "../../../../src/api/meditation";
 import {
   deleteUserNote,
@@ -25,6 +23,7 @@ import {
 import { remoteLog } from "../../../../src/api/remote-logger";
 import { type WithAuthProps, withAuth } from "../../../../src/auth/with-auth";
 import { LemuelButton } from "../../../../src/components/lemuel-button";
+import { LemuelKeyboardAwareScrollView } from "../../../../src/components/lemuel-keyboard-aware-scroll-view";
 import { ProverbCard } from "../../../../src/components/proverb-card";
 import { ProverbReferenceHeaderText } from "../../../../src/components/proverb-reference-header-text";
 import { Text } from "../../../../src/components/themed-text";
@@ -37,7 +36,6 @@ const FONT_SIZES = [56, 40, 24];
 function UserNotePage({ user: _user }: WithAuthProps) {
   const router = useRouter();
   const { height: windowHeight } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
   const { uuid, ref, date } = useLocalSearchParams<{
     uuid: string;
     ref: string;
@@ -61,7 +59,7 @@ function UserNotePage({ user: _user }: WithAuthProps) {
   const [deleting, setDeleting] = useState(false);
   const richTextRef = useRef<RichEditor>(null);
 
-  const textBoxHeight = windowHeight * 0.6 - insets.bottom;
+  const textBoxHeight = windowHeight * 0.6;
   const { fontSize, onTextLayout } = useFitFontSize(
     proverb?.proverb,
     textBoxHeight,
@@ -166,14 +164,10 @@ function UserNotePage({ user: _user }: WithAuthProps) {
           ),
         }}
       />
-      <KeyboardAwareScrollView
-        contentInsetAdjustmentBehaviour="automatic"
-        contentContainerStyle={[
-          styles.contentContainer,
-          { paddingBottom: insets.bottom + 16 },
-        ]}
+      <LemuelKeyboardAwareScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={styles.contentContainer}
         keyboardShouldPersistTaps="handled"
-        bottomOffset={insets.bottom + 8}
       >
         {proverb && !proverbLoading && !proverbError && (
           <ProverbCard
@@ -277,7 +271,7 @@ function UserNotePage({ user: _user }: WithAuthProps) {
             </LemuelButton>
           </View>
         </View>
-      </KeyboardAwareScrollView>
+      </LemuelKeyboardAwareScrollView>
     </View>
   );
 }

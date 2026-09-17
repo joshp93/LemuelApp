@@ -74,6 +74,7 @@ jest.mock("react-native-render-html", () => {
 });
 
 jest.mock("expo-router", () => ({
+  useFocusEffect: jest.fn(),
   Stack: { Screen: () => null },
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
   useNavigation: () => ({

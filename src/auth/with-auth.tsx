@@ -130,17 +130,20 @@ export function withAuth<P extends WithAuthProps>(
   function AuthenticatedRoute(props: Omit<P, keyof WithAuthProps>) {
     const { user, loading } = useAuth();
     const redirectPath = useRedirectPath();
+    const navigation = useNavigation();
+    const state = navigation.getState();
+    const routeName = state?.routes?.[state.index ?? 0]?.name;
 
     if (loading) {
       return null;
     }
 
     if (!user) {
-      return (
-        <Redirect
-          href={`/email-entry?redirect=${encodeURIComponent(redirectPath)}`}
-        />
-      );
+      const query = `redirect=${encodeURIComponent(redirectPath)}`;
+      const routeQuery = routeName
+        ? `&route=${encodeURIComponent(routeName)}`
+        : "";
+      return <Redirect href={`/email-entry?${query}${routeQuery}`} />;
     }
 
     return <Component {...(props as P)} user={user} />;

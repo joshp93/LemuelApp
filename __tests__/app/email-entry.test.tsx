@@ -2,12 +2,13 @@ import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import EmailEntry from "../../app/email-entry";
 import { checkUserExists } from "../../src/api/auth";
 
-const mockReplace = jest.fn();
+const mockPush = jest.fn();
 let mockParams: Record<string, string> = {};
 
 jest.mock("expo-router", () => ({
+  useFocusEffect: jest.fn(),
   useRouter: () => ({
-    replace: mockReplace,
+    push: mockPush,
   }),
   useLocalSearchParams: () => mockParams,
   Stack: {
@@ -73,7 +74,7 @@ describe("EmailEntry", () => {
       expect(mockCheckUserExists).toHaveBeenCalledWith("test@example.com");
     });
 
-    expect(mockReplace).toHaveBeenCalledWith({
+    expect(mockPush).toHaveBeenCalledWith({
       pathname: "/sign-in",
       params: { email: "test@example.com" },
     });
@@ -94,7 +95,7 @@ describe("EmailEntry", () => {
       expect(mockCheckUserExists).toHaveBeenCalledWith("new@example.com");
     });
 
-    expect(mockReplace).toHaveBeenCalledWith({
+    expect(mockPush).toHaveBeenCalledWith({
       pathname: "/sign-up",
       params: { email: "new@example.com" },
     });
@@ -113,7 +114,7 @@ describe("EmailEntry", () => {
     fireEvent.press(continueButton);
 
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith({
+      expect(mockPush).toHaveBeenCalledWith({
         pathname: "/sign-in",
         params: {
           email: "test@example.com",
@@ -136,7 +137,7 @@ describe("EmailEntry", () => {
     fireEvent.press(continueButton);
 
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith({
+      expect(mockPush).toHaveBeenCalledWith({
         pathname: "/sign-up",
         params: { email: "new@example.com", redirect: "/settings" },
       });

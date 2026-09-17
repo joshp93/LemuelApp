@@ -10,8 +10,6 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   type AccountDetails,
   deleteAccount,
@@ -21,10 +19,10 @@ import {
 import { useAuth } from "../src/auth/auth-context";
 import { type WithAuthProps, withAuth } from "../src/auth/with-auth";
 import { LemuelButton } from "../src/components/lemuel-button";
+import { LemuelKeyboardAwareScrollView } from "../src/components/lemuel-keyboard-aware-scroll-view";
 import { formatDate } from "../src/utils/date";
 
 function Account({ user }: WithAuthProps) {
-  const insets = useSafeAreaInsets();
   const { signOut } = useAuth();
   const [account, setAccount] = useState<AccountDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -116,14 +114,9 @@ function Account({ user }: WithAuthProps) {
   return (
     <>
       <Stack.Screen options={{ title: "Account" }} />
-      <KeyboardAwareScrollView
-        style={styles.container}
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom: insets.bottom + 20 },
-        ]}
-        bottomOffset={insets.bottom + 8}
+      <LemuelKeyboardAwareScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
         {loading ? (
@@ -140,6 +133,7 @@ function Account({ user }: WithAuthProps) {
             {editingDisplayName ? (
               <View>
                 <TextInput
+                  autoFocus
                   style={[
                     styles.editInput,
                     displayNameError ? styles.editInputError : null,
@@ -183,7 +177,11 @@ function Account({ user }: WithAuthProps) {
               </View>
             ) : (
               <View
-                style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 8,
+                }}
               >
                 <Text selectable style={[styles.value, { flex: 1 }]}>
                   {account.displayName || "Set display name"}
@@ -279,7 +277,7 @@ function Account({ user }: WithAuthProps) {
             )}
           </View>
         )}
-      </KeyboardAwareScrollView>
+      </LemuelKeyboardAwareScrollView>
 
       {deleting && (
         <View style={styles.overlay}>

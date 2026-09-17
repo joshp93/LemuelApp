@@ -13,9 +13,11 @@ const content = /* @__PURE__ */ React.createElement(VoltraAndroid.Box, {
     alignItems: "center",
   },
 }, /* @__PURE__ */ React.createElement(VoltraAndroid.Column, {
+  deepLinkUrl: "lemuel://",
   verticalAlignment: "center-vertically",
   horizontalAlignment: "center-horizontally",
 }, /* @__PURE__ */ React.createElement(VoltraAndroid.Text, {
+  deepLinkUrl: "lemuel://",
   style: {
     fontSize: 16,
     fontWeight: "bold",
@@ -24,6 +26,7 @@ const content = /* @__PURE__ */ React.createElement(VoltraAndroid.Box, {
     fontFamily: "nunito_400regular",
   },
 }, "Lemuel"), /* @__PURE__ */ React.createElement(VoltraAndroid.Text, {
+  deepLinkUrl: "lemuel://",
   style: {
     fontSize: 12,
     color: "#666666",

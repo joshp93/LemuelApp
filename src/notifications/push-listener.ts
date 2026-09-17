@@ -2,7 +2,6 @@ import * as BackgroundTask from "expo-background-task";
 import * as Notifications from "expo-notifications";
 import * as TaskManager from "expo-task-manager";
 import { Platform } from "react-native";
-import { z } from "zod";
 import { getAuthenticatedUser } from "../api/auth";
 import { LEMUEL_API_BASE_URL } from "../api/constants";
 import { getProverbForTheDay } from "../api/proverbs";
@@ -83,59 +82,15 @@ export const initializePushHandler = async () => {
   remoteLog("info", "[PushListener] Data-received task registered");
 };
 
-const DailyProverbPushDataSchema = z.object({
-  collapseKey: z.string().nullable(),
-  data: z.object({ dataString: z.any().nullable(), type: z.string() }),
-  from: z.string().nullable(),
-  messageId: z.string(),
-  messageType: z.any().nullable(),
-  notification: z.any().nullable(),
-  originalPriority: z.number(),
-  priority: z.number(),
-  sentTime: z.number(),
-  to: z.string().nullable(),
-  ttl: z.number(),
+TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ error }) => {
+  if (error) {
+    remoteLog("error", "[PushListener] Background task error", { error });
+    return;
+  }
+
+  remoteLog("info", "[PushListener] Received daily-proverb silent push");
+  await handleDailyProverbPush();
 });
-
-/**
- * System-level background task handler for FCM silent data messages.
- * Invoked automatically by the OS when an FCM data message arrives with the
- * app in the background. Filters for `type === "daily-proverb"` and delegates
- * to {@link handleDailyProverbPush}.
- */
-TaskManager.defineTask(
-  BACKGROUND_NOTIFICATION_TASK,
-  async ({ data, error }) => {
-    if (error) {
-      remoteLog("error", "[PushListener] Background task error", { error });
-      return;
-    }
-
-    const parseResult = DailyProverbPushDataSchema.safeParse(data);
-    if (!parseResult.success) {
-      remoteLog(
-        "warn",
-        "[PushListener] Received task with invalid data payload",
-        {
-          error: parseResult.error,
-        },
-      );
-      return;
-    }
-
-    const pushNotificationData = parseResult.data;
-
-    if (pushNotificationData.data.type !== "daily-proverb") {
-      remoteLog("debug", "[PushListener] Ignoring non-proverb data message", {
-        type: pushNotificationData.data.type,
-      });
-      return;
-    }
-
-    remoteLog("info", "[PushListener] Received daily-proverb silent push");
-    await handleDailyProverbPush();
-  },
-);
 
 /**
  * Serializes calls to {@link ensureNotificationsScheduled} so that concurrent

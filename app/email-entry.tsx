@@ -1,5 +1,5 @@
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   ActivityIndicator,
   StyleSheet,
@@ -7,18 +7,22 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { checkUserExists } from "../src/api/auth";
 import { LemuelButton } from "../src/components/lemuel-button";
+import { LemuelKeyboardAvoidingView } from "../src/components/lemuel-keyboard-avoiding-view";
 import { isValidEmail } from "../src/utils/email";
 
 export default function EmailEntry() {
   const router = useRouter();
-  const { redirect } = useLocalSearchParams<{ redirect?: string }>();
+  const { redirect, route } = useLocalSearchParams<{
+    redirect?: string;
+    route?: string;
+  }>();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [fieldError, setFieldError] = useState<string | undefined>();
+  const inputRef = useRef<TextInput>(null);
 
   const validateField = (value: string) => {
     if (!value) {
@@ -42,14 +46,22 @@ export default function EmailEntry() {
     try {
       const userExists = await checkUserExists(email);
       if (userExists) {
-        router.replace({
+        router.push({
           pathname: "/sign-in",
-          params: { email, ...(redirect && { redirect }) },
+          params: {
+            email,
+            ...(redirect && { redirect }),
+            ...(route && { route }),
+          },
         });
       } else {
-        router.replace({
+        router.push({
           pathname: "/sign-up",
-          params: { email, ...(redirect && { redirect }) },
+          params: {
+            email,
+            ...(redirect && { redirect }),
+            ...(route && { route }),
+          },
         });
       }
     } catch {
@@ -62,7 +74,11 @@ export default function EmailEntry() {
   return (
     <>
       <Stack.Screen options={{ title: "Welcome" }} />
-      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
+      <LemuelKeyboardAvoidingView
+        behavior="padding"
+        style={{ flex: 1 }}
+        navigationSafeAutoFocus={inputRef}
+      >
         <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
           <View style={styles.container}>
             <Text style={styles.title}>Welcome</Text>
@@ -73,6 +89,7 @@ export default function EmailEntry() {
             ) : null}
 
             <TextInput
+              ref={inputRef}
               style={[styles.input, fieldError ? styles.inputError : null]}
               placeholder="Email"
               placeholderTextColor="#999"
@@ -82,6 +99,8 @@ export default function EmailEntry() {
               autoCapitalize="none"
               keyboardType="email-address"
               autoComplete="email"
+              returnKeyType="go"
+              onSubmitEditing={handleContinue}
             />
 
             <LemuelButton onPress={handleContinue} disabled={loading}>
@@ -90,7 +109,7 @@ export default function EmailEntry() {
             {loading && <ActivityIndicator style={styles.loader} />}
           </View>
         </SafeAreaView>
-      </KeyboardAvoidingView>
+      </LemuelKeyboardAvoidingView>
     </>
   );
 }
