@@ -14,6 +14,7 @@ import {
   RichEditor,
   RichToolbar,
 } from "react-native-pell-rich-editor";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { recordMeditationCompletion } from "../../../../src/api/meditation";
 import {
   deleteUserNote,
@@ -36,6 +37,7 @@ const FONT_SIZES = [56, 40, 24];
 function UserNotePage({ user: _user }: WithAuthProps) {
   const router = useRouter();
   const { height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const { uuid, ref, date } = useLocalSearchParams<{
     uuid: string;
     ref: string;
@@ -165,9 +167,13 @@ function UserNotePage({ user: _user }: WithAuthProps) {
         }}
       />
       <LemuelKeyboardAwareScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={styles.contentContainer}
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={[
+          styles.contentContainer,
+          { paddingBottom: insets.bottom + 16 },
+        ]}
         keyboardShouldPersistTaps="handled"
+        bottomOffset={insets.bottom + 8}
       >
         {proverb && !proverbLoading && !proverbError && (
           <ProverbCard

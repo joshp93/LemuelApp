@@ -10,6 +10,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   type AccountDetails,
   deleteAccount,
@@ -24,6 +25,7 @@ import { formatDate } from "../src/utils/date";
 
 function Account({ user }: WithAuthProps) {
   const { signOut } = useAuth();
+  const insets = useSafeAreaInsets();
   const [account, setAccount] = useState<AccountDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -115,9 +117,13 @@ function Account({ user }: WithAuthProps) {
     <>
       <Stack.Screen options={{ title: "Account" }} />
       <LemuelKeyboardAwareScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={styles.content}
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: insets.bottom + 20 },
+        ]}
         keyboardShouldPersistTaps="handled"
+        bottomOffset={insets.bottom + 8}
       >
         {loading ? (
           <ActivityIndicator size="large" color="#333" />

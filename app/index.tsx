@@ -13,6 +13,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   getProverbNotes,
   getReactions,
@@ -42,6 +43,7 @@ export default function Index() {
   const router = useRouter();
   const navigation = useNavigation();
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const contentWidth = useMemo(() => windowWidth - 56, [windowWidth]);
   const { user } = useAuth();
   const {
@@ -179,7 +181,7 @@ export default function Index() {
     return () => sub.remove();
   }, [goToDate, date]);
 
-  const textBoxHeight = windowHeight * 0.6;
+  const textBoxHeight = windowHeight * 0.6 - insets.bottom;
 
   const { fontSize, onTextLayout } = useFitFontSize(
     proverb?.proverb,
@@ -220,7 +222,6 @@ export default function Index() {
         }}
       />
       <LemuelKeyboardAwareScrollView
-        style={{ flex: 1 }}
         contentInsetAdjustmentBehavior="automatic"
         refreshControl={
           <RefreshControl
@@ -231,9 +232,11 @@ export default function Index() {
         }
         contentContainerStyle={{
           padding: 16,
+          paddingBottom: insets.bottom + 36,
           flexGrow: 1,
         }}
         keyboardShouldPersistTaps="handled"
+        bottomOffset={insets.bottom + 8}
       >
         {!dataReady && !error && (
           <Text
