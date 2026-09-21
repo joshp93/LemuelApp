@@ -76,6 +76,7 @@ const TIER_GLOW_STEP: Record<DeviceTier, number> = {
  */
 export default function WebMeditationScreen() {
   const [isComplete, setIsComplete] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [durationMs, setDurationMs] = useState(60000);
   const {
@@ -109,6 +110,10 @@ export default function WebMeditationScreen() {
   const animationStarted = useRef(false);
 
   const tier = useDeviceTier();
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const resolution = useSharedValue([0, 0]);
   const handleLayout = useCallback((e: LayoutChangeEvent) => {
@@ -217,25 +222,29 @@ export default function WebMeditationScreen() {
           statusBarHidden: true,
         }}
       />
-      <Canvas style={StyleSheet.absoluteFill}>
-        <Fill color="black" />
-        {outlinePath &&
-          segments.map((seg, si) =>
-            sampledGlowLayers.map(({ w, a }, li) => (
-              <Path
-                key={`${si}-${li}`}
-                path={outlinePath}
-                style="stroke"
-                strokeWidth={w}
-                color={`rgba(25,51,179,${a})`}
-                start={seg.start}
-                end={seg.end}
-                strokeCap="round"
-                strokeJoin="round"
-              />
-            )),
-          )}
-      </Canvas>
+      {isClient ? (
+        <Canvas style={StyleSheet.absoluteFill}>
+          <Fill color="black" />
+          {outlinePath &&
+            segments.map((seg, si) =>
+              sampledGlowLayers.map(({ w, a }, li) => (
+                <Path
+                  key={`${si}-${li}`}
+                  path={outlinePath}
+                  style="stroke"
+                  strokeWidth={w}
+                  color={`rgba(25,51,179,${a})`}
+                  start={seg.start}
+                  end={seg.end}
+                  strokeCap="round"
+                  strokeJoin="round"
+                />
+              )),
+            )}
+        </Canvas>
+      ) : (
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: "#000" }]} />
+      )}
 
       <View style={styles.overlay}>
         {proverbData && !loading && (
