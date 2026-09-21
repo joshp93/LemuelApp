@@ -108,6 +108,7 @@ export default function WebMeditationScreen() {
   const hasVisibleNavBar = screenHeight - windowHeight > 30;
   const progress = useSharedValue(0);
   const textOpacity = useSharedValue(0);
+  const resolution = useSharedValue([0, 0]);
   const animationStarted = useRef(false);
 
   const tier = useDeviceTier();
@@ -115,6 +116,7 @@ export default function WebMeditationScreen() {
   const handleLayout = useCallback((e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
     setCanvasSize({ width, height });
+    resolution.value = [width, height];
   }, []);
 
   const sampledGlowLayers = useMemo(() => {
@@ -222,7 +224,13 @@ export default function WebMeditationScreen() {
               `https://cdn.jsdelivr.net/npm/canvaskit-wasm@${version}/bin/full/${file}`,
           }}
           getComponent={() => import("../src/components/meditation-canvas")}
-          componentProps={{ outlinePath, segments, sampledGlowLayers }}
+          componentProps={{
+            outlinePath,
+            segments,
+            sampledGlowLayers,
+            tier,
+            resolution,
+          }}
           fallback={
             <View
               style={[StyleSheet.absoluteFill, { backgroundColor: "#000" }]}
