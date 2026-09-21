@@ -222,6 +222,7 @@ export default function WebMeditationScreen() {
               `https://cdn.jsdelivr.net/npm/canvaskit-wasm@${version}/bin/full/${file}`,
           }}
           getComponent={() => import("../src/components/meditation-canvas")}
+          componentProps={{ outlinePath, segments, sampledGlowLayers }}
           fallback={
             <View
               style={[StyleSheet.absoluteFill, { backgroundColor: "#000" }]}
