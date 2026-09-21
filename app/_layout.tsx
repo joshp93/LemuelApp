@@ -10,7 +10,7 @@ import * as Notifications from "expo-notifications";
 import { Stack, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useCallback, useEffect } from "react";
-import { Alert, Image, StyleSheet, View } from "react-native";
+import { Alert, Image, Platform, StyleSheet, View } from "react-native";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { registerPushToken } from "../src/api/push-token";
@@ -133,6 +133,7 @@ function AppContent() {
   }, [fontsLoaded, fontError, router]);
 
   useEffect(() => {
+    if (Platform.OS === "web") return;
     if (!fontsLoaded && !fontError) return;
 
     const lastResponse = Notifications.getLastNotificationResponse();

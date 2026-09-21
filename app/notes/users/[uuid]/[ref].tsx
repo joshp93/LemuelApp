@@ -1,19 +1,13 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import {
   Alert,
   StyleSheet,
   Switch,
-  TouchableOpacity,
   useWindowDimensions,
   View,
 } from "react-native";
-import {
-  actions,
-  RichEditor,
-  RichToolbar,
-} from "react-native-pell-rich-editor";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { recordMeditationCompletion } from "../../../../src/api/meditation";
 import {
@@ -31,6 +25,8 @@ import { Text } from "../../../../src/components/themed-text";
 import { useFitFontSize } from "../../../../src/hooks/useFitFontSize";
 import { useProverbForTheDay } from "../../../../src/hooks/useProverbForTheDay";
 import { useUnsavedChanges } from "../../../../src/hooks/useUnsavedChanges";
+
+const NoteEditor = lazy(() => import("./note-editor"));
 
 const FONT_SIZES = [56, 40, 24];
 
@@ -59,7 +55,6 @@ function UserNotePage({ user: _user }: WithAuthProps) {
   const [isDirty, setIsDirty] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const richTextRef = useRef<RichEditor>(null);
 
   const textBoxHeight = windowHeight * 0.6;
   const { fontSize, onTextLayout } = useFitFontSize(
@@ -140,16 +135,6 @@ function UserNotePage({ user: _user }: WithAuthProps) {
 
   const allLoaded = !notesLoading && !proverbLoading && proverb;
 
-  useEffect(() => {
-    if (!allLoaded) return;
-
-    const timer = setTimeout(() => {
-      richTextRef.current?.focusContentEditor();
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [allLoaded]);
-
   return (
     <View style={styles.container}>
       <Stack.Screen
@@ -183,56 +168,18 @@ function UserNotePage({ user: _user }: WithAuthProps) {
           />
         )}
         <View style={styles.editorBox}>
-          {!notesLoading && (
-            <View style={styles.toolbarRow}>
-              <View style={styles.toolbarFlex}>
-                <RichToolbar
-                  editor={richTextRef}
-                  actions={[
-                    actions.setBold,
-                    actions.setItalic,
-                    actions.setUnderline,
-                    actions.insertBulletsList,
-                    actions.insertOrderedList,
-                  ]}
-                  iconSize={24}
-                  iconTint="white"
-                  selectedIconTint="#ccc"
-                  style={styles.toolbarInner}
-                />
-              </View>
-              <TouchableOpacity
-                onPress={handleDelete}
-                disabled={deleting}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <MaterialIcons name="delete" size={24} color="white" />
-              </TouchableOpacity>
-            </View>
-          )}
-          {notesLoading ? (
-            <View style={styles.loadingContainer}>
-              <Text style={styles.loadingText}>Loading note...</Text>
-            </View>
-          ) : (
-            <RichEditor
-              ref={richTextRef}
+          <Suspense
+            fallback={notesLoading ? null : <Text>Loading editor...</Text>}
+          >
+            <NoteEditor
+              notesLoading={notesLoading}
+              editorContent={editorContent}
               onChange={handleEditorChange}
-              placeholder="Capture your thoughts..."
-              editorStyle={{
-                backgroundColor: "#fff",
-                color: "#333",
-                placeholderColor: "#999",
-                contentCSSText:
-                  "font-size: 16px; font-family: Nunito; padding: 8px; overflow: hidden;",
-              }}
-              initialContentHTML={editorContent}
-              initialHeight={150}
-              autoCapitalize="sentences"
-              autoCorrect
-              style={{ minHeight: 150 }}
+              onDelete={handleDelete}
+              deleting={deleting}
+              contentLoaded={allLoaded}
             />
-          )}
+          </Suspense>
           <View
             style={{
               flexDirection: "row",
@@ -299,32 +246,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ccc",
     backgroundColor: "#fff",
-  },
-  toolbarInner: {
-    backgroundColor: "black",
-  },
-  toolbarRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginHorizontal: 8,
-    marginTop: 4,
-    marginBottom: 8,
-    paddingRight: 8,
-    backgroundColor: "black",
-    borderRadius: 8,
-    overflow: "hidden",
-  },
-  loadingContainer: {
-    padding: 20,
-    alignItems: "center",
-  },
-  loadingText: {
-    color: "#999",
-    fontSize: 16,
-    fontFamily: "Nunito_400Regular",
-  },
-  toolbarFlex: {
-    flex: 1,
   },
   saveButton: {
     backgroundColor: "black",

@@ -1,4 +1,4 @@
-import { initializeWidget } from "../../src/widgets/initializeWidget";
+import { initializeWidget } from "../../src/widgets/initializeWidget.android";
 
 const mockReload = jest.fn();
 jest.mock("@use-voltra/android-client", () => ({
