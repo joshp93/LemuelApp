@@ -1,4 +1,4 @@
-import { Canvas, Fill, Path, useClock } from "@shopify/react-native-skia";
+import { WithSkiaWeb } from "@shopify/react-native-skia/lib/module/web";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -69,14 +69,14 @@ const TIER_GLOW_STEP: Record<DeviceTier, number> = {
 /**
  * Meditation screen for web.
  *
- * Renders a full-screen canvas with a breathing-pill progress arc and glow
- * layers. The nebula shader (powered by Skia RuntimeEffect) is omitted on
- * web because CanvasKit WASM is not reliably available. Keep-awake and
- * battery APIs are also omitted — they have no effect in the browser.
+ * Uses {@linkcode WithSkiaWeb} to defer loading the Skia glow-arc canvas
+ * until CanvasKit WASM has finished loading. During SSR and CanvasKit
+ * initialisation a plain black background is shown. The nebula shader,
+ * keep-awake and battery APIs are omitted — they either require native
+ * modules or are not available on web.
  */
 export default function WebMeditationScreen() {
   const [isComplete, setIsComplete] = useState(false);
-  const [isClient, setIsClient] = useState(false);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [durationMs, setDurationMs] = useState(60000);
   const {
@@ -111,15 +111,9 @@ export default function WebMeditationScreen() {
 
   const tier = useDeviceTier();
 
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  const resolution = useSharedValue([0, 0]);
   const handleLayout = useCallback((e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
     setCanvasSize({ width, height });
-    resolution.value = [width, height];
   }, []);
 
   const sampledGlowLayers = useMemo(() => {
@@ -134,8 +128,6 @@ export default function WebMeditationScreen() {
       glowLayers: sampledGlowLayers.length,
     });
   }, [tier, sampledGlowLayers]);
-
-  const clock = useClock();
 
   useEffect(() => {
     (async () => {
@@ -222,26 +214,15 @@ export default function WebMeditationScreen() {
           statusBarHidden: true,
         }}
       />
-      {isClient ? (
-        <Canvas style={StyleSheet.absoluteFill}>
-          <Fill color="black" />
-          {outlinePath &&
-            segments.map((seg, si) =>
-              sampledGlowLayers.map(({ w, a }, li) => (
-                <Path
-                  key={`${si}-${li}`}
-                  path={outlinePath}
-                  style="stroke"
-                  strokeWidth={w}
-                  color={`rgba(25,51,179,${a})`}
-                  start={seg.start}
-                  end={seg.end}
-                  strokeCap="round"
-                  strokeJoin="round"
-                />
-              )),
-            )}
-        </Canvas>
+      {outlinePath ? (
+        <WithSkiaWeb
+          getComponent={() => import("../src/components/meditation-canvas")}
+          fallback={
+            <View
+              style={[StyleSheet.absoluteFill, { backgroundColor: "#000" }]}
+            />
+          }
+        />
       ) : (
         <View style={[StyleSheet.absoluteFill, { backgroundColor: "#000" }]} />
       )}
