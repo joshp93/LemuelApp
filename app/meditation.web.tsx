@@ -1,4 +1,5 @@
 import { WithSkiaWeb } from "@shopify/react-native-skia/lib/module/web";
+import { version } from "canvaskit-wasm/package.json";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -216,6 +217,10 @@ export default function WebMeditationScreen() {
       />
       {outlinePath ? (
         <WithSkiaWeb
+          opts={{
+            locateFile: (file) =>
+              `https://cdn.jsdelivr.net/npm/canvaskit-wasm@${version}/bin/full/${file}`,
+          }}
           getComponent={() => import("../src/components/meditation-canvas")}
           fallback={
             <View
