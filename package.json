@@ -21,8 +21,10 @@
     "test:watch": "jest --watch",
     "emulator": "C:\\android_sdk\\emulator\\emulator.exe -avd %npm_package_config_emulatorDevice% -use-keycode-forwarding",
     "emulator:cold": "C:\\android_sdk\\emulator\\emulator.exe -avd %npm_package_config_emulatorDevice% -use-keycode-forwarding -no-snapshot-load -wipe-data",
-    "deploy": "eas build -p android --profile production",
-    "android:submit": "eas submit -p android --latest"
+    "dep:android": "eas build -p android --profile production",
+    "android:submit": "eas submit -p android --latest",
+    "dep:web": "expo export -p web && eas deploy --prod",
+    "login": "eas login"
   },
   "config": {
     "emulatorDevice": "Nexus_5_API_33"
