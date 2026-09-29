@@ -33,6 +33,7 @@ import { ProverbCard } from "../src/components/proverb-card";
 import ProverbNoteCard from "../src/components/proverb-note-card";
 import { ProverbReferenceHeaderText } from "../src/components/proverb-reference-header-text";
 import { Text } from "../src/components/themed-text";
+import { CONTENT_COLUMN, CONTENT_INSET } from "../src/constants/layout";
 import { useFitFontSize } from "../src/hooks/useFitFontSize";
 import { useProverbForTheDay } from "../src/hooks/useProverbForTheDay";
 import type { GetReactionsResponse } from "../src/models/reactions-and-replies";
@@ -230,11 +231,14 @@ export default function Index() {
             tintColor="white"
           />
         }
-        contentContainerStyle={{
-          padding: 16,
-          paddingBottom: insets.bottom + 36,
-          flexGrow: 1,
-        }}
+        contentContainerStyle={[
+          {
+            padding: CONTENT_INSET,
+            paddingBottom: insets.bottom + 36,
+            flexGrow: 1,
+          },
+          CONTENT_COLUMN,
+        ]}
         keyboardShouldPersistTaps="handled"
         bottomOffset={insets.bottom + 8}
       >

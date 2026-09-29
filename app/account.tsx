@@ -3,7 +3,7 @@ import { Stack } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
+  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -21,7 +21,10 @@ import { useAuth } from "../src/auth/auth-context";
 import { type WithAuthProps, withAuth } from "../src/auth/with-auth";
 import { LemuelButton } from "../src/components/lemuel-button";
 import { LemuelKeyboardAwareScrollView } from "../src/components/lemuel-keyboard-aware-scroll-view";
+import { CONTENT_COLUMN, CONTENT_INSET } from "../src/constants/layout";
+import { confirm } from "../src/utils/confirm";
 import { formatDate } from "../src/utils/date";
+import { notify } from "../src/utils/dialog";
 
 function Account({ user }: WithAuthProps) {
   const { signOut } = useAuth();
@@ -86,31 +89,24 @@ function Account({ user }: WithAuthProps) {
     setDisplayNameError(null);
   };
 
-  const handleDelete = () => {
-    Alert.alert(
-      "Delete Account",
-      "This action cannot be undone. All your data, notes, and account information will be permanently deleted.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete Forever",
-          style: "destructive",
-          onPress: async () => {
-            setDeleting(true);
-            const ok = await deleteAccount(user.userId);
-            setDeleting(false);
-            if (ok) {
-              signOut();
-            } else {
-              Alert.alert(
-                "Error",
-                "Failed to delete account. Please try again.",
-              );
-            }
-          },
-        },
-      ],
-    );
+  const handleDelete = async () => {
+    const accepted = await confirm({
+      title: "Delete Account",
+      message:
+        "This action cannot be undone. All your data, notes, and account information will be permanently deleted.",
+      confirmLabel: "Delete Forever",
+      destructive: true,
+    });
+    if (!accepted) return;
+
+    setDeleting(true);
+    const ok = await deleteAccount(user.userId);
+    setDeleting(false);
+    if (ok) {
+      signOut();
+    } else {
+      await notify("Error", "Failed to delete account. Please try again.");
+    }
   };
 
   return (
@@ -121,6 +117,7 @@ function Account({ user }: WithAuthProps) {
         contentContainerStyle={[
           styles.content,
           { paddingBottom: insets.bottom + 20 },
+          CONTENT_COLUMN,
         ]}
         keyboardShouldPersistTaps="handled"
         bottomOffset={insets.bottom + 8}
@@ -286,10 +283,12 @@ function Account({ user }: WithAuthProps) {
       </LemuelKeyboardAwareScrollView>
 
       {deleting && (
-        <View style={styles.overlay}>
-          <ActivityIndicator size="large" color="white" />
-          <Text style={styles.overlayText}>Deleting account...</Text>
-        </View>
+        <Modal transparent animationType="none" onRequestClose={() => {}}>
+          <View style={styles.overlay}>
+            <ActivityIndicator size="large" color="white" />
+            <Text style={styles.overlayText}>Deleting account...</Text>
+          </View>
+        </Modal>
       )}
     </>
   );
@@ -303,7 +302,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#E6F4FE",
   },
   content: {
-    padding: 20,
+    padding: CONTENT_INSET,
     justifyContent: "center",
     flexGrow: 1,
   },
@@ -404,11 +403,10 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   overlay: {
-    ...StyleSheet.absoluteFill,
+    flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.7)",
     alignItems: "center",
     justifyContent: "center",
-    zIndex: 999,
   },
   overlayText: {
     color: "white",

@@ -1,13 +1,7 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
-import {
-  Alert,
-  StyleSheet,
-  Switch,
-  useWindowDimensions,
-  View,
-} from "react-native";
+import { StyleSheet, Switch, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { recordMeditationCompletion } from "../../../../src/api/meditation";
 import {
@@ -22,11 +16,16 @@ import { LemuelKeyboardAwareScrollView } from "../../../../src/components/lemuel
 import { ProverbCard } from "../../../../src/components/proverb-card";
 import { ProverbReferenceHeaderText } from "../../../../src/components/proverb-reference-header-text";
 import { Text } from "../../../../src/components/themed-text";
+import {
+  CONTENT_COLUMN,
+  CONTENT_INSET,
+} from "../../../../src/constants/layout";
 import { useFitFontSize } from "../../../../src/hooks/useFitFontSize";
 import { useProverbForTheDay } from "../../../../src/hooks/useProverbForTheDay";
 import { useUnsavedChanges } from "../../../../src/hooks/useUnsavedChanges";
+import { confirm } from "../../../../src/utils/confirm";
 
-const NoteEditor = lazy(() => import("./note-editor"));
+const NoteEditor = lazy(() => import("../../../../src/components/note-editor"));
 
 const FONT_SIZES = [56, 40, 24];
 
@@ -109,28 +108,25 @@ function UserNotePage({ user: _user }: WithAuthProps) {
 
   useUnsavedChanges(isDirty, persistNote);
 
-  const handleDelete = useCallback(() => {
-    Alert.alert("Delete Note", "Are you sure you want to delete this note?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          setDeleting(true);
-          try {
-            setIsDirty(false);
-            await deleteUserNote(uuid!, ref!, date!);
-            remoteLog("info", "[Notes] Note deleted", { uuid, ref });
-            router.replace("/");
-          } catch (err) {
-            remoteLog("error", "[Notes] Failed to delete note", {
-              error: err,
-            });
-            setDeleting(false);
-          }
-        },
-      },
-    ]);
+  const handleDelete = useCallback(async () => {
+    const accepted = await confirm({
+      title: "Delete Note",
+      message: "Are you sure you want to delete this note?",
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!accepted) return;
+
+    setDeleting(true);
+    try {
+      setIsDirty(false);
+      await deleteUserNote(uuid!, ref!, date!);
+      remoteLog("info", "[Notes] Note deleted", { uuid, ref });
+      router.replace("/");
+    } catch (err) {
+      remoteLog("error", "[Notes] Failed to delete note", { error: err });
+      setDeleting(false);
+    }
   }, [uuid, ref, date, router]);
 
   const allLoaded = !notesLoading && !proverbLoading && proverb;
@@ -156,6 +152,7 @@ function UserNotePage({ user: _user }: WithAuthProps) {
         contentContainerStyle={[
           styles.contentContainer,
           { paddingBottom: insets.bottom + 16 },
+          CONTENT_COLUMN,
         ]}
         keyboardShouldPersistTaps="handled"
         bottomOffset={insets.bottom + 8}
@@ -236,7 +233,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    padding: 16,
+    padding: CONTENT_INSET,
     flexGrow: 1,
   },
   editorBox: {

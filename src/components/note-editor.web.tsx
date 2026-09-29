@@ -1,6 +1,7 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { useCallback, useEffect, useRef } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { NoteEditorLoading } from "./note-editor-loading";
 
 interface WebNoteEditorProps {
   notesLoading: boolean;
@@ -101,7 +102,7 @@ export default function WebNoteEditor({
         />
       )}
       {notesLoading ? (
-        <LoadingIndicator />
+        <NoteEditorLoading />
       ) : isBrowserReady ? (
         <div
           ref={editorRef}
@@ -159,13 +160,6 @@ const Toolbar = ({
   </View>
 );
 
-/** Centered loading state shown while the note content is being fetched. */
-const LoadingIndicator = () => (
-  <View style={styles.loadingContainer}>
-    <Text style={styles.loadingText}>Loading note...</Text>
-  </View>
-);
-
 const styles = StyleSheet.create({
   toolbarRow: {
     flexDirection: "row",
@@ -188,14 +182,5 @@ const styles = StyleSheet.create({
     height: 20,
     backgroundColor: "rgba(255,255,255,0.3)",
     marginHorizontal: 4,
-  },
-  loadingContainer: {
-    padding: 20,
-    alignItems: "center",
-  },
-  loadingText: {
-    color: "#999",
-    fontSize: 16,
-    fontFamily: "Nunito_400Regular",
   },
 });

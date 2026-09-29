@@ -1,6 +1,10 @@
-import { act, render, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import type React from "react";
-import WebSettingsScreen from "../../app/settings.web";
+import WebSettingsScreen from "../../src/screens/settings.web";
+import {
+  getMeditationDuration,
+  setMeditationDuration,
+} from "../../src/settings/meditation-preferences";
 
 jest.mock("expo-router", () => ({
   useNavigation: () => ({
@@ -19,15 +23,30 @@ jest.mock("../../src/auth/auth-context", () => ({
   }),
 }));
 
+jest.mock("../../src/settings/meditation-preferences", () => {
+  const actual = jest.requireActual(
+    "../../src/settings/meditation-preferences",
+  );
+  return {
+    ...actual,
+    getMeditationDuration: jest.fn(),
+    setMeditationDuration: jest.fn(),
+  };
+});
+
 jest.mock("@react-native-picker/picker", () => {
-  const { View } = require("react-native");
-  const { Text } = require("react-native");
+  const { View, Text, Pressable } = require("react-native");
   const Picker = (props: {
     selectedValue: number;
+    onValueChange: (v: number) => void;
     children: React.ReactNode;
   }) => (
     <View>
       <Text>{String(props.selectedValue)}</Text>
+      <Pressable
+        testID="picker-change"
+        onPress={() => props.onValueChange(120000)}
+      />
       {props.children}
     </View>
   );
@@ -35,31 +54,19 @@ jest.mock("@react-native-picker/picker", () => {
   return { Picker };
 });
 
-describe("WebSettingsScreen", () => {
-  let localStorageMock: Record<string, string>;
+const mockGetMeditationDuration = getMeditationDuration as jest.MockedFunction<
+  typeof getMeditationDuration
+>;
+const mockSetMeditationDuration = setMeditationDuration as jest.MockedFunction<
+  typeof setMeditationDuration
+>;
 
+describe("WebSettingsScreen", () => {
   beforeEach(() => {
     jest.useFakeTimers();
-    localStorageMock = {};
-    Object.defineProperty(global, "localStorage", {
-      value: {
-        getItem: jest.fn((key: string) => localStorageMock[key] ?? null),
-        setItem: jest.fn(
-          (key: string, value: string) => (localStorageMock[key] = value),
-        ),
-        removeItem: jest.fn((key: string) => delete localStorageMock[key]),
-        clear: jest.fn(() => {
-          localStorageMock = {};
-        }),
-        get length() {
-          return Object.keys(localStorageMock).length;
-        },
-        key: jest.fn((index: number) => Object.keys(localStorageMock)[index]),
-      },
-      writable: true,
-      configurable: true,
-    });
     jest.clearAllMocks();
+    mockGetMeditationDuration.mockResolvedValue(60000);
+    mockSetMeditationDuration.mockResolvedValue(undefined);
   });
 
   it("shows the info banner about limited settings", async () => {
@@ -104,8 +111,8 @@ describe("WebSettingsScreen", () => {
     });
   });
 
-  it("loads stored duration from localStorage", async () => {
-    localStorageMock.meditation_duration_ms = "120000";
+  it("loads the stored duration via getMeditationDuration", async () => {
+    mockGetMeditationDuration.mockResolvedValue(120000);
 
     const { getByText } = render(<WebSettingsScreen />);
     await act(async () => {
@@ -113,6 +120,20 @@ describe("WebSettingsScreen", () => {
     });
     await waitFor(() => {
       expect(getByText("120000")).toBeTruthy();
+    });
+  });
+
+  it("persists the new duration when Update is pressed", async () => {
+    const { getByText, getByTestId } = render(<WebSettingsScreen />);
+    await act(async () => {
+      jest.advanceTimersByTime(300);
+    });
+
+    fireEvent.press(getByTestId("picker-change"));
+    fireEvent.press(getByText("Update"));
+
+    await waitFor(() => {
+      expect(mockSetMeditationDuration).toHaveBeenCalledWith(120000);
     });
   });
 

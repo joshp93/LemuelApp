@@ -8,25 +8,30 @@ import {
   addNotificationSentDate,
   getNotificationSentDates,
 } from "./notification-preferences";
+import type { NonNullNotificationTrigger } from "./notification-utils";
+import {
+  EXAMPLE_NOTIFICATION_ID,
+  getMeditationRouteParams,
+  getNotificationIdForDate,
+  getRandomTimeInWindow,
+  MEDITATE_ACTION_ID,
+  resolveScheduleDate,
+} from "./notification-utils";
 
-const NOTIFICATION_ID_PREFIX = "daily-proverb-meditation";
+export type { MeditationRouteParams } from "./notification-utils";
+export type { NonNullNotificationTrigger };
+export {
+  EXAMPLE_NOTIFICATION_ID,
+  getMeditationRouteParams,
+  getNotificationIdForDate,
+  getRandomTimeInWindow,
+  MEDITATE_ACTION_ID,
+  resolveScheduleDate,
+};
+
 const SNOOZE_NOTIFICATION_ID = "daily-proverb-snoozed";
-export const EXAMPLE_NOTIFICATION_ID = "daily-proverb-example";
 const CATEGORY_ID = "proverb-meditation";
 const SNOOZE_ACTION_ID = "snooze";
-
-export const MEDITATE_ACTION_ID = "meditate";
-
-export const getNotificationIdForDate = (dateString: string): string =>
-  `${NOTIFICATION_ID_PREFIX}-${dateString}`;
-
-/**
- * A notification trigger that guarantees a schedulable (non-null) value.
- * Excludes the `null` and `ChannelAwareTriggerInput` variants of
- * {@link Notifications.NotificationTriggerInput}.
- */
-export type NonNullNotificationTrigger =
-  Notifications.SchedulableNotificationTriggerInput;
 
 /**
  * Creates an object to be used as the payload of a notification
@@ -114,50 +119,6 @@ export const scheduleProverbNotification = async (
     dateString,
   });
   return notificationId;
-};
-
-/**
- * Uses the window values provided to schedule a notification at a random time between them.
- * @param date The date, used to determine which day to schedule it for
- * @param startHour The starting hour window
- * @param startMinute The starting minute window
- * @param endHour The ending hour window
- * @param endMinute The ending minute window
- * @returns A Date object representing a random time on the provided date between the provided window values.
- */
-export const getRandomTimeInWindow = (
-  date: Date,
-  startHour: number,
-  startMinute: number,
-  endHour: number,
-  endMinute: number,
-): Date => {
-  const startOfDay = new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate(),
-  );
-  const windowStartMinutes = startHour * 60 + startMinute;
-  const windowEndMinutes = endHour * 60 + endMinute;
-  const range = Math.max(windowEndMinutes - windowStartMinutes, 1);
-  const randomMinutes = windowStartMinutes + Math.floor(Math.random() * range);
-  return new Date(startOfDay.getTime() + randomMinutes * 60000);
-};
-
-/**
- * Builds the full date time that from the provided date string, hour and minute values
- * @param isoDateString The date string (YYYY-MM-DD) to resolve the schedule date against
- * @param hour The hour to set
- * @param minute The minute to set
- * @returns A Date object representing the resolved schedule date
- */
-export const resolveScheduleDate = (
-  isoDateString: string,
-  hour: number,
-  minute: number,
-): Date => {
-  const [y, m, d] = isoDateString.split("-").map(Number);
-  return new Date(y, m - 1, d, hour, minute, 0, 0);
 };
 
 /**
@@ -362,27 +323,4 @@ export const sendExampleProverbNotification = async (proverb: Proverb) => {
       error,
     });
   }
-};
-
-/**
- * Navigation params for the meditation screen derived from a notification's
- * content data. Includes the proverb date when present so tapping the
- * notification lands on the correct daily proverb rather than today's.
- *
- * Returns null when the data cannot be used to navigate (missing proverb/ref).
- * @param data The `content.data` payload of a notification response.
- */
-export type MeditationRouteParams = {
-  pathname: "/meditation";
-  params: { proverb: string; ref: string; date?: string };
-};
-
-export const getMeditationRouteParams = (
-  data: Record<string, unknown>,
-): MeditationRouteParams | null => {
-  const { proverb, ref, date } = data;
-  if (typeof proverb !== "string" || typeof ref !== "string") return null;
-  const params: MeditationRouteParams["params"] = { proverb, ref };
-  if (typeof date === "string") params.date = date;
-  return { pathname: "/meditation", params };
 };

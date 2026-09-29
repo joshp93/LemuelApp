@@ -1,44 +1,16 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
 import { Stack } from "expo-router";
-import { useEffect, useReducer, useRef } from "react";
+import { useEffect, useReducer } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LemuelButton } from "../src/components/lemuel-button";
-
-/**
- * Loads the stored meditation duration from localStorage.
- * Falls back to the default 60 seconds when no value is stored.
- */
-const getDuration = (): Promise<number> => {
-  if (typeof localStorage === "undefined") {
-    return Promise.resolve(60000);
-  }
-  try {
-    const raw = localStorage.getItem("meditation_duration_ms");
-    if (raw !== null) {
-      const num = Number.parseInt(raw, 10);
-      if (!Number.isNaN(num) && num >= 5000 && num <= 600000) {
-        return Promise.resolve(num);
-      }
-    }
-  } catch {
-    /* ignore */
-  }
-  return Promise.resolve(60000);
-};
-
-/**
- * Persists the meditation duration to localStorage.
- */
-const persistDuration = async (ms: number): Promise<void> => {
-  if (typeof localStorage === "undefined") return;
-  try {
-    localStorage.setItem("meditation_duration_ms", ms.toString());
-  } catch {
-    /* ignore */
-  }
-};
+import { LemuelButton } from "../components/lemuel-button";
+import { CONTENT_COLUMN, CONTENT_INSET } from "../constants/layout";
+import {
+  getMeditationDuration,
+  MEDITATION_DURATION_OPTIONS,
+  setMeditationDuration,
+} from "../settings/meditation-preferences";
 
 type State = { loading: boolean; duration: number; isDirty: boolean };
 type Action =
@@ -46,6 +18,13 @@ type Action =
   | { type: "SET_DURATION"; duration: number }
   | { type: "SYNC" };
 
+/**
+ * Reducer for the web settings form.
+ *
+ * @param state - The current form state.
+ * @param action - The action to apply.
+ * @returns The next form state.
+ */
 const reducer = (state: State, action: Action): State => {
   switch (action.type) {
     case "LOADED":
@@ -65,29 +44,16 @@ const reducer = (state: State, action: Action): State => {
   }
 };
 
-/** Options for meditation timer duration. */
-const DURATION_OPTIONS = [
-  { label: "5 seconds", value: 5000 },
-  { label: "10 seconds", value: 10000 },
-  { label: "20 seconds", value: 20000 },
-  { label: "30 seconds", value: 30000 },
-  { label: "1 minute", value: 60000 },
-  { label: "2 minutes", value: 120000 },
-  { label: "5 minutes", value: 300000 },
-  { label: "10 minutes", value: 600000 },
-] as const;
-
 /**
  * Settings page for the web platform.
  *
  * Shows only the meditation timer duration picker and an informational
  * banner noting that notification and battery-optimisation settings
- * are only available in the native app. Preferences are stored in
- * localStorage (cookies on the server-rendered page).
+ * are only available in the native app. Preferences are stored via
+ * AsyncStorage, which is backed by localStorage on web.
  */
 export default function WebSettingsScreen() {
   const insets = useSafeAreaInsets();
-  const savedDuration = useRef(60000);
   const [state, dispatch] = useReducer(reducer, {
     loading: true,
     duration: 60000,
@@ -96,8 +62,7 @@ export default function WebSettingsScreen() {
 
   useEffect(() => {
     (async () => {
-      const dur = await getDuration();
-      savedDuration.current = dur;
+      const dur = await getMeditationDuration();
       dispatch({ type: "LOADED", duration: dur });
     })();
   }, []);
@@ -107,8 +72,7 @@ export default function WebSettingsScreen() {
   };
 
   const handleSave = async () => {
-    await persistDuration(state.duration);
-    savedDuration.current = state.duration;
+    await setMeditationDuration(state.duration);
     dispatch({ type: "SYNC" });
   };
 
@@ -118,7 +82,7 @@ export default function WebSettingsScreen() {
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         style={styles.container}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={[styles.content, CONTENT_COLUMN]}
       >
         <View style={styles.infoBanner}>
           <MaterialIcons
@@ -128,9 +92,8 @@ export default function WebSettingsScreen() {
             style={styles.infoIcon}
           />
           <Text style={styles.infoText}>
-            Some settings (notifications, battery optimisation) are only
-            available in the native app. Download the Lemuel app for the full
-            experience.
+            Some settings are only available in the native app. Download the
+            Lemuel app for the full experience.
           </Text>
         </View>
 
@@ -141,8 +104,9 @@ export default function WebSettingsScreen() {
           <Picker
             selectedValue={state.duration}
             onValueChange={handleDurationChange}
+            style={styles.durationPicker}
           >
-            {DURATION_OPTIONS.map((opt) => (
+            {MEDITATION_DURATION_OPTIONS.map((opt) => (
               <Picker.Item
                 key={opt.value}
                 label={opt.label}
@@ -154,10 +118,10 @@ export default function WebSettingsScreen() {
       </ScrollView>
 
       {!state.loading && state.isDirty && (
-        <View
-          style={[styles.updateButtonWrapper, { bottom: insets.bottom + 36 }]}
-        >
-          <LemuelButton onPress={handleSave}>Update</LemuelButton>
+        <View style={[styles.updateBar, { bottom: insets.bottom + 36 }]}>
+          <View style={[styles.updateBarInner, CONTENT_COLUMN]}>
+            <LemuelButton onPress={handleSave}>Update</LemuelButton>
+          </View>
         </View>
       )}
     </View>
@@ -167,8 +131,10 @@ export default function WebSettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    backgroundColor: "#F0F8FF",
+  },
+  content: {
+    padding: CONTENT_INSET,
+    paddingBottom: 100,
   },
   sectionHeader: {
     fontSize: 20,
@@ -189,11 +155,16 @@ const styles = StyleSheet.create({
     color: "#333",
     marginBottom: 12,
   },
-  updateButtonWrapper: {
+  durationPicker: {
+    borderWidth: 0,
+  },
+  updateBar: {
     position: "absolute",
-    bottom: 36,
-    left: 20,
-    right: 20,
+    left: 0,
+    right: 0,
+  },
+  updateBarInner: {
+    paddingHorizontal: CONTENT_INSET,
   },
   infoBanner: {
     flexDirection: "row",

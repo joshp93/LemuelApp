@@ -15,6 +15,7 @@ import { getUserNotes } from "../../../src/api/notes";
 import { remoteLog } from "../../../src/api/remote-logger";
 import { type WithAuthProps, withAuth } from "../../../src/auth/with-auth";
 import { LemuelKeyboardAvoidingView } from "../../../src/components/lemuel-keyboard-avoiding-view";
+import { CONTENT_COLUMN, CONTENT_INSET } from "../../../src/constants/layout";
 import { formatDate } from "../../../src/utils/date";
 import { convertProverbKeyToDisplayProverb } from "../../../src/utils/proverb-helper";
 
@@ -188,13 +189,13 @@ export default withAuth(MyMeditationsPage);
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F0F8FF",
   },
   centered: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 20,
+    padding: CONTENT_INSET,
+    ...CONTENT_COLUMN,
   },
   errorText: {
     color: "#dc3545",
@@ -206,7 +207,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   listContent: {
-    padding: 16,
+    padding: CONTENT_INSET,
+    ...CONTENT_COLUMN,
   },
   searchContainer: {
     marginBottom: 8,

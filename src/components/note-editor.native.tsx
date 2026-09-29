@@ -1,11 +1,12 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { useEffect, useRef } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 import {
   actions,
   RichEditor,
   RichToolbar,
 } from "react-native-pell-rich-editor";
+import { NoteEditorLoading } from "./note-editor-loading";
 
 interface NoteEditorProps {
   notesLoading: boolean;
@@ -67,7 +68,7 @@ export default function NoteEditor({
         </View>
       )}
       {notesLoading ? (
-        <LoadingIndicator />
+        <NoteEditorLoading />
       ) : (
         <RichEditor
           ref={richTextRef}
@@ -108,13 +109,6 @@ const DeleteButton = ({
   </TouchableOpacity>
 );
 
-/** Centered loading state shown while the note content is being fetched. */
-const LoadingIndicator = () => (
-  <View style={styles.loadingContainer}>
-    <Text style={styles.loadingText}>Loading note...</Text>
-  </View>
-);
-
 const styles = StyleSheet.create({
   toolbarInner: {
     backgroundColor: "black",
@@ -132,14 +126,5 @@ const styles = StyleSheet.create({
   },
   toolbarFlex: {
     flex: 1,
-  },
-  loadingContainer: {
-    padding: 20,
-    alignItems: "center",
-  },
-  loadingText: {
-    color: "#999",
-    fontSize: 16,
-    fontFamily: "Nunito_400Regular",
   },
 });

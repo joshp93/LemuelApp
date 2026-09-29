@@ -9,13 +9,20 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
 import { Stack, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useCallback, useEffect } from "react";
-import { Alert, Image, Platform, StyleSheet, View } from "react-native";
+import { useCallback, useEffect, useMemo } from "react";
+import {
+  Image,
+  Platform,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { registerPushToken } from "../src/api/push-token";
 import { AuthProvider } from "../src/auth/auth-context";
 import { HeaderMenu } from "../src/components/header-menu";
+import { CONTENT_INSET } from "../src/constants/layout";
 import { COLORS } from "../src/constants/theme";
 import {
   getMeditationRouteParams,
@@ -29,6 +36,8 @@ import {
   registerReplyNotificationCategory,
   setupTokenListener,
 } from "../src/notifications/push-listener";
+import { confirm } from "../src/utils/confirm";
+import { getContentGutter } from "../src/utils/layout";
 import { initializeWidget } from "../src/widgets/initializeWidget";
 
 SplashScreen.preventAutoHideAsync();
@@ -40,6 +49,20 @@ function AppContent() {
   });
 
   const router = useRouter();
+  const { width: windowWidth } = useWindowDimensions();
+  const contentGutter = useMemo(
+    () => (Platform.OS === "web" ? getContentGutter(windowWidth) : 0),
+    [windowWidth],
+  );
+
+  const headerLogo = (
+    <HeaderMenu>
+      <Image
+        source={require("../assets/images/app-logo.png")}
+        style={{ width: 40, height: 40, resizeMode: "contain" }}
+      />
+    </HeaderMenu>
+  );
 
   const handleNotificationResponse = useCallback(
     (response: Notifications.NotificationResponse) => {
@@ -114,18 +137,17 @@ function AppContent() {
     (async () => {
       const shown = await AsyncStorage.getItem("notification_prompt_shown");
       if (!shown) {
-        setTimeout(() => {
-          Alert.alert(
-            "Daily Proverb Reminders",
-            "Would you like to receive a daily notification with the proverb of the day? You can adjust this anytime in Settings.",
-            [
-              { text: "Not Now", style: "cancel" },
-              {
-                text: "Go to Settings",
-                onPress: () => router.push("/settings"),
-              },
-            ],
-          );
+        setTimeout(async () => {
+          const accepted = await confirm({
+            title: "Daily Proverb Reminders",
+            message:
+              "Would you like to receive a daily notification with the proverb of the day? You can adjust this anytime in Settings.",
+            confirmLabel: "Go to Settings",
+            cancelLabel: "Not Now",
+          });
+          if (accepted) {
+            router.push("/settings");
+          }
         }, 1000);
         await AsyncStorage.setItem("notification_prompt_shown", "true");
       }
@@ -150,20 +172,23 @@ function AppContent() {
     <View style={styles.container}>
       <Stack
         screenOptions={{
-          contentStyle: { backgroundColor: COLORS.lightBackground },
+          contentStyle: styles.screenContent,
           headerTitleStyle: styles.defaultText,
           headerStyle: {
             backgroundColor: "black",
           },
           headerTintColor: "white",
-          headerRight: () => (
-            <HeaderMenu>
-              <Image
-                source={require("../assets/images/app-logo.png")}
-                style={{ width: 40, height: 40, resizeMode: "contain" }}
-              />
-            </HeaderMenu>
-          ),
+          ...(contentGutter > 0 && {
+            headerLeftContainerStyle: { paddingLeft: contentGutter },
+          }),
+          headerRight: () =>
+            Platform.OS === "web" ? (
+              <View style={{ paddingRight: contentGutter + CONTENT_INSET }}>
+                {headerLogo}
+              </View>
+            ) : (
+              headerLogo
+            ),
         }}
       >
         <Stack.Screen name="index" />
@@ -195,6 +220,9 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: COLORS.lightBackground,
+  },
+  screenContent: {
     backgroundColor: COLORS.lightBackground,
   },
   defaultText: {

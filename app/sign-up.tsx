@@ -7,6 +7,7 @@ import { createAccount } from "../src/api/auth";
 import { BottomSheetMenu } from "../src/components/bottom-sheet-menu";
 import { LemuelButton } from "../src/components/lemuel-button";
 import { LemuelKeyboardAvoidingView } from "../src/components/lemuel-keyboard-avoiding-view";
+import { CONTENT_COLUMN, CONTENT_INSET } from "../src/constants/layout";
 import { isValidEmail } from "../src/utils/email";
 import { getPasswordError } from "../src/utils/password";
 
@@ -124,7 +125,7 @@ export default function SignUp() {
         navigationSafeAutoFocus={displayNameRef}
       >
         <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
-          <View style={styles.container}>
+          <View style={[styles.container, CONTENT_COLUMN]}>
             <Text style={styles.title}>Sign Up</Text>
 
             {formError ? (
@@ -271,7 +272,7 @@ export default function SignUp() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    padding: CONTENT_INSET,
     backgroundColor: "#E6F4FE",
     justifyContent: "center",
   },

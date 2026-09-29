@@ -1,0 +1,376 @@
+import { Picker } from "@react-native-picker/picker";
+import * as Notifications from "expo-notifications";
+import { Stack, useNavigation } from "expo-router";
+import { useEffect, useState } from "react";
+import { ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { getReplyNotificationsEnabled, updateAccount } from "../api/account";
+import { remoteLog } from "../api/remote-logger";
+import { useAuth } from "../auth/auth-context";
+import { ExpandableSection } from "../components/expandable-section";
+import { LemuelButton } from "../components/lemuel-button";
+import { TimePicker } from "../components/time-picker";
+import { CONTENT_INSET } from "../constants/layout";
+import { useSettingsPreferences } from "../hooks/useSettingsPreferences";
+
+import {
+  type NotificationMode,
+  setNotificationMode,
+  setNotificationsEnabled,
+  setRandomWindowEndMinute,
+  setRandomWindowHourEnd,
+  setRandomWindowHourStart,
+  setRandomWindowStartMinute,
+  setScheduledTimeHour,
+  setScheduledTimeMinute,
+} from "../notifications/notification-preferences";
+import { ensureNotificationsScheduled } from "../notifications/push-listener";
+import {
+  MEDITATION_DURATION_OPTIONS,
+  setMeditationDuration,
+} from "../settings/meditation-preferences";
+import {
+  getBatteryOptimizationWarningText,
+  openBatteryOptimizationSettings,
+} from "../utils/battery-optimization";
+import { showDialog } from "../utils/dialog";
+export default function SettingsScreen() {
+  const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+  const [replyNotificationsEnabled, setReplyNotificationsEnabled] =
+    useState<boolean>(true);
+  const [replyNotificationsLoading, setReplyNotificationsLoading] =
+    useState(true);
+  const {
+    loading,
+    enabled,
+    mode,
+    windowStartHour,
+    windowStartMinute,
+    windowEndHour,
+    windowEndMinute,
+    scheduledHour,
+    scheduledMinute,
+    meditationDuration,
+    snapshotRef,
+    setEnabled,
+    setMode,
+    setWindowStartHour,
+    setWindowStartMinute,
+    setWindowEndHour,
+    setWindowEndMinute,
+    setScheduledHour,
+    setScheduledMinute,
+    setMeditationDuration: setMeditationDuration_,
+    isDirty,
+    setIsDirty,
+  } = useSettingsPreferences();
+
+  const persistAll = async () => {
+    await setNotificationsEnabled(enabled);
+    await setNotificationMode(mode);
+    await setRandomWindowHourStart(parseInt(windowStartHour, 10) || 9);
+    await setRandomWindowStartMinute(parseInt(windowStartMinute, 10) || 0);
+    await setRandomWindowHourEnd(parseInt(windowEndHour, 10) || 19);
+    await setRandomWindowEndMinute(parseInt(windowEndMinute, 10) || 0);
+    await setScheduledTimeHour(parseInt(scheduledHour, 10) || 9);
+    await setScheduledTimeMinute(parseInt(scheduledMinute, 10) || 0);
+    await setMeditationDuration(meditationDuration);
+    await ensureNotificationsScheduled(2, true);
+    snapshotRef.current = {
+      enabled,
+      mode,
+      windowStartHour,
+      windowStartMinute,
+      windowEndHour,
+      windowEndMinute,
+      scheduledHour,
+      scheduledMinute,
+      meditationDuration: meditationDuration.toString(),
+    };
+    setIsDirty(false);
+  };
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener(
+      "beforeRemove",
+      async (e: any) => {
+        if (!isDirty) return;
+
+        e.preventDefault();
+
+        const choice = await showDialog({
+          title: "Update your settings?",
+          actions: [
+            { id: "update", label: "Update" },
+            { id: "discard", label: "Discard", style: "destructive" },
+            { id: "cancel", label: "Cancel", style: "cancel" },
+          ],
+        });
+
+        if (choice === "update") {
+          await persistAll();
+          navigation.dispatch(e.data.action);
+        } else if (choice === "discard") {
+          navigation.dispatch(e.data.action);
+        }
+      },
+    );
+    return unsubscribe;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDirty, navigation]);
+
+  const handleToggle = async (value: boolean) => {
+    setEnabled(value);
+    if (value) {
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== "granted") {
+        setEnabled(false);
+      }
+    }
+  };
+
+  const handleModeChange = (newMode: NotificationMode) => {
+    setMode(newMode);
+  };
+
+  useEffect(() => {
+    if (!user) {
+      setReplyNotificationsLoading(false);
+      return;
+    }
+    getReplyNotificationsEnabled(user.userId).then((enabled) => {
+      setReplyNotificationsEnabled(enabled);
+      setReplyNotificationsLoading(false);
+    });
+  }, [user]);
+
+  const handleReplyNotificationsToggle = async (value: boolean) => {
+    setReplyNotificationsEnabled(value);
+    try {
+      const success = await updateAccount(user!.userId, {
+        replyNotificationsEnabled: value,
+      });
+      remoteLog("info", "[Settings] Reply notifications toggled", { value });
+      if (!success) {
+        setReplyNotificationsEnabled(!value);
+      }
+    } catch (error) {
+      remoteLog("error", "[Settings] Failed to toggle reply notifications", {
+        error,
+      });
+      setReplyNotificationsEnabled(!value);
+    }
+  };
+
+  return (
+    <View style={{ flex: 1 }}>
+      <Stack.Screen options={{ title: "Settings" }} />
+      <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
+        style={styles.container}
+        contentContainerStyle={{ paddingBottom: 100 }}
+      >
+        <Text style={styles.sectionHeader}>Notifications</Text>
+
+        <View style={styles.infoBox}>
+          <Text style={styles.infoText}>
+            {getBatteryOptimizationWarningText()}
+          </Text>
+          <LemuelButton onPress={openBatteryOptimizationSettings}>
+            Open battery settings
+          </LemuelButton>
+        </View>
+
+        <View style={styles.notificationsCard}>
+          <View style={styles.settingItemRow}>
+            <View style={styles.labelContainer}>
+              <Text style={styles.label}>
+                Enable daily proverb meditation notifications
+              </Text>
+            </View>
+            {!loading && (
+              <Switch
+                value={enabled}
+                onValueChange={handleToggle}
+                trackColor={{ false: "#d3d3d3", true: "black" }}
+                thumbColor={enabled ? "black" : "#f4f3f4"}
+              />
+            )}
+          </View>
+
+          {enabled && !loading && (
+            <View>
+              <ExpandableSection
+                selected={mode === "random"}
+                onSelect={() => handleModeChange("random")}
+                label="Send at a random time"
+              >
+                <TimePicker
+                  mode="random"
+                  hour={windowStartHour}
+                  minute={windowStartMinute}
+                  endHour={windowEndHour}
+                  endMinute={windowEndMinute}
+                  onHourChange={setWindowStartHour}
+                  onMinuteChange={setWindowStartMinute}
+                  onEndHourChange={setWindowEndHour}
+                  onEndMinuteChange={setWindowEndMinute}
+                />
+              </ExpandableSection>
+
+              <ExpandableSection
+                selected={mode === "scheduled"}
+                onSelect={() => handleModeChange("scheduled")}
+                label="Send at a specific time"
+              >
+                <TimePicker
+                  mode="scheduled"
+                  hour={scheduledHour}
+                  minute={scheduledMinute}
+                  onHourChange={setScheduledHour}
+                  onMinuteChange={setScheduledMinute}
+                />
+              </ExpandableSection>
+            </View>
+          )}
+        </View>
+
+        {user && (
+          <View style={styles.notificationsCard}>
+            <View style={styles.replyToggleRow}>
+              <View style={styles.labelContainer}>
+                <Text style={styles.label}>
+                  Notify me when someone replies to my note
+                </Text>
+              </View>
+              {!replyNotificationsLoading && (
+                <Switch
+                  value={replyNotificationsEnabled}
+                  onValueChange={handleReplyNotificationsToggle}
+                  trackColor={{ false: "#d3d3d3", true: "black" }}
+                  thumbColor={replyNotificationsEnabled ? "black" : "#f4f3f4"}
+                />
+              )}
+            </View>
+          </View>
+        )}
+
+        <Text style={styles.sectionHeader}>Meditations</Text>
+
+        <View style={styles.durationCard}>
+          <Text style={styles.durationLabel}>Meditation timer</Text>
+          <Picker
+            selectedValue={meditationDuration}
+            onValueChange={(v: number) => setMeditationDuration_(v)}
+          >
+            {MEDITATION_DURATION_OPTIONS.map((opt) => (
+              <Picker.Item
+                key={opt.value}
+                label={opt.label}
+                value={opt.value}
+              />
+            ))}
+          </Picker>
+        </View>
+      </ScrollView>
+
+      {!loading && isDirty && (
+        <View
+          style={[styles.updateButtonWrapper, { bottom: insets.bottom + 36 }]}
+        >
+          <LemuelButton onPress={persistAll}>Update</LemuelButton>
+        </View>
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: CONTENT_INSET,
+    backgroundColor: "#F0F8FF",
+  },
+  sectionHeader: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#333",
+    marginBottom: 12,
+    marginTop: 8,
+  },
+  settingItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    backgroundColor: "white",
+    borderRadius: 8,
+    marginBottom: 20,
+  },
+  labelContainer: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#333",
+  },
+  durationCard: {
+    backgroundColor: "white",
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 20,
+  },
+  durationLabel: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#333",
+    marginBottom: 12,
+  },
+  updateButtonWrapper: {
+    position: "absolute",
+    bottom: 36,
+    left: CONTENT_INSET,
+    right: CONTENT_INSET,
+  },
+  infoBox: {
+    backgroundColor: "#E6F4FE",
+    borderLeftWidth: 4,
+    borderLeftColor: "black",
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 20,
+  },
+  infoText: {
+    fontSize: 13,
+    color: "#333",
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  notificationsCard: {
+    backgroundColor: "white",
+    borderRadius: 8,
+    overflow: "hidden",
+    marginBottom: 20,
+  },
+  settingItemRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  replyToggleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+  },
+});

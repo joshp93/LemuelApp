@@ -1,0 +1,226 @@
+import * as Notifications from "expo-notifications";
+import {
+  Stack,
+  useLocalSearchParams,
+  useNavigation,
+  useRouter,
+} from "expo-router";
+import { useRef, useState } from "react";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { createAccountRecord, linkDeviceToken } from "../api/account";
+import { getAuthenticatedUser, signIn } from "../api/auth";
+import { useAuth } from "../auth/auth-context";
+import { LemuelButton } from "../components/lemuel-button";
+import { LemuelKeyboardAvoidingView } from "../components/lemuel-keyboard-avoiding-view";
+import { CONTENT_INSET } from "../constants/layout";
+import { buildRedirectResetAction } from "../utils/auth-redirect";
+
+export default function SignIn() {
+  const router = useRouter();
+  const navigation = useNavigation();
+  const params = useLocalSearchParams<{
+    email?: string;
+    displayName?: string;
+    redirect?: string;
+    route?: string;
+  }>();
+  const { refreshUser } = useAuth();
+  const email = params.email || "";
+  const redirect = params.redirect;
+  const route = params.route;
+  const passwordRef = useRef<TextInput>(null);
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [fieldError, setFieldError] = useState<string>();
+
+  const handleSignIn = async () => {
+    setFormError("");
+    setFieldError(undefined);
+
+    if (!password) {
+      setFieldError("Password is required");
+      return;
+    }
+
+    setLoading(true);
+    const result = await signIn(email, password);
+    setLoading(false);
+
+    if (result.success) {
+      await refreshUser();
+      const token = (await Notifications.getDevicePushTokenAsync()).data;
+      if (params.displayName) {
+        await createAccountRecord(params.displayName);
+      }
+      linkDeviceToken(token);
+      const authenticatedUser = await getAuthenticatedUser();
+      const routeName = route || "index";
+      const redirectUrl = redirect || "/";
+      navigation.dispatch(
+        buildRedirectResetAction(
+          routeName,
+          redirectUrl,
+          authenticatedUser?.userId ?? "",
+        ),
+      );
+    } else if (result.requiresConfirmation) {
+      // User account not confirmed yet, redirect to confirmation screen
+      router.replace({
+        pathname: "/confirm-sign-up",
+        params: { email },
+      });
+    } else {
+      setFormError(result.message || "Sign in failed. Please try again.");
+    }
+  };
+
+  const handleBack = () => {
+    router.replace("/email-entry");
+  };
+
+  return (
+    <>
+      <Stack.Screen options={{ title: "Sign In" }} />
+      <LemuelKeyboardAvoidingView
+        behavior="padding"
+        style={{ flex: 1 }}
+        navigationSafeAutoFocus={passwordRef}
+      >
+        <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
+          <View style={styles.container}>
+            <Text style={styles.title}>Sign In</Text>
+            <Text style={styles.emailPreview}>{email}</Text>
+
+            {formError ? (
+              <Text style={styles.formError}>{formError}</Text>
+            ) : null}
+
+            <View style={styles.passwordContainer}>
+              <TextInput
+                ref={passwordRef}
+                style={[
+                  styles.input,
+                  styles.passwordInput,
+                  fieldError ? styles.inputError : null,
+                ]}
+                placeholder="Password"
+                placeholderTextColor="#999"
+                value={password}
+                onChangeText={setPassword}
+                onBlur={() => {
+                  if (!password) setFieldError("Password is required");
+                }}
+                secureTextEntry={!showPassword}
+                returnKeyType="go"
+                onSubmitEditing={handleSignIn}
+              />
+              <Pressable
+                style={styles.showPasswordButton}
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                <Text style={styles.showPasswordText}>
+                  {showPassword ? "Hide" : "Show"}
+                </Text>
+              </Pressable>
+            </View>
+            {fieldError ? (
+              <Text style={styles.fieldError}>{fieldError}</Text>
+            ) : null}
+
+            <LemuelButton onPress={handleSignIn} disabled={loading}>
+              {loading ? "Signing in..." : "Sign In"}
+            </LemuelButton>
+
+            <Pressable style={styles.backButton} onPress={handleBack}>
+              <Text style={styles.backButtonText}>Back to Email</Text>
+            </Pressable>
+          </View>
+        </SafeAreaView>
+      </LemuelKeyboardAvoidingView>
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: CONTENT_INSET,
+    backgroundColor: "#E6F4FE",
+    justifyContent: "center",
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 10,
+    color: "#333",
+  },
+  emailPreview: {
+    fontSize: 16,
+    textAlign: "center",
+    color: "#666",
+    marginBottom: 30,
+  },
+  formError: {
+    color: "#dc3545",
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  fieldError: {
+    color: "#dc3545",
+    fontSize: 14,
+    marginTop: -10,
+    marginBottom: 10,
+  },
+  input: {
+    backgroundColor: "white",
+    borderRadius: 8,
+    padding: 15,
+    marginBottom: 15,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    color: "#333",
+  },
+  inputError: {
+    borderColor: "#dc3545",
+  },
+  passwordContainer: {
+    position: "relative",
+  },
+  passwordInput: {
+    paddingRight: 60,
+  },
+  showPasswordButton: {
+    position: "absolute",
+    right: 15,
+    top: 0,
+    bottom: 15,
+    justifyContent: "center",
+  },
+  showPasswordText: {
+    color: "#007AFF",
+    fontSize: 16,
+  },
+  links: {
+    marginTop: 20,
+    alignItems: "center",
+  },
+  link: {
+    color: "#007AFF",
+    fontSize: 16,
+  },
+  backButton: {
+    marginTop: 15,
+    padding: 10,
+    alignItems: "center",
+  },
+  backButtonText: {
+    color: "#007AFF",
+    fontSize: 16,
+  },
+});

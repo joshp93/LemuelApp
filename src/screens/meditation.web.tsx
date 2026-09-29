@@ -17,55 +17,26 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { recordMeditationCompletion } from "../src/api/meditation";
-import { remoteLog } from "../src/api/remote-logger";
-import { useAuth } from "../src/auth/auth-context";
-import { LemuelButton } from "../src/components/lemuel-button";
-import { Text } from "../src/components/themed-text";
-import { type DeviceTier, useDeviceTier } from "../src/hooks/useDeviceTier";
-import { useFitFontSize } from "../src/hooks/useFitFontSize";
-import { useProverbForTheDay } from "../src/hooks/useProverbForTheDay";
-import type { Proverb } from "../src/models/proverb";
-import { getMeditationDuration } from "../src/settings/meditation-preferences";
+import { recordMeditationCompletion } from "../api/meditation";
+import { remoteLog } from "../api/remote-logger";
+import { useAuth } from "../auth/auth-context";
+import { LemuelButton } from "../components/lemuel-button";
+import { Text } from "../components/themed-text";
+import {
+  ACCENT_COLOR,
+  DEFAULT_CORNER_RADIUS,
+  FONT_SIZES,
+  glowLayers,
+  INSET,
+  TIER_GLOW_STEP,
+} from "../constants/meditation";
+import { useDeviceTier } from "../hooks/useDeviceTier";
+import { useFitFontSize } from "../hooks/useFitFontSize";
+import { useProverbForTheDay } from "../hooks/useProverbForTheDay";
+import type { Proverb } from "../models/proverb";
+import { getMeditationDuration } from "../settings/meditation-preferences";
 
-const INSET = 20;
-const CORNER_RADIUS = 30;
-const STROKE_WIDTH = 8;
-const ACCENT_COLOR = "rgb(25, 51, 179)";
-const FONT_SIZES = [40, 28, 18];
-
-const glowLayers = [
-  { w: 80, a: 0.015 },
-  { w: 72, a: 0.018 },
-  { w: 65, a: 0.021 },
-  { w: 59, a: 0.026 },
-  { w: 54, a: 0.031 },
-  { w: 48, a: 0.037 },
-  { w: 44, a: 0.044 },
-  { w: 40, a: 0.052 },
-  { w: 36, a: 0.062 },
-  { w: 32, a: 0.074 },
-  { w: 29, a: 0.089 },
-  { w: 27, a: 0.106 },
-  { w: 24, a: 0.127 },
-  { w: 22, a: 0.152 },
-  { w: 20, a: 0.181 },
-  { w: 18, a: 0.217 },
-  { w: 16, a: 0.259 },
-  { w: 15, a: 0.309 },
-  { w: 13, a: 0.37 },
-  { w: 12, a: 0.442 },
-  { w: 11, a: 0.528 },
-  { w: 10, a: 0.63 },
-  { w: 9, a: 0.753 },
-  { w: STROKE_WIDTH, a: 0.9 },
-];
-
-const TIER_GLOW_STEP: Record<DeviceTier, number> = {
-  high: 1,
-  medium: 2,
-  low: 3,
-};
+const CORNER_RADIUS = DEFAULT_CORNER_RADIUS;
 
 /**
  * Meditation screen for web.
@@ -223,7 +194,7 @@ export default function WebMeditationScreen() {
             locateFile: (file) =>
               `https://cdn.jsdelivr.net/npm/canvaskit-wasm@${version}/bin/full/${file}`,
           }}
-          getComponent={() => import("../src/components/meditation-canvas")}
+          getComponent={() => import("../components/meditation-canvas")}
           componentProps={{
             outlinePath,
             segments,

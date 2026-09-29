@@ -1,6 +1,8 @@
-import { render, waitFor } from "@testing-library/react-native";
+import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import Account from "../../app/account";
-import { getAccountDetails } from "../../src/api/account";
+import { deleteAccount, getAccountDetails } from "../../src/api/account";
+import { confirm } from "../../src/utils/confirm";
+import { notify } from "../../src/utils/dialog";
 
 const mockRedirect = jest.fn();
 const mockAuthUser: {
@@ -46,11 +48,26 @@ jest.mock("../../src/auth/auth-context", () => ({
 
 jest.mock("../../src/api/account", () => ({
   getAccountDetails: jest.fn(),
+  deleteAccount: jest.fn(),
+  updateAccount: jest.fn(),
+}));
+
+jest.mock("../../src/utils/confirm", () => ({
+  confirm: jest.fn(),
+}));
+
+jest.mock("../../src/utils/dialog", () => ({
+  notify: jest.fn(),
 }));
 
 const mockGetAccountDetails = getAccountDetails as jest.MockedFunction<
   typeof getAccountDetails
 >;
+const mockDeleteAccount = deleteAccount as jest.MockedFunction<
+  typeof deleteAccount
+>;
+const mockConfirm = confirm as jest.MockedFunction<typeof confirm>;
+const mockNotify = notify as jest.MockedFunction<typeof notify>;
 
 describe("Account", () => {
   beforeEach(() => {
@@ -130,5 +147,117 @@ describe("Account", () => {
     await waitFor(() => {
       expect(getByText("Network error")).toBeTruthy();
     });
+  });
+
+  it("deletes the account when the confirmation is accepted", async () => {
+    mockAuthUser.value = {
+      ...mockAuthUser.value,
+      user: {
+        userId: "uuid-123",
+        email: "test@example.com",
+        username: "test@example.com",
+        token: "token",
+      },
+    };
+    mockGetAccountDetails.mockResolvedValue({
+      pk: "uuid-123",
+      sk: "account",
+      accountCreatedDate: "2025-01-15T10:00:00.000Z",
+      totalMeditations: 5,
+      totalNotes: 2,
+    });
+    mockConfirm.mockResolvedValue(true);
+    mockDeleteAccount.mockResolvedValue(true);
+
+    const { getByText } = render(<Account />);
+
+    await waitFor(() => {
+      expect(getByText("Account Management")).toBeTruthy();
+    });
+    fireEvent.press(getByText("Account Management"));
+    fireEvent.press(getByText("Delete Account"));
+
+    await waitFor(() => {
+      expect(mockConfirm).toHaveBeenCalledWith({
+        title: "Delete Account",
+        message:
+          "This action cannot be undone. All your data, notes, and account information will be permanently deleted.",
+        confirmLabel: "Delete Forever",
+        destructive: true,
+      });
+      expect(mockDeleteAccount).toHaveBeenCalledWith("uuid-123");
+      expect(mockAuthUser.value.signOut).toHaveBeenCalled();
+    });
+  });
+
+  it("keeps the account when the confirmation is dismissed", async () => {
+    mockAuthUser.value = {
+      ...mockAuthUser.value,
+      user: {
+        userId: "uuid-123",
+        email: "test@example.com",
+        username: "test@example.com",
+        token: "token",
+      },
+    };
+    mockGetAccountDetails.mockResolvedValue({
+      pk: "uuid-123",
+      sk: "account",
+      accountCreatedDate: "2025-01-15T10:00:00.000Z",
+      totalMeditations: 5,
+      totalNotes: 2,
+    });
+    mockConfirm.mockResolvedValue(false);
+
+    const { getByText } = render(<Account />);
+
+    await waitFor(() => {
+      expect(getByText("Account Management")).toBeTruthy();
+    });
+    fireEvent.press(getByText("Account Management"));
+    fireEvent.press(getByText("Delete Account"));
+
+    await waitFor(() => {
+      expect(mockConfirm).toHaveBeenCalled();
+    });
+    expect(mockDeleteAccount).not.toHaveBeenCalled();
+    expect(mockAuthUser.value.signOut).not.toHaveBeenCalled();
+  });
+
+  it("reports a failed deletion", async () => {
+    mockAuthUser.value = {
+      ...mockAuthUser.value,
+      user: {
+        userId: "uuid-123",
+        email: "test@example.com",
+        username: "test@example.com",
+        token: "token",
+      },
+    };
+    mockGetAccountDetails.mockResolvedValue({
+      pk: "uuid-123",
+      sk: "account",
+      accountCreatedDate: "2025-01-15T10:00:00.000Z",
+      totalMeditations: 5,
+      totalNotes: 2,
+    });
+    mockConfirm.mockResolvedValue(true);
+    mockDeleteAccount.mockResolvedValue(false);
+
+    const { getByText } = render(<Account />);
+
+    await waitFor(() => {
+      expect(getByText("Account Management")).toBeTruthy();
+    });
+    fireEvent.press(getByText("Account Management"));
+    fireEvent.press(getByText("Delete Account"));
+
+    await waitFor(() => {
+      expect(mockNotify).toHaveBeenCalledWith(
+        "Error",
+        "Failed to delete account. Please try again.",
+      );
+    });
+    expect(mockAuthUser.value.signOut).not.toHaveBeenCalled();
   });
 });
