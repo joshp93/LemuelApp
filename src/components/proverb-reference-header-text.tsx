@@ -64,7 +64,7 @@ export function ProverbReferenceHeaderText({
   }, [proverbRef]);
 
   const title = useMemo(() => {
-    if (!proverbRef || loading || error) return "Daily Proverb";
+    if (!proverbRef || loading || error) return "Daily proverb";
     if (variantWidths.length < 3 || availableWidth <= 0) return proverbRef;
 
     const dropdownWidth = showVersionDropdown ? APPROX_DROPDOWN_WIDTH : 0;

@@ -128,9 +128,9 @@ describe("Index", () => {
   it("should render loading state", () => {
     mockUseProverbForTheDay.mockReturnValue(defaultHookReturn);
 
-    const { getByText } = render(<Index />);
+    const { getByTestId } = render(<Index />);
 
-    expect(getByText("Loading proverb...")).toBeTruthy();
+    expect(getByTestId("lemuel-loading")).toBeTruthy();
   });
 
   it("should render error state", () => {
@@ -177,9 +177,9 @@ describe("Index", () => {
   });
 
   it("should render loading state when proverb is loading", () => {
-    const { getByText } = render(<Index />);
+    const { getByTestId } = render(<Index />);
 
-    expect(getByText("Loading proverb...")).toBeTruthy();
+    expect(getByTestId("lemuel-loading")).toBeTruthy();
   });
 
   it("should render error message on error", () => {
@@ -204,7 +204,7 @@ describe("Index", () => {
     const { getByText } = render(<Index />);
 
     await waitFor(() => {
-      expect(getByText("Start Meditation")).toBeTruthy();
+      expect(getByText("Start meditation")).toBeTruthy();
     });
   });
 

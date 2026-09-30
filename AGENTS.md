@@ -221,8 +221,8 @@ src/
   components/     # bottom-sheet-menu, dividing-line, error-boundary,
                   # expandable-section, fade-in-down, header-menu, lemuel-button,
                   # lemuel-keyboard-avoiding-view, lemuel-keyboard-aware-scroll-view,
-                  # meditation-canvas, month-picker, not-today-banner,
-                  # note-editor-loading, proverb-card, proverb-note-card,
+                  # lemuel-loading-screen, meditation-canvas, month-picker,
+                  # not-today-banner, proverb-card, proverb-note-card,
                   # proverb-reference-header-text, reaction-bar, reply-card,
                   # reply-input, reply-thread, themed-text, time-picker,
                   # version-dropdown
@@ -298,6 +298,27 @@ everyone.
 - Detect the OS shell before running commands (the dev machine is Windows, so
   PowerShell — no `grep`)
 - New functions and components get concise TSDoc; new behaviour gets unit tests
+
+### UI copy
+
+User-facing titles, controls and labels use **sentence case** — capitalise the
+first word only. This is neither Title Case nor all-lowercase.
+
+- **Controls**: buttons and any pressable label, including menu items and
+  dialog buttons — "Sign up", "Sign out", "Start meditation", "Delete account",
+  "Account management", "Resend code", "Go to settings".
+- **Titles**: page and navigation headers, on-page headings, dialog titles,
+  notification titles and menu titles — "Sign in", "Confirm sign up",
+  "My meditations", "Delete note", "Unsaved changes", "Daily proverb",
+  "Bible version".
+- **Labels**: field and stat labels, and input placeholders — "Display name",
+  "Account created", "Total meditations", "Total notes", "Verification code",
+  "Confirm password".
+- A control's busy state replaces its label while the action runs, and takes
+  the same casing: `{loading ? "Signing up..." : "Sign up"}`,
+  `{loading ? "Confirming..." : "Verify"}`.
+- Body copy is prose, so it is untouched: error messages, empty states and
+  descriptions keep their own wording.
 
 ### Testing
 

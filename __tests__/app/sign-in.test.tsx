@@ -83,14 +83,14 @@ describe("SignIn", () => {
 
   it("should render email preview and password input", () => {
     const { getByPlaceholderText, getAllByText } = render(<SignIn />);
-    expect(getAllByText("Sign In").length).toBeGreaterThan(0);
+    expect(getAllByText("Sign in").length).toBeGreaterThan(0);
     expect(getByPlaceholderText("Password")).toBeTruthy();
   });
 
   it("should show validation error when password is empty", async () => {
     const { getAllByText, getByText } = render(<SignIn />);
 
-    const signInButtons = getAllByText("Sign In");
+    const signInButtons = getAllByText("Sign in");
     fireEvent.press(signInButtons[1]);
 
     await waitFor(() => {
@@ -105,7 +105,7 @@ describe("SignIn", () => {
 
     fireEvent.changeText(getByPlaceholderText("Password"), "password123");
 
-    const signInButtons = getAllByText("Sign In");
+    const signInButtons = getAllByText("Sign in");
     fireEvent.press(signInButtons[1]);
 
     await waitFor(() => {
@@ -129,7 +129,7 @@ describe("SignIn", () => {
 
     fireEvent.changeText(getByPlaceholderText("Password"), "password123");
 
-    const signInButtons = getAllByText("Sign In");
+    const signInButtons = getAllByText("Sign in");
     fireEvent.press(signInButtons[1]);
 
     await waitFor(() => {
@@ -156,7 +156,7 @@ describe("SignIn", () => {
 
     fireEvent.changeText(getByPlaceholderText("Password"), "password123");
 
-    const signInButtons = getAllByText("Sign In");
+    const signInButtons = getAllByText("Sign in");
     fireEvent.press(signInButtons[1]);
 
     await waitFor(() => {
@@ -174,7 +174,7 @@ describe("SignIn", () => {
 
     fireEvent.changeText(getByPlaceholderText("Password"), "password123");
 
-    const signInButtons = getAllByText("Sign In");
+    const signInButtons = getAllByText("Sign in");
     fireEvent.press(signInButtons[1]);
 
     await waitFor(() => {
@@ -194,7 +194,7 @@ describe("SignIn", () => {
 
     fireEvent.changeText(getByPlaceholderText("Password"), "password123");
 
-    const signInButtons = getAllByText("Sign In");
+    const signInButtons = getAllByText("Sign in");
     fireEvent.press(signInButtons[1]);
 
     await waitFor(() => {
@@ -216,7 +216,7 @@ describe("SignIn", () => {
 
     fireEvent.changeText(getByPlaceholderText("Password"), "wrongpassword");
 
-    const signInButtons = getAllByText("Sign In");
+    const signInButtons = getAllByText("Sign in");
     fireEvent.press(signInButtons[1]);
 
     await waitFor(() => {
@@ -246,7 +246,7 @@ describe("SignIn", () => {
 
     fireEvent.changeText(getByPlaceholderText("Password"), "password123");
 
-    const signInButtons = getAllByText("Sign In");
+    const signInButtons = getAllByText("Sign in");
     fireEvent.press(signInButtons[1]);
 
     await waitFor(() => {
@@ -272,7 +272,7 @@ describe("SignIn", () => {
 
     fireEvent.changeText(getByPlaceholderText("Password"), "password123");
 
-    const signInButtons = getAllByText("Sign In");
+    const signInButtons = getAllByText("Sign in");
     fireEvent.press(signInButtons[1]);
 
     await waitFor(() => {

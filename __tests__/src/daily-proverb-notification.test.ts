@@ -360,7 +360,7 @@ describe("Notification Functions", () => {
 
       expect(Notifications.setNotificationChannelAsync).toHaveBeenCalledWith(
         "daily-proverb",
-        expect.objectContaining({ name: "Daily Proverb" }),
+        expect.objectContaining({ name: "Daily proverb" }),
       );
     });
 

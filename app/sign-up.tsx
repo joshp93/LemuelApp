@@ -118,7 +118,7 @@ export default function SignUp() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Sign Up" }} />
+      <Stack.Screen options={{ title: "Sign up" }} />
       <LemuelKeyboardAvoidingView
         behavior="padding"
         style={{ flex: 1 }}
@@ -126,7 +126,7 @@ export default function SignUp() {
       >
         <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
           <View style={[styles.container, CONTENT_COLUMN]}>
-            <Text style={styles.title}>Sign Up</Text>
+            <Text style={styles.title}>Sign up</Text>
 
             {formError ? (
               <Text style={styles.formError}>{formError}</Text>
@@ -213,7 +213,7 @@ export default function SignUp() {
                   styles.passwordInput,
                   fieldErrors.confirmPassword ? styles.inputError : null,
                 ]}
-                placeholder="Confirm Password"
+                placeholder="Confirm password"
                 placeholderTextColor="#999"
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
@@ -243,7 +243,7 @@ export default function SignUp() {
             ) : null}
 
             <LemuelButton onPress={handleSignUp} disabled={loading}>
-              {loading ? "Signing up..." : "Sign Up"}
+              {loading ? "Signing up..." : "Sign up"}
             </LemuelButton>
 
             <Pressable style={styles.backButton} onPress={handleBack}>

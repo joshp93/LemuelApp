@@ -98,11 +98,11 @@ function AppContent() {
       if (!shown) {
         setTimeout(async () => {
           const accepted = await confirm({
-            title: "Daily Proverb Reminders",
+            title: "Daily proverb reminders",
             message:
               "Would you like to receive a daily notification with the proverb of the day? You can adjust this anytime in Settings.",
-            confirmLabel: "Go to Settings",
-            cancelLabel: "Not Now",
+            confirmLabel: "Go to settings",
+            cancelLabel: "Not now",
           });
           if (accepted) {
             router.push("/settings");

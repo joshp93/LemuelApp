@@ -26,25 +26,25 @@ describe("ProverbReferenceHeaderText", () => {
     selectedVersion: null,
   };
 
-  it("shows 'Daily Proverb' when loading", () => {
+  it("shows 'Daily proverb' when loading", () => {
     const { getByTestId } = render(
       <ProverbReferenceHeaderText {...baseProps} loading />,
     );
-    expect(getByTestId("header-title").props.children).toBe("Daily Proverb");
+    expect(getByTestId("header-title").props.children).toBe("Daily proverb");
   });
 
-  it("shows 'Daily Proverb' when error", () => {
+  it("shows 'Daily proverb' when error", () => {
     const { getByTestId } = render(
       <ProverbReferenceHeaderText {...baseProps} error={new Error()} />,
     );
-    expect(getByTestId("header-title").props.children).toBe("Daily Proverb");
+    expect(getByTestId("header-title").props.children).toBe("Daily proverb");
   });
 
-  it("shows 'Daily Proverb' when proverbRef is undefined", () => {
+  it("shows 'Daily proverb' when proverbRef is undefined", () => {
     const { getByTestId } = render(
       <ProverbReferenceHeaderText {...baseProps} />,
     );
-    expect(getByTestId("header-title").props.children).toBe("Daily Proverb");
+    expect(getByTestId("header-title").props.children).toBe("Daily proverb");
   });
 
   it("shows full proverbRef when no measurement taken yet", () => {

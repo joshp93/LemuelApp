@@ -6,7 +6,7 @@ import {
   RichEditor,
   RichToolbar,
 } from "react-native-pell-rich-editor";
-import { NoteEditorLoading } from "./note-editor-loading";
+import { LemuelLoadingScreen } from "./lemuel-loading-screen";
 
 interface NoteEditorProps {
   notesLoading: boolean;
@@ -68,7 +68,7 @@ export default function NoteEditor({
         </View>
       )}
       {notesLoading ? (
-        <NoteEditorLoading />
+        <LemuelLoadingScreen />
       ) : (
         <RichEditor
           ref={richTextRef}

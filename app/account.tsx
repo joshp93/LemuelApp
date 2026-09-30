@@ -21,6 +21,7 @@ import { useAuth } from "../src/auth/auth-context";
 import { type WithAuthProps, withAuth } from "../src/auth/with-auth";
 import { LemuelButton } from "../src/components/lemuel-button";
 import { LemuelKeyboardAwareScrollView } from "../src/components/lemuel-keyboard-aware-scroll-view";
+import { LemuelLoadingScreen } from "../src/components/lemuel-loading-screen";
 import { CONTENT_COLUMN, CONTENT_INSET } from "../src/constants/layout";
 import { confirm } from "../src/utils/confirm";
 import { formatDate } from "../src/utils/date";
@@ -91,10 +92,10 @@ function Account({ user }: WithAuthProps) {
 
   const handleDelete = async () => {
     const accepted = await confirm({
-      title: "Delete Account",
+      title: "Delete account",
       message:
         "This action cannot be undone. All your data, notes, and account information will be permanently deleted.",
-      confirmLabel: "Delete Forever",
+      confirmLabel: "Delete forever",
       destructive: true,
     });
     if (!accepted) return;
@@ -123,7 +124,7 @@ function Account({ user }: WithAuthProps) {
         bottomOffset={insets.bottom + 8}
       >
         {loading ? (
-          <ActivityIndicator size="large" color="#333" />
+          <LemuelLoadingScreen />
         ) : error ? (
           <Text selectable style={styles.error}>
             {error}
@@ -131,7 +132,7 @@ function Account({ user }: WithAuthProps) {
         ) : account ? (
           <View style={styles.card}>
             <Text selectable style={styles.label}>
-              Display Name
+              Display name
             </Text>
             {editingDisplayName ? (
               <View>
@@ -218,7 +219,7 @@ function Account({ user }: WithAuthProps) {
             <View style={styles.divider} />
 
             <Text selectable style={styles.label}>
-              Account Created
+              Account created
             </Text>
             <Text selectable style={styles.value}>
               {formatDate(account.accountCreatedDate)}
@@ -227,7 +228,7 @@ function Account({ user }: WithAuthProps) {
             <View style={styles.divider} />
 
             <Text selectable style={styles.label}>
-              Total Meditations
+              Total meditations
             </Text>
             <Text selectable style={styles.value}>
               {account.totalMeditations}
@@ -236,7 +237,7 @@ function Account({ user }: WithAuthProps) {
             <View style={styles.divider} />
 
             <Text selectable style={styles.label}>
-              Total Notes
+              Total notes
             </Text>
             <Text selectable style={styles.value}>
               {account.totalNotes}
@@ -256,7 +257,7 @@ function Account({ user }: WithAuthProps) {
                 setAccountManagementExpanded(!accountManagementExpanded)
               }
             >
-              <Text style={styles.label}>Account Management</Text>
+              <Text style={styles.label}>Account management</Text>
               <MaterialIcons
                 name={
                   accountManagementExpanded
@@ -274,7 +275,7 @@ function Account({ user }: WithAuthProps) {
                   onPress={handleDelete}
                   disabled={deleting}
                 >
-                  <Text style={styles.deleteButtonText}>Delete Account</Text>
+                  <Text style={styles.deleteButtonText}>Delete account</Text>
                 </Pressable>
               </View>
             )}

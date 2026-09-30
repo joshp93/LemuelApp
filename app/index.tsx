@@ -27,6 +27,7 @@ import { DividingLine } from "../src/components/dividing-line";
 import { FadeInDown } from "../src/components/fade-in-down";
 import { LemuelButton } from "../src/components/lemuel-button";
 import { LemuelKeyboardAwareScrollView } from "../src/components/lemuel-keyboard-aware-scroll-view";
+import { LemuelLoadingScreen } from "../src/components/lemuel-loading-screen";
 import { MonthPicker } from "../src/components/month-picker";
 import { NotTodayBanner } from "../src/components/not-today-banner";
 import { ProverbCard } from "../src/components/proverb-card";
@@ -242,15 +243,7 @@ export default function Index() {
         keyboardShouldPersistTaps="handled"
         bottomOffset={insets.bottom + 8}
       >
-        {!dataReady && !error && (
-          <Text
-            style={{
-              textAlign: "center",
-            }}
-          >
-            Loading proverb...
-          </Text>
-        )}
+        {!dataReady && !error && <LemuelLoadingScreen />}
         {error && <Text>{error}</Text>}
         {dataReady && proverb && !error && (
           <FadeInDown key={proverb.ref}>
@@ -278,7 +271,7 @@ export default function Index() {
                 }
                 style={{ marginTop: 16 }}
               >
-                Start Meditation
+                Start meditation
               </LemuelButton>
             )}
             {user && (

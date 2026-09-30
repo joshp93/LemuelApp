@@ -1,7 +1,7 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { useCallback, useEffect, useRef } from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
-import { NoteEditorLoading } from "./note-editor-loading";
+import { LemuelLoadingScreen } from "./lemuel-loading-screen";
 
 interface WebNoteEditorProps {
   notesLoading: boolean;
@@ -102,7 +102,7 @@ export default function WebNoteEditor({
         />
       )}
       {notesLoading ? (
-        <NoteEditorLoading />
+        <LemuelLoadingScreen />
       ) : isBrowserReady ? (
         <div
           ref={editorRef}

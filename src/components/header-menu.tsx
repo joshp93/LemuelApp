@@ -147,14 +147,14 @@ export function HeaderMenu({ children }: { children?: React.ReactNode }) {
                     style={styles.menuItem}
                     onPress={handleSignOut}
                   >
-                    <Text style={styles.signOutText}>Sign Out</Text>
+                    <Text style={styles.signOutText}>Sign out</Text>
                   </TouchableOpacity>
                 ) : (
                   <TouchableOpacity
                     style={styles.menuItem}
                     onPress={() => navigateTo("/email-entry", true)}
                   >
-                    <Text style={styles.signInText}>Sign In</Text>
+                    <Text style={styles.signInText}>Sign in</Text>
                   </TouchableOpacity>
                 )}
               </View>

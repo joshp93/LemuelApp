@@ -1,12 +1,6 @@
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { checkUserExists } from "../src/api/auth";
 import { LemuelButton } from "../src/components/lemuel-button";
@@ -105,9 +99,8 @@ export default function EmailEntry() {
             />
 
             <LemuelButton onPress={handleContinue} disabled={loading}>
-              {loading ? "" : "Continue"}
+              {loading ? "Meditating..." : "Continue"}
             </LemuelButton>
-            {loading && <ActivityIndicator style={styles.loader} />}
           </View>
         </SafeAreaView>
       </LemuelKeyboardAvoidingView>
@@ -153,8 +146,5 @@ const styles = StyleSheet.create({
   },
   inputError: {
     borderColor: "#dc3545",
-  },
-  loader: {
-    marginTop: 10,
   },
 });

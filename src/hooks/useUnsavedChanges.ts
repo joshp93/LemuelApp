@@ -28,7 +28,7 @@ export function useUnsavedChanges(
         e.preventDefault();
 
         const choice = await showDialog({
-          title: "Unsaved Changes",
+          title: "Unsaved changes",
           message: "You have unsaved changes.",
           actions: [
             { id: "save", label: "Save" },

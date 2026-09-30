@@ -46,14 +46,14 @@ describe("ConfirmSignUp", () => {
     const { getByPlaceholderText, getByText } = render(<ConfirmSignUp />);
 
     expect(getByText("test@example.com")).toBeTruthy();
-    expect(getByPlaceholderText("Verification Code")).toBeTruthy();
+    expect(getByPlaceholderText("Verification code")).toBeTruthy();
   });
 
   it("should show validation error when code is empty", async () => {
     const { getByPlaceholderText, getByText, getAllByText } = render(
       <ConfirmSignUp />,
     );
-    const codeInput = getByPlaceholderText("Verification Code");
+    const codeInput = getByPlaceholderText("Verification code");
 
     fireEvent(codeInput, "blur");
 
@@ -64,7 +64,7 @@ describe("ConfirmSignUp", () => {
 
   it("should show validation error for invalid code length", async () => {
     const { getByPlaceholderText, getByText } = render(<ConfirmSignUp />);
-    const codeInput = getByPlaceholderText("Verification Code");
+    const codeInput = getByPlaceholderText("Verification code");
 
     fireEvent.changeText(codeInput, "123");
     fireEvent.press(getByText("Verify"));
@@ -79,7 +79,7 @@ describe("ConfirmSignUp", () => {
 
     const { getByPlaceholderText, getByText } = render(<ConfirmSignUp />);
 
-    fireEvent.changeText(getByPlaceholderText("Verification Code"), "123456");
+    fireEvent.changeText(getByPlaceholderText("Verification code"), "123456");
 
     fireEvent.press(getByText("Verify"));
 
@@ -102,7 +102,7 @@ describe("ConfirmSignUp", () => {
 
     const { getByPlaceholderText, getByText } = render(<ConfirmSignUp />);
 
-    fireEvent.changeText(getByPlaceholderText("Verification Code"), "123456");
+    fireEvent.changeText(getByPlaceholderText("Verification code"), "123456");
     fireEvent.press(getByText("Verify"));
 
     await waitFor(() => {
@@ -133,7 +133,7 @@ describe("ConfirmSignUp", () => {
 
     const { getByPlaceholderText, getByText } = render(<ConfirmSignUp />);
 
-    fireEvent.changeText(getByPlaceholderText("Verification Code"), "123456");
+    fireEvent.changeText(getByPlaceholderText("Verification code"), "123456");
     fireEvent.press(getByText("Verify"));
 
     await waitFor(() => {
@@ -171,7 +171,7 @@ describe("ConfirmSignUp", () => {
 
     const { getByPlaceholderText, getByText } = render(<ConfirmSignUp />);
 
-    fireEvent.changeText(getByPlaceholderText("Verification Code"), "000000");
+    fireEvent.changeText(getByPlaceholderText("Verification code"), "000000");
 
     fireEvent.press(getByText("Verify"));
 
@@ -185,7 +185,7 @@ describe("ConfirmSignUp", () => {
 
     const { getByText } = render(<ConfirmSignUp />);
 
-    fireEvent.press(getByText("Resend Code"));
+    fireEvent.press(getByText("Resend code"));
 
     await waitFor(() => {
       expect(mockResendVerificationCode).toHaveBeenCalledWith(

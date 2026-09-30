@@ -83,7 +83,7 @@ export default function SignIn() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Sign In" }} />
+      <Stack.Screen options={{ title: "Sign in" }} />
       <LemuelKeyboardAvoidingView
         behavior="padding"
         style={{ flex: 1 }}
@@ -91,7 +91,7 @@ export default function SignIn() {
       >
         <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
           <View style={styles.container}>
-            <Text style={styles.title}>Sign In</Text>
+            <Text style={styles.title}>Sign in</Text>
             <Text style={styles.emailPreview}>{email}</Text>
 
             {formError ? (
@@ -131,7 +131,7 @@ export default function SignIn() {
             ) : null}
 
             <LemuelButton onPress={handleSignIn} disabled={loading}>
-              {loading ? "Signing in..." : "Sign In"}
+              {loading ? "Signing in..." : "Sign in"}
             </LemuelButton>
 
             <Pressable style={styles.backButton} onPress={handleBack}>

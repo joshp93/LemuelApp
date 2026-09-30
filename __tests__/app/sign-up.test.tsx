@@ -35,7 +35,7 @@ describe("SignUp", () => {
     expect(getByPlaceholderText("Email")).toBeTruthy();
     expect(getByPlaceholderText("Display name")).toBeTruthy();
     expect(getByPlaceholderText("Password")).toBeTruthy();
-    expect(getByPlaceholderText("Confirm Password")).toBeTruthy();
+    expect(getByPlaceholderText("Confirm password")).toBeTruthy();
   });
 
   it("should show validation error for empty email", async () => {
@@ -110,9 +110,9 @@ describe("SignUp", () => {
 
     fireEvent.changeText(getByPlaceholderText("Email"), "test@example.com");
     fireEvent.changeText(getByPlaceholderText("Password"), "Password1");
-    fireEvent.changeText(getByPlaceholderText("Confirm Password"), "Password2");
+    fireEvent.changeText(getByPlaceholderText("Confirm password"), "Password2");
 
-    const signUpButtons = getAllByText("Sign Up");
+    const signUpButtons = getAllByText("Sign up");
     fireEvent.press(signUpButtons[1]);
 
     await waitFor(() => {
@@ -128,9 +128,9 @@ describe("SignUp", () => {
     fireEvent.changeText(getByPlaceholderText("Email"), "test@example.com");
     fireEvent.changeText(getByPlaceholderText("Display name"), "testuser");
     fireEvent.changeText(getByPlaceholderText("Password"), "Password1");
-    fireEvent.changeText(getByPlaceholderText("Confirm Password"), "Password1");
+    fireEvent.changeText(getByPlaceholderText("Confirm password"), "Password1");
 
-    const signUpButton = getAllByText("Sign Up");
+    const signUpButton = getAllByText("Sign up");
     fireEvent.press(signUpButton[1]);
 
     await waitFor(() => {
@@ -155,9 +155,9 @@ describe("SignUp", () => {
     fireEvent.changeText(getByPlaceholderText("Email"), "test@example.com");
     fireEvent.changeText(getByPlaceholderText("Display name"), "testuser");
     fireEvent.changeText(getByPlaceholderText("Password"), "Password1");
-    fireEvent.changeText(getByPlaceholderText("Confirm Password"), "Password1");
+    fireEvent.changeText(getByPlaceholderText("Confirm password"), "Password1");
 
-    const signUpButton = getAllByText("Sign Up");
+    const signUpButton = getAllByText("Sign up");
     fireEvent.press(signUpButton[1]);
 
     await waitFor(() => {
@@ -190,9 +190,9 @@ describe("SignUp", () => {
     fireEvent.changeText(getByPlaceholderText("Email"), "test@example.com");
     fireEvent.changeText(getByPlaceholderText("Display name"), "testuser");
     fireEvent.changeText(getByPlaceholderText("Password"), "Password1");
-    fireEvent.changeText(getByPlaceholderText("Confirm Password"), "Password1");
+    fireEvent.changeText(getByPlaceholderText("Confirm password"), "Password1");
 
-    const signUpButton = getAllByText("Sign Up");
+    const signUpButton = getAllByText("Sign up");
     fireEvent.press(signUpButton[1]);
 
     await waitFor(() => {

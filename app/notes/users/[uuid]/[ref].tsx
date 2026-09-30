@@ -13,6 +13,7 @@ import { remoteLog } from "../../../../src/api/remote-logger";
 import { type WithAuthProps, withAuth } from "../../../../src/auth/with-auth";
 import { LemuelButton } from "../../../../src/components/lemuel-button";
 import { LemuelKeyboardAwareScrollView } from "../../../../src/components/lemuel-keyboard-aware-scroll-view";
+import { LemuelLoadingScreen } from "../../../../src/components/lemuel-loading-screen";
 import { ProverbCard } from "../../../../src/components/proverb-card";
 import { ProverbReferenceHeaderText } from "../../../../src/components/proverb-reference-header-text";
 import { Text } from "../../../../src/components/themed-text";
@@ -110,7 +111,7 @@ function UserNotePage({ user: _user }: WithAuthProps) {
 
   const handleDelete = useCallback(async () => {
     const accepted = await confirm({
-      title: "Delete Note",
+      title: "Delete note",
       message: "Are you sure you want to delete this note?",
       confirmLabel: "Delete",
       destructive: true,
@@ -165,9 +166,7 @@ function UserNotePage({ user: _user }: WithAuthProps) {
           />
         )}
         <View style={styles.editorBox}>
-          <Suspense
-            fallback={notesLoading ? null : <Text>Loading editor...</Text>}
-          >
+          <Suspense fallback={<LemuelLoadingScreen />}>
             <NoteEditor
               notesLoading={notesLoading}
               editorContent={editorContent}
@@ -238,6 +237,7 @@ const styles = StyleSheet.create({
   },
   editorBox: {
     marginTop: 16,
+    minHeight: 150,
     borderRadius: 8,
     overflow: "hidden",
     borderWidth: 1,

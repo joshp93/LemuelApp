@@ -172,17 +172,17 @@ describe("Account", () => {
     const { getByText } = render(<Account />);
 
     await waitFor(() => {
-      expect(getByText("Account Management")).toBeTruthy();
+      expect(getByText("Account management")).toBeTruthy();
     });
-    fireEvent.press(getByText("Account Management"));
-    fireEvent.press(getByText("Delete Account"));
+    fireEvent.press(getByText("Account management"));
+    fireEvent.press(getByText("Delete account"));
 
     await waitFor(() => {
       expect(mockConfirm).toHaveBeenCalledWith({
-        title: "Delete Account",
+        title: "Delete account",
         message:
           "This action cannot be undone. All your data, notes, and account information will be permanently deleted.",
-        confirmLabel: "Delete Forever",
+        confirmLabel: "Delete forever",
         destructive: true,
       });
       expect(mockDeleteAccount).toHaveBeenCalledWith("uuid-123");
@@ -212,10 +212,10 @@ describe("Account", () => {
     const { getByText } = render(<Account />);
 
     await waitFor(() => {
-      expect(getByText("Account Management")).toBeTruthy();
+      expect(getByText("Account management")).toBeTruthy();
     });
-    fireEvent.press(getByText("Account Management"));
-    fireEvent.press(getByText("Delete Account"));
+    fireEvent.press(getByText("Account management"));
+    fireEvent.press(getByText("Delete account"));
 
     await waitFor(() => {
       expect(mockConfirm).toHaveBeenCalled();
@@ -247,10 +247,10 @@ describe("Account", () => {
     const { getByText } = render(<Account />);
 
     await waitFor(() => {
-      expect(getByText("Account Management")).toBeTruthy();
+      expect(getByText("Account management")).toBeTruthy();
     });
-    fireEvent.press(getByText("Account Management"));
-    fireEvent.press(getByText("Delete Account"));
+    fireEvent.press(getByText("Account management"));
+    fireEvent.press(getByText("Delete account"));
 
     await waitFor(() => {
       expect(mockNotify).toHaveBeenCalledWith(

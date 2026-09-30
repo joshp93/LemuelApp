@@ -38,7 +38,7 @@ export function VersionDropdown({
       >
         <Pressable style={styles.overlay} onPress={() => setVisible(false)}>
           <View style={styles.menu}>
-            <Text style={styles.menuTitle}>Bible Version</Text>
+            <Text style={styles.menuTitle}>Bible version</Text>
             <FlatList
               data={versions}
               keyExtractor={(item) => item}

@@ -72,13 +72,13 @@ describe("HeaderMenu", () => {
     mockAuthUser.value = { user: null, signOut: mockSignOut };
 
     const { getByText } = openMenu();
-    expect(getByText("Sign In")).toBeTruthy();
+    expect(getByText("Sign in")).toBeTruthy();
   });
 
   it("should call signOut when Sign Out is pressed", () => {
     const { getByText } = openMenu();
     act(() => {
-      fireEvent.press(getByText("Sign Out"));
+      fireEvent.press(getByText("Sign out"));
       jest.advanceTimersByTime(300);
     });
     expect(mockSignOut).toHaveBeenCalled();

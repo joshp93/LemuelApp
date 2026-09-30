@@ -270,7 +270,8 @@ src/
                 # accounts, notes + reactions + replies, meditation, push-token, logs)
   auth/         # Auth context, token storage/refresh, `withAuth` route guard
   components/   # Shared UI (proverb card, note cards, note editors, reactions,
-                # replies, menus, pickers, buttons, meditation canvas, …)
+                # replies, menus, pickers, buttons, loading screen, meditation
+                # canvas, …)
   constants/    # theme, layout (content width/inset/column), meditation constants
   hooks/        # useProverbForTheDay, useSettingsPreferences, useFitFontSize,
                 # useUnsavedChanges, useDeviceTier

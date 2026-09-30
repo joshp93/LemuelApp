@@ -97,7 +97,7 @@ export default function ConfirmSignUp() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Confirm Sign Up" }} />
+      <Stack.Screen options={{ title: "Confirm sign up" }} />
       <LemuelKeyboardAvoidingView
         behavior="padding"
         style={{ flex: 1 }}
@@ -105,7 +105,7 @@ export default function ConfirmSignUp() {
       >
         <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
           <View style={[styles.container, CONTENT_COLUMN]}>
-            <Text style={styles.title}>Confirm Sign Up</Text>
+            <Text style={styles.title}>Confirm sign up</Text>
             <Text style={styles.subtitle}>
               Enter the 6-digit code sent to your email
             </Text>
@@ -122,7 +122,7 @@ export default function ConfirmSignUp() {
             <TextInput
               ref={codeRef}
               style={[styles.input, fieldError ? styles.inputError : null]}
-              placeholder="Verification Code"
+              placeholder="Verification code"
               placeholderTextColor="#999"
               value={code}
               onChangeText={setCode}
@@ -139,7 +139,7 @@ export default function ConfirmSignUp() {
             ) : null}
 
             <LemuelButton onPress={handleConfirm} disabled={loading}>
-              {loading ? "Verifying..." : "Verify"}
+              {loading ? "Confirming..." : "Verify"}
             </LemuelButton>
 
             {resendMessage ? (
@@ -155,7 +155,7 @@ export default function ConfirmSignUp() {
               disabled={resending}
             >
               <Text style={styles.resendButtonText}>
-                {resending ? "Sending..." : "Resend Code"}
+                {resending ? "Sending..." : "Resend code"}
               </Text>
             </Pressable>
           </View>

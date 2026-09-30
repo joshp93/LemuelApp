@@ -2,7 +2,6 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   FlatList,
   StyleSheet,
   Text,
@@ -15,6 +14,7 @@ import { getUserNotes } from "../../../src/api/notes";
 import { remoteLog } from "../../../src/api/remote-logger";
 import { type WithAuthProps, withAuth } from "../../../src/auth/with-auth";
 import { LemuelKeyboardAvoidingView } from "../../../src/components/lemuel-keyboard-avoiding-view";
+import { LemuelLoadingScreen } from "../../../src/components/lemuel-loading-screen";
 import { CONTENT_COLUMN, CONTENT_INSET } from "../../../src/constants/layout";
 import { formatDate } from "../../../src/utils/date";
 import { convertProverbKeyToDisplayProverb } from "../../../src/utils/proverb-helper";
@@ -88,12 +88,8 @@ function MyMeditationsPage(_props: WithAuthProps) {
   return (
     <LemuelKeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
       <View style={styles.container}>
-        <Stack.Screen options={{ title: "My Meditations" }} />
-        {loading && (
-          <View style={styles.centered}>
-            <ActivityIndicator size="large" color="#000" testID="loading" />
-          </View>
-        )}
+        <Stack.Screen options={{ title: "My meditations" }} />
+        {loading && <LemuelLoadingScreen testID="loading" />}
         {error && (
           <View style={styles.centered}>
             <Text style={styles.errorText}>{error}</Text>

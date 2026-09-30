@@ -40,7 +40,7 @@ const SNOOZE_ACTION_ID = "snooze";
  * used to navigate to the correct proverb when the notification is tapped.
  */
 const _createNotificationContent = (proverb: Proverb, dateString: string) => ({
-  title: "Daily Proverb Meditation",
+  title: "Daily proverb meditation",
   body: `Tap to begin meditation on ${proverb.ref}`,
   data: { proverb: proverb.proverb, ref: proverb.ref, date: dateString },
   categoryIdentifier: CATEGORY_ID,
@@ -58,7 +58,7 @@ const _createNotificationContent = (proverb: Proverb, dateString: string) => ({
 const _createAndroidChannel = async () => {
   if (Platform.OS === "android") {
     await Notifications.setNotificationChannelAsync("daily-proverb", {
-      name: "Daily Proverb",
+      name: "Daily proverb",
       importance: Notifications.AndroidImportance.HIGH,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: COLORS.lightBackground,
