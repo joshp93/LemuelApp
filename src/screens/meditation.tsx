@@ -49,12 +49,10 @@ import type { Proverb } from "../models/proverb";
 import { getMeditationDuration } from "../settings/meditation-preferences";
 import { makeSkSL, TIER_SHADER } from "../utils/meditation-shader";
 
-const cornerRadius = getCornerRadius();
-const CORNER_RADIUS = cornerRadius <= 0 ? DEFAULT_CORNER_RADIUS : cornerRadius;
-
 export default function MeditationScreen() {
   const [isComplete, setIsComplete] = useState(false);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+  const [deviceCornerRadius, setDeviceCornerRadius] = useState(0);
   const [durationMs, setDurationMs] = useState(60000);
   const { ref: canvasRef } = useCanvasSize();
   const {
@@ -94,8 +92,12 @@ export default function MeditationScreen() {
     const { width, height } = e.nativeEvent.layout;
     setCanvasSize({ width, height });
     resolution.value = [width, height];
+    setDeviceCornerRadius(getCornerRadius());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const cornerRadius =
+    deviceCornerRadius > 0 ? deviceCornerRadius : DEFAULT_CORNER_RADIUS;
 
   const sksl = useMemo(
     () =>
@@ -132,6 +134,15 @@ export default function MeditationScreen() {
       glowLayers: sampledGlowLayers.length,
     });
   }, [tier, sampledGlowLayers]);
+
+  useEffect(() => {
+    remoteLog("debug", "[MeditationScreen] Corner radius", {
+      deviceCornerRadius,
+      resolvedCornerRadius: cornerRadius,
+      defaultCornerRadius: DEFAULT_CORNER_RADIUS,
+      usedFallback: deviceCornerRadius <= 0,
+    });
+  }, [deviceCornerRadius, cornerRadius]);
 
   const clock = useClock();
   const uniforms = useDerivedValue<Uniforms>(() => ({
@@ -183,7 +194,7 @@ export default function MeditationScreen() {
     opacity: textOpacity.value,
   }));
 
-  const textBoxHeight = canvasSize.height - (INSET + CORNER_RADIUS + 8) - 100;
+  const textBoxHeight = canvasSize.height - (INSET + cornerRadius + 8) - 100;
   const { fontSize, onTextLayout } = useFitFontSize(
     proverbData?.proverb,
     textBoxHeight,
@@ -213,7 +224,7 @@ export default function MeditationScreen() {
     const { width: W, height: H } = canvasSize;
     if (W === 0 || H === 0) return null;
 
-    const R = CORNER_RADIUS;
+    const R = cornerRadius;
     const cx = W / 2;
 
     const d = [
@@ -231,7 +242,7 @@ export default function MeditationScreen() {
     ].join(" ");
 
     return Skia.Path.MakeFromSVGString(d);
-  }, [canvasSize]);
+  }, [canvasSize, cornerRadius]);
 
   const innerContent = (
     <>
@@ -268,7 +279,16 @@ export default function MeditationScreen() {
 
       <View style={styles.overlay}>
         {proverbData && !loading && (
-          <Animated.View style={[styles.textContainer, textAnimatedStyle]}>
+          <Animated.View
+            style={[
+              styles.textContainer,
+              {
+                paddingHorizontal: INSET + cornerRadius,
+                paddingTop: INSET + cornerRadius + 8,
+              },
+              textAnimatedStyle,
+            ]}
+          >
             <ScrollView>
               <Text
                 style={[styles.proverbText, { fontSize, lineHeight: fontSize }]}
@@ -332,8 +352,6 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     flex: 1,
-    paddingHorizontal: INSET + CORNER_RADIUS,
-    paddingTop: INSET + CORNER_RADIUS + 8,
     paddingBottom: 100,
   },
   proverbText: {
