@@ -74,6 +74,7 @@ sibling**, or Metro fails to resolve it.
 | Note editor | `src/components/note-editor.native.tsx` | `src/components/note-editor.web.tsx` |
 | Scheduling + notifications | `src/notifications/daily-proverb-notification.ts` | `.web.ts` (no-ops) |
 | Push / background tasks | `src/notifications/push-listener.ts` | `.web.ts` (no-ops) |
+| Notification taps | `src/notifications/notification-response.ts` | `.web.ts` (no-ops) |
 | Device token | `src/api/push-token.ts` | `.web.ts` (no-op) |
 | Dialog primitives | `src/utils/dialog.ts` | `.web.ts` |
 | Confirm helper | `src/utils/confirm.ts` | `.web.ts` |
@@ -163,8 +164,10 @@ above).
    from the jsDelivr CDN and the canvas is mounted through `WithSkiaWeb` with a
    fallback. Don't import `meditation-canvas` directly on web.
 6. **Notifications, push and the widget are no-ops on web.** Their `.web.ts`
-   variants exist so shared code can import them unconditionally. The web
-   settings page states this rather than showing dead controls.
+   variants exist so shared code can import them unconditionally. Keep it that
+   way: `app/_layout.tsx` is shared, so it holds no `expo-notifications` code of
+   its own and nothing subscribes or prompts in the browser. The web settings
+   page states this rather than showing dead controls.
 7. **Keep web perf in mind.** Avoid heavy work at module scope and prefer the
    shared, already-memoised hooks.
 
@@ -230,7 +233,8 @@ src/
   models/         # Zod schemas + response types (proverb, daily-proverb,
                   # reactions-and-replies)
   notifications/  # daily-proverb-notification (+ .web), notification-preferences,
-                  # notification-utils (shared pure helpers), push-listener (+ .web)
+                  # notification-utils (shared pure helpers), push-listener (+ .web),
+                  # notification-response (+ .web, tap routing)
   screens/        # Screens that differ per platform: sign-in, settings, meditation
                   # (each with a .tsx and a .web.tsx sibling)
   settings/       # meditation-preferences (duration + duration options)

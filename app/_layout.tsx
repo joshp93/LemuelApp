@@ -6,10 +6,9 @@ import {
   useFonts,
 } from "@expo-google-fonts/nunito";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Notifications from "expo-notifications";
 import { Stack, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useCallback, useEffect, useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import {
   Image,
   Platform,
@@ -24,11 +23,11 @@ import { AuthProvider } from "../src/auth/auth-context";
 import { HeaderMenu } from "../src/components/header-menu";
 import { CONTENT_INSET } from "../src/constants/layout";
 import { COLORS } from "../src/constants/theme";
+import { initializeNotifications } from "../src/notifications/daily-proverb-notification";
 import {
-  getMeditationRouteParams,
-  initializeNotifications,
-  MEDITATE_ACTION_ID,
-} from "../src/notifications/daily-proverb-notification";
+  handleInitialNotificationResponse,
+  subscribeToNotificationResponses,
+} from "../src/notifications/notification-response";
 import {
   ensureNotificationsScheduled,
   initializeBackgroundFetch,
@@ -64,44 +63,6 @@ function AppContent() {
     </HeaderMenu>
   );
 
-  const handleNotificationResponse = useCallback(
-    (response: Notifications.NotificationResponse) => {
-      const data = response.notification.request.content.data as
-        | Record<string, unknown>
-        | undefined;
-
-      const isProverbAction =
-        response.actionIdentifier === MEDITATE_ACTION_ID ||
-        response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER;
-      if (
-        isProverbAction &&
-        data &&
-        (data as Record<string, string>).type === undefined
-      ) {
-        const routeParams = getMeditationRouteParams(
-          response.notification.request.content.data as Record<string, unknown>,
-        );
-        if (!routeParams) return;
-
-        router.dismissAll();
-        router.push(routeParams);
-        Notifications.dismissNotificationAsync(
-          response.notification.request.identifier,
-        );
-        return;
-      }
-
-      if (data?.type === "reply") {
-        router.dismissAll();
-        router.push(`/?date=${data.date}`);
-        Notifications.dismissNotificationAsync(
-          response.notification.request.identifier,
-        );
-      }
-    },
-    [router],
-  );
-
   useEffect(() => {
     initializePushHandler();
     initializeNotifications();
@@ -110,16 +71,13 @@ function AppContent() {
     ensureNotificationsScheduled(2);
     registerReplyNotificationCategory();
 
-    const meditateSub = Notifications.addNotificationResponseReceivedListener(
-      handleNotificationResponse,
-    );
-
+    const unsubscribe = subscribeToNotificationResponses(router);
     const tokenSub = setupTokenListener();
     return () => {
       tokenSub.remove();
-      meditateSub.remove();
+      unsubscribe();
     };
-  }, [handleNotificationResponse]);
+  }, [router]);
 
   useEffect(() => {
     initializeWidget();
@@ -132,6 +90,7 @@ function AppContent() {
   }, [fontsLoaded, fontError]);
 
   useEffect(() => {
+    if (Platform.OS === "web") return;
     if (!fontsLoaded && !fontError) return;
 
     (async () => {
@@ -155,14 +114,10 @@ function AppContent() {
   }, [fontsLoaded, fontError, router]);
 
   useEffect(() => {
-    if (Platform.OS === "web") return;
     if (!fontsLoaded && !fontError) return;
 
-    const lastResponse = Notifications.getLastNotificationResponse();
-    if (!lastResponse) return;
-    handleNotificationResponse(lastResponse);
-    Notifications.clearLastNotificationResponse();
-  }, [fontsLoaded, fontError, handleNotificationResponse]);
+    handleInitialNotificationResponse(router);
+  }, [fontsLoaded, fontError, router]);
 
   if (!fontsLoaded && !fontError) {
     return null;

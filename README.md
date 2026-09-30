@@ -167,6 +167,7 @@ platform-specific file that Metro picks automatically (`X.tsx` for native,
 | Note editor | `src/components/note-editor.native.tsx` | `src/components/note-editor.web.tsx` |
 | Reminders / scheduling | `src/notifications/daily-proverb-notification.ts` | `.web.ts` (no-ops) |
 | Push listener | `src/notifications/push-listener.ts` | `.web.ts` (no-ops) |
+| Notification taps | `src/notifications/notification-response.ts` | `.web.ts` (no-ops) |
 | Device token | `src/api/push-token.ts` | `.web.ts` (no-op) |
 | Dialogs | `src/utils/dialog.ts`, `src/utils/confirm.ts` | `.web.ts` |
 | Widget bootstrap | `src/widgets/initializeWidget.android.ts` | `initializeWidget.ts` (no-op) |
@@ -274,7 +275,7 @@ src/
   hooks/        # useProverbForTheDay, useSettingsPreferences, useFitFontSize,
                 # useUnsavedChanges, useDeviceTier
   models/       # Zod schemas and response types
-  notifications/# Scheduling, preferences, FCM push listener
+  notifications/# Scheduling, preferences, FCM push listener, tap routing
   screens/      # Screens with per-platform variants (sign-in, settings, meditation)
   settings/     # Meditation preferences
   utils/        # date, email, password, format, proverb-helper, dialogs, layout, shader
