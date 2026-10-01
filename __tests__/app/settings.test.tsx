@@ -1,4 +1,4 @@
-import { act, render, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import SettingsScreen from "../../app/settings";
 import {
   getNotificationMode,
@@ -10,7 +10,11 @@ import {
   getScheduledTimeHour,
   getScheduledTimeMinute,
 } from "../../src/notifications/notification-preferences";
-import { getMeditationDuration } from "../../src/settings/meditation-preferences";
+import {
+  getEnabledMeditationShaders,
+  getMeditationDuration,
+  setEnabledMeditationShaders,
+} from "../../src/settings/meditation-preferences";
 
 jest.mock("expo-router", () => ({
   useNavigation: () => ({
@@ -71,6 +75,10 @@ const mockGetScheduledTimeMinute =
 const mockGetMeditationDuration = getMeditationDuration as jest.MockedFunction<
   typeof getMeditationDuration
 >;
+const mockGetEnabledMeditationShaders =
+  getEnabledMeditationShaders as jest.MockedFunction<
+    typeof getEnabledMeditationShaders
+  >;
 
 describe("SettingsScreen", () => {
   const mockProverb = {
@@ -90,6 +98,7 @@ describe("SettingsScreen", () => {
     mockGetScheduledTimeHour.mockResolvedValue(8);
     mockGetScheduledTimeMinute.mockResolvedValue(0);
     mockGetMeditationDuration.mockResolvedValue(60000);
+    mockGetEnabledMeditationShaders.mockResolvedValue(["star-field"]);
   });
 
   it("shows the Settings title", async () => {
@@ -166,6 +175,194 @@ describe("SettingsScreen", () => {
 
     await waitFor(() => {
       expect(getByText("14:30")).toBeTruthy();
+    });
+  });
+
+  describe("meditation animations", () => {
+    it("shows the Meditation animations section with every shader", async () => {
+      const { getByText } = render(<SettingsScreen />);
+      await act(async () => {
+        jest.advanceTimersByTime(300);
+      });
+
+      await waitFor(() => {
+        expect(getByText("Meditation animations")).toBeTruthy();
+        expect(getByText("Star field")).toBeTruthy();
+        expect(getByText("Gas giant")).toBeTruthy();
+        expect(getByText("Sine mountains")).toBeTruthy();
+        expect(getByText("Sunset")).toBeTruthy();
+        expect(getByText("Don't show an animation")).toBeTruthy();
+      });
+    });
+
+    it("selects every animation but not the blank background by default", async () => {
+      mockGetEnabledMeditationShaders.mockResolvedValue([
+        "star-field",
+        "gas-giant",
+        "sine-mountains",
+      ]);
+
+      const { getByTestId } = render(<SettingsScreen />);
+      await act(async () => {
+        jest.advanceTimersByTime(300);
+      });
+
+      await waitFor(() => {
+        expect(getByTestId("shader-switch-star-field").props.value).toBe(true);
+        expect(getByTestId("shader-switch-gas-giant").props.value).toBe(true);
+        expect(getByTestId("shader-switch-sine-mountains").props.value).toBe(
+          true,
+        );
+        expect(getByTestId("shader-switch-none").props.value).toBe(false);
+      });
+    });
+
+    it("greys out the animations while the blank background is selected", async () => {
+      mockGetEnabledMeditationShaders.mockResolvedValue([
+        "star-field",
+        "gas-giant",
+        "none",
+      ]);
+
+      const { getByTestId } = render(<SettingsScreen />);
+      await act(async () => {
+        jest.advanceTimersByTime(300);
+      });
+
+      await waitFor(() => {
+        expect(getByTestId("shader-switch-none").props.value).toBe(true);
+        expect(getByTestId("shader-switch-star-field").props.disabled).toBe(
+          true,
+        );
+        expect(getByTestId("shader-switch-gas-giant").props.disabled).toBe(
+          true,
+        );
+        expect(getByTestId("shader-switch-sine-mountains").props.disabled).toBe(
+          true,
+        );
+        expect(getByTestId("shader-switch-none").props.disabled).toBe(false);
+      });
+    });
+
+    it("leaves every animation greyed when the blank background is the only selection", async () => {
+      mockGetEnabledMeditationShaders.mockResolvedValue(["none"]);
+
+      const { getByTestId } = render(<SettingsScreen />);
+      await act(async () => {
+        jest.advanceTimersByTime(300);
+      });
+
+      await waitFor(() => {
+        expect(getByTestId("shader-switch-none").props.value).toBe(true);
+        expect(getByTestId("shader-switch-none").props.disabled).toBe(false);
+        expect(getByTestId("shader-switch-star-field").props.disabled).toBe(
+          true,
+        );
+      });
+    });
+
+    it("turns the animations back on when the blank background is deselected", async () => {
+      mockGetEnabledMeditationShaders.mockResolvedValue(["none"]);
+
+      const { getByTestId } = render(<SettingsScreen />);
+      await act(async () => {
+        jest.advanceTimersByTime(300);
+      });
+
+      fireEvent(getByTestId("shader-switch-none"), "valueChange", false);
+
+      await waitFor(() => {
+        expect(getByTestId("shader-switch-none").props.value).toBe(false);
+        expect(getByTestId("shader-switch-star-field").props.value).toBe(true);
+        expect(getByTestId("shader-switch-gas-giant").props.value).toBe(true);
+      });
+    });
+
+    it("reflects the stored selection", async () => {
+      mockGetEnabledMeditationShaders.mockResolvedValue([
+        "gas-giant",
+        "sine-mountains",
+      ]);
+
+      const { getByTestId } = render(<SettingsScreen />);
+      await act(async () => {
+        jest.advanceTimersByTime(300);
+      });
+
+      await waitFor(() => {
+        expect(getByTestId("shader-switch-star-field").props.value).toBe(false);
+        expect(getByTestId("shader-switch-gas-giant").props.value).toBe(true);
+        expect(getByTestId("shader-switch-sine-mountains").props.value).toBe(
+          true,
+        );
+      });
+    });
+
+    it("enables a shader that is toggled on", async () => {
+      const { getByTestId } = render(<SettingsScreen />);
+      await act(async () => {
+        jest.advanceTimersByTime(300);
+      });
+
+      await waitFor(() => {
+        expect(getByTestId("shader-switch-gas-giant").props.value).toBe(false);
+      });
+
+      fireEvent(getByTestId("shader-switch-gas-giant"), "valueChange", true);
+
+      await waitFor(() => {
+        expect(getByTestId("shader-switch-gas-giant").props.value).toBe(true);
+      });
+    });
+
+    it("marks the form dirty when a shader is toggled", async () => {
+      const { getByTestId, queryByText } = render(<SettingsScreen />);
+      await act(async () => {
+        jest.advanceTimersByTime(300);
+      });
+
+      await waitFor(() => {
+        expect(queryByText("Update")).toBeNull();
+      });
+
+      fireEvent(getByTestId("shader-switch-gas-giant"), "valueChange", true);
+
+      await waitFor(() => {
+        expect(queryByText("Update")).toBeTruthy();
+      });
+    });
+
+    it("prevents turning off the last enabled shader", async () => {
+      const { getByTestId } = render(<SettingsScreen />);
+      await act(async () => {
+        jest.advanceTimersByTime(300);
+      });
+
+      await waitFor(() => {
+        expect(getByTestId("shader-switch-star-field").props.disabled).toBe(
+          true,
+        );
+        expect(getByTestId("shader-switch-gas-giant").props.disabled).toBe(
+          false,
+        );
+      });
+    });
+
+    it("persists the selection when Update is pressed", async () => {
+      const { getByTestId, getByText } = render(<SettingsScreen />);
+      await act(async () => {
+        jest.advanceTimersByTime(300);
+      });
+
+      fireEvent(getByTestId("shader-switch-gas-giant"), "valueChange", true);
+      fireEvent.press(getByText("Update"));
+
+      await waitFor(() => {
+        expect(setEnabledMeditationShaders).toHaveBeenCalledWith([
+          "star-field",
+          "gas-giant",
+        ]);
+      });
     });
   });
 });

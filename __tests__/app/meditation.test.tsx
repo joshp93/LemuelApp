@@ -127,6 +127,7 @@ jest.mock("../../src/hooks/useProverbForTheDay", () => ({
 
 jest.mock("../../src/settings/meditation-preferences", () => ({
   getMeditationDuration: jest.fn().mockResolvedValue(60000),
+  getEnabledMeditationShaders: jest.fn().mockResolvedValue(["star-field"]),
 }));
 
 function renderMeditation() {

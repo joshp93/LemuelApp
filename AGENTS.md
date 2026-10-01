@@ -221,7 +221,8 @@ src/
   components/     # bottom-sheet-menu, dividing-line, error-boundary,
                   # expandable-section, fade-in-down, header-menu, lemuel-button,
                   # lemuel-keyboard-avoiding-view, lemuel-keyboard-aware-scroll-view,
-                  # lemuel-loading-screen, meditation-canvas, month-picker,
+                  # lemuel-loading-screen, lemuel-switch, meditation-canvas,
+                  # month-picker,
                   # not-today-banner, proverb-card, proverb-note-card,
                   # proverb-reference-header-text, reaction-bar, reply-card,
                   # reply-input, reply-thread, themed-text, time-picker,
@@ -239,8 +240,13 @@ src/
                   # (each with a .tsx and a .web.tsx sibling)
   settings/       # meditation-preferences (duration + duration options)
   utils/          # auth-redirect, battery-optimization, confirm (+ .web), date,
-                  # dialog (+ .web), email, format, layout, meditation-shader,
-                  # password, proverb-helper
+                  # dialog (+ .web), email, format, layout, password,
+                  # proverb-helper
+  utils/meditation-shaders/  # one SkSL generator per background animation
+                  # (star-field, gas-giant, sine-mountains, sunset, blank)
+                  # + the registry in index.ts, which also carries each
+                  # background's proverb text colour; star-field is the
+                  # original nebula shader
   widgets/        # Voltra Android widget (see below)
 
 plugins/          # Expo config plugins
@@ -261,7 +267,8 @@ __tests__/        # Jest tests mirroring the source tree
 | Monthly calendar | Browse past proverbs by tapping a date on a month grid | Android + web | `src/api/daily-proverbs.ts`, `src/components/month-picker.tsx` |
 | Authentication | Email-based sign-up/sign-in with IdToken/AccessToken/RefreshToken in AsyncStorage, proactive refresh before expiry, reactive refresh on 401, silent sign-out on failure | Android + web | `src/auth/*`, `src/api/auth.ts`, `src/api/cognito.ts` |
 | Auth-guarded routes | `withAuth` HOC redirects to `/email-entry?redirect=…&route=…`, replacing dynamic `[uuid]` segments with `{{uuid}}` so they resolve after login | Android + web | `src/auth/with-auth.tsx`, `src/utils/auth-redirect.ts` |
-| Meditation timer | Full-screen Skia animation (nebula shader + progress arc), shader complexity adapts to device tier, records completion | Android + web (CanvasKit on web) | `app/meditation.tsx` / `.web.tsx`, `src/components/meditation-canvas.tsx`, `src/utils/meditation-shader.ts`, `src/constants/meditation.ts`, `src/hooks/useDeviceTier.ts` |
+| Meditation timer | Full-screen Skia animation (background shader + progress arc), shader complexity adapts to device tier, records completion | Android + web (CanvasKit on web) | `app/meditation.tsx` / `.web.tsx`, `src/components/meditation-canvas.tsx`, `src/utils/meditation-shaders/`, `src/hooks/useMeditationShader.ts`, `src/constants/meditation.ts`, `src/hooks/useDeviceTier.ts` |
+| Meditation animations | Five selectable backgrounds (Star field, Gas giant, Sine mountains, Sunset, and "Don't show an animation" for a blank black canvas). All four animations are enabled by default; the user enables a subset in Settings and one is chosen at random per meditation. "Don't show an animation" is exclusive — selecting it greys the others out. Each background carries its own proverb text colour (Sunset takes a dark grey) | Android + web (CanvasKit on web) | `src/utils/meditation-shaders/`, `src/hooks/useMeditationShader.ts`, `src/settings/meditation-preferences.ts`, `src/constants/meditation.ts` |
 | Notes | Rich-text journaling per proverb (pell editor on native, `contentEditable` on web), with a private flag and delete | Android + web | `src/api/notes.ts`, `app/notes/users/[uuid]/[ref].tsx`, `note-editor.*` |
 | Community notes | All users' notes for a proverb are shown on the home screen | Android + web | `src/components/proverb-note-card.tsx`, `src/api/notes.ts` |
 | Reactions & replies | Emoji reactions and threaded replies on notes | Android + web | `src/components/reaction-bar.tsx`, `reply-thread.tsx`, `reply-card.tsx`, `reply-input.tsx`, `src/api/notes.ts` |

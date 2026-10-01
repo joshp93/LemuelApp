@@ -10,7 +10,16 @@ import {
   getScheduledTimeMinute,
   type NotificationMode,
 } from "../notifications/notification-preferences";
-import { getMeditationDuration } from "../settings/meditation-preferences";
+import {
+  getEnabledMeditationShaders,
+  getMeditationDuration,
+} from "../settings/meditation-preferences";
+import {
+  BLANK_SHADER_ID,
+  DEFAULT_ENABLED_SHADER_IDS,
+  DEFAULT_SHADER_ID,
+  type MeditationShaderId,
+} from "../utils/meditation-shaders";
 
 type Snapshot = Record<string, string | boolean | null>;
 
@@ -25,6 +34,7 @@ export interface SettingsPreferences {
   scheduledHour: string;
   scheduledMinute: string;
   meditationDuration: number;
+  enabledShaders: MeditationShaderId[];
   snapshotRef: React.MutableRefObject<Snapshot>;
   initialLoadDone: React.MutableRefObject<boolean>;
   isDirty: boolean;
@@ -37,6 +47,7 @@ export interface SettingsPreferences {
   setScheduledHour: (v: string) => void;
   setScheduledMinute: (v: string) => void;
   setMeditationDuration: (v: number) => void;
+  toggleShader: (id: MeditationShaderId) => void;
   setIsDirty: (v: boolean) => void;
 }
 
@@ -50,6 +61,7 @@ type Saved = {
   scheduledHour: string;
   scheduledMinute: string;
   meditationDuration: number;
+  enabledShaders: MeditationShaderId[];
 };
 
 type State = {
@@ -63,6 +75,7 @@ type State = {
   scheduledHour: string;
   scheduledMinute: string;
   meditationDuration: number;
+  enabledShaders: MeditationShaderId[];
   saved: Saved;
   isDirty: boolean;
 };
@@ -83,6 +96,7 @@ type Action =
         | "scheduledMinute";
       value: string;
     }
+  | { type: "TOGGLE_SHADER"; id: MeditationShaderId }
   | { type: "SYNC_SNAPSHOT" };
 
 const initialSaved: Saved = {
@@ -95,6 +109,7 @@ const initialSaved: Saved = {
   scheduledHour: "9",
   scheduledMinute: "0",
   meditationDuration: 60000,
+  enabledShaders: [DEFAULT_SHADER_ID],
 };
 
 const initialState: State = {
@@ -108,9 +123,21 @@ const initialState: State = {
   scheduledHour: "9",
   scheduledMinute: "0",
   meditationDuration: 60000,
+  enabledShaders: [DEFAULT_SHADER_ID],
   saved: initialSaved,
   isDirty: false,
 };
+
+/**
+ * Renders an order-insensitive key for a shader selection, so it can be compared
+ * for dirtiness and stored in the string-valued snapshot.
+ *
+ * @param ids - The selected shader ids.
+ * @returns A stable string key.
+ */
+export function shaderSelectionKey(ids: readonly MeditationShaderId[]): string {
+  return [...ids].sort().join(",");
+}
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
@@ -129,6 +156,7 @@ function reducer(state: State, action: Action): State {
           scheduledHour: action.payload.scheduledHour,
           scheduledMinute: action.payload.scheduledMinute,
           meditationDuration: action.payload.meditationDuration,
+          enabledShaders: action.payload.enabledShaders,
         },
         isDirty: false,
       };
@@ -144,8 +172,40 @@ function reducer(state: State, action: Action): State {
         s.windowEndMinute !== next.windowEndMinute ||
         s.scheduledHour !== next.scheduledHour ||
         s.scheduledMinute !== next.scheduledMinute ||
-        s.meditationDuration !== next.meditationDuration;
+        s.meditationDuration !== next.meditationDuration ||
+        shaderSelectionKey(s.enabledShaders) !==
+          shaderSelectionKey(next.enabledShaders);
       return next;
+    }
+    case "TOGGLE_SHADER": {
+      const selected = state.enabledShaders.includes(action.id);
+      let enabledShaders: MeditationShaderId[];
+
+      if (action.id === BLANK_SHADER_ID) {
+        enabledShaders = selected
+          ? state.enabledShaders.filter((id) => id !== BLANK_SHADER_ID)
+          : [...state.enabledShaders, BLANK_SHADER_ID];
+        if (enabledShaders.length === 0) {
+          enabledShaders = [...DEFAULT_ENABLED_SHADER_IDS];
+        }
+      } else {
+        enabledShaders = selected
+          ? state.enabledShaders.filter((id) => id !== action.id)
+          : [...state.enabledShaders, action.id];
+        if (
+          enabledShaders.filter((id) => id !== BLANK_SHADER_ID).length === 0
+        ) {
+          return state;
+        }
+      }
+
+      return {
+        ...state,
+        enabledShaders,
+        isDirty:
+          shaderSelectionKey(state.saved.enabledShaders) !==
+          shaderSelectionKey(enabledShaders),
+      };
     }
     case "SYNC_SNAPSHOT":
       return {
@@ -160,6 +220,7 @@ function reducer(state: State, action: Action): State {
           scheduledHour: state.scheduledHour,
           scheduledMinute: state.scheduledMinute,
           meditationDuration: state.meditationDuration,
+          enabledShaders: state.enabledShaders,
         },
         isDirty: false,
       };
@@ -182,6 +243,7 @@ export function useSettingsPreferences(): SettingsPreferences {
       const schedHour = (await getScheduledTimeHour()).toString();
       const schedMinute = (await getScheduledTimeMinute()).toString();
       const durMs = await getMeditationDuration();
+      const shaders = await getEnabledMeditationShaders();
 
       snapshotRef.current = {
         enabled: isEnabled,
@@ -193,6 +255,7 @@ export function useSettingsPreferences(): SettingsPreferences {
         scheduledHour: schedHour,
         scheduledMinute: schedMinute,
         meditationDuration: durMs.toString(),
+        enabledShaders: shaderSelectionKey(shaders),
       };
       initialLoadDone.current = true;
 
@@ -208,6 +271,7 @@ export function useSettingsPreferences(): SettingsPreferences {
           scheduledHour: schedHour,
           scheduledMinute: schedMinute,
           meditationDuration: durMs,
+          enabledShaders: shaders,
         },
       });
     })();
@@ -254,6 +318,10 @@ export function useSettingsPreferences(): SettingsPreferences {
       dispatch({ type: "SET", field: "meditationDuration", value: v }),
     [],
   );
+  const toggleShader = useCallback(
+    (id: MeditationShaderId) => dispatch({ type: "TOGGLE_SHADER", id }),
+    [],
+  );
   const setIsDirty = useCallback((v: boolean) => {
     if (!v) dispatch({ type: "SYNC_SNAPSHOT" });
   }, []);
@@ -269,6 +337,7 @@ export function useSettingsPreferences(): SettingsPreferences {
     scheduledHour: state.scheduledHour,
     scheduledMinute: state.scheduledMinute,
     meditationDuration: state.meditationDuration,
+    enabledShaders: state.enabledShaders,
     isDirty: state.isDirty,
     snapshotRef,
     initialLoadDone,
@@ -281,6 +350,7 @@ export function useSettingsPreferences(): SettingsPreferences {
     setScheduledHour,
     setScheduledMinute,
     setMeditationDuration,
+    toggleShader,
     setIsDirty,
   };
 }

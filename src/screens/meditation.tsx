@@ -44,15 +44,17 @@ import {
 } from "../constants/meditation";
 import { useDeviceTier } from "../hooks/useDeviceTier";
 import { useFitFontSize } from "../hooks/useFitFontSize";
+import { useMeditationShader } from "../hooks/useMeditationShader";
 import { useProverbForTheDay } from "../hooks/useProverbForTheDay";
 import type { Proverb } from "../models/proverb";
 import { getMeditationDuration } from "../settings/meditation-preferences";
-import { makeSkSL, TIER_SHADER } from "../utils/meditation-shader";
 
 export default function MeditationScreen() {
   const [isComplete, setIsComplete] = useState(false);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
-  const [deviceCornerRadius, setDeviceCornerRadius] = useState(0);
+  const [deviceCornerRadius, setDeviceCornerRadius] = useState<number | null>(
+    null,
+  );
   const [durationMs, setDurationMs] = useState(60000);
   const { ref: canvasRef } = useCanvasSize();
   const {
@@ -97,22 +99,12 @@ export default function MeditationScreen() {
   }, []);
 
   const cornerRadius =
-    deviceCornerRadius > 0 ? deviceCornerRadius : DEFAULT_CORNER_RADIUS;
+    deviceCornerRadius !== null && deviceCornerRadius > 0
+      ? deviceCornerRadius
+      : DEFAULT_CORNER_RADIUS;
 
-  const sksl = useMemo(
-    () =>
-      makeSkSL(
-        TIER_SHADER[tier].kIterations,
-        TIER_SHADER[tier].kVolsteps,
-        TIER_SHADER[tier].kStepsize,
-        TIER_SHADER[tier].kBrightness,
-        TIER_SHADER[tier].kFormuparam,
-        TIER_SHADER[tier].kShellFloor,
-        TIER_SHADER[tier].kTile,
-        TIER_SHADER[tier].kDarkmatter,
-      ),
-    [tier],
-  );
+  const shader = useMeditationShader();
+  const sksl = useMemo(() => shader.makeSkSL(tier), [shader, tier]);
   const effect = useMemo(() => Skia.RuntimeEffect.Make(sksl), [sksl]);
   const sampledGlowLayers = useMemo(() => {
     const step = TIER_GLOW_STEP[tier];
@@ -120,22 +112,15 @@ export default function MeditationScreen() {
   }, [tier]);
 
   useEffect(() => {
-    const cfg = TIER_SHADER[tier];
     remoteLog("debug", "[MeditationScreen] Shader configured", {
+      shader: shader.id,
       tier,
-      kIterations: cfg.kIterations,
-      kVolsteps: cfg.kVolsteps,
-      kStepsize: cfg.kStepsize,
-      kBrightness: cfg.kBrightness,
-      kFormuparam: cfg.kFormuparam,
-      kShellFloor: cfg.kShellFloor,
-      kTile: cfg.kTile,
-      kDarkmatter: cfg.kDarkmatter,
       glowLayers: sampledGlowLayers.length,
     });
-  }, [tier, sampledGlowLayers]);
+  }, [shader, tier, sampledGlowLayers]);
 
   useEffect(() => {
+    if (deviceCornerRadius === null) return;
     remoteLog("debug", "[MeditationScreen] Corner radius", {
       deviceCornerRadius,
       resolvedCornerRadius: cornerRadius,
@@ -291,7 +276,14 @@ export default function MeditationScreen() {
           >
             <ScrollView>
               <Text
-                style={[styles.proverbText, { fontSize, lineHeight: fontSize }]}
+                style={[
+                  styles.proverbText,
+                  {
+                    fontSize,
+                    lineHeight: fontSize,
+                    color: shader.textColour,
+                  },
+                ]}
                 onTextLayout={onTextLayout}
               >
                 {proverbData.proverb}
@@ -355,7 +347,6 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   proverbText: {
-    color: "#b8c8ff",
     textAlign: "left",
   },
   captureButton: {

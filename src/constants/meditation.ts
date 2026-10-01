@@ -12,6 +12,16 @@ export const STROKE_WIDTH = 8;
 /** Accent colour used for the meditation UI and capture button. */
 export const ACCENT_COLOR = "rgb(25, 51, 179)";
 
+/** Proverb text colour for the dark backgrounds, which light text reads against. */
+export const PROVERB_TEXT_COLOR = "#b8c8ff";
+
+/**
+ * Proverb text colour for the bright backgrounds — Sunset is a pale sky and
+ * Cloud-free star fields are not, so a dark grey carries where light text washes
+ * out.
+ */
+export const PROVERB_TEXT_COLOR_DARK = "#444444";
+
 /** Candidate font sizes (largest first) for fitting the proverb text. */
 export const FONT_SIZES = [40, 28, 18];
 

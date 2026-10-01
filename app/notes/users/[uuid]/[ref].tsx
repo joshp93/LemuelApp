@@ -1,7 +1,7 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
-import { StyleSheet, Switch, useWindowDimensions, View } from "react-native";
+import { StyleSheet, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { recordMeditationCompletion } from "../../../../src/api/meditation";
 import {
@@ -14,6 +14,7 @@ import { type WithAuthProps, withAuth } from "../../../../src/auth/with-auth";
 import { LemuelButton } from "../../../../src/components/lemuel-button";
 import { LemuelKeyboardAwareScrollView } from "../../../../src/components/lemuel-keyboard-aware-scroll-view";
 import { LemuelLoadingScreen } from "../../../../src/components/lemuel-loading-screen";
+import { LemuelSwitch } from "../../../../src/components/lemuel-switch";
 import { ProverbCard } from "../../../../src/components/proverb-card";
 import { ProverbReferenceHeaderText } from "../../../../src/components/proverb-reference-header-text";
 import { Text } from "../../../../src/components/themed-text";
@@ -201,13 +202,12 @@ function UserNotePage({ user: _user }: WithAuthProps) {
                 Make this a private note
               </Text>
             </View>
-            <Switch
+            <LemuelSwitch
               value={isPrivate}
               onValueChange={(v) => {
                 setIsPrivate(v);
                 setIsDirty(true);
               }}
-              trackColor={{ false: "#ccc", true: "#666" }}
             />
           </View>
           <View>

@@ -11,7 +11,10 @@ import { useMemo } from "react";
 import type { SharedValue } from "react-native-reanimated";
 import { useDerivedValue } from "react-native-reanimated";
 import type { DeviceTier } from "../hooks/useDeviceTier";
-import { makeSkSL, TIER_SHADER } from "../utils/meditation-shader";
+import {
+  getMeditationShader,
+  type MeditationShaderId,
+} from "../utils/meditation-shaders";
 
 /** A single glow layer descriptor used by the meditation arc. */
 interface GlowLayer {
@@ -26,6 +29,7 @@ interface ArcSegment {
 }
 
 interface MeditationCanvasProps {
+  shaderId: MeditationShaderId;
   outlinePath: string;
   segments: ArcSegment[];
   sampledGlowLayers: GlowLayer[];
@@ -34,12 +38,14 @@ interface MeditationCanvasProps {
 }
 
 /**
- * Skia canvas that renders the meditation glow arc and nebula shader.
+ * Skia canvas that renders the meditation glow arc and the selected background
+ * shader.
  *
  * This component is loaded lazily via {@linkcode WithSkiaWeb} so that
  * CanvasKit WASM is fully initialised before the Skia module is imported.
  */
 export default function MeditationCanvas({
+  shaderId,
   outlinePath,
   segments,
   sampledGlowLayers,
@@ -47,18 +53,8 @@ export default function MeditationCanvas({
   resolution,
 }: MeditationCanvasProps) {
   const sksl = useMemo(
-    () =>
-      makeSkSL(
-        TIER_SHADER[tier].kIterations,
-        TIER_SHADER[tier].kVolsteps,
-        TIER_SHADER[tier].kStepsize,
-        TIER_SHADER[tier].kBrightness,
-        TIER_SHADER[tier].kFormuparam,
-        TIER_SHADER[tier].kShellFloor,
-        TIER_SHADER[tier].kTile,
-        TIER_SHADER[tier].kDarkmatter,
-      ),
-    [tier],
+    () => getMeditationShader(shaderId).makeSkSL(tier),
+    [shaderId, tier],
   );
   const effect = useMemo(() => Skia.RuntimeEffect.Make(sksl), [sksl]);
 

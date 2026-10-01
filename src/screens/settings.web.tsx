@@ -5,17 +5,33 @@ import { useEffect, useReducer } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LemuelButton } from "../components/lemuel-button";
+import { LemuelSwitch } from "../components/lemuel-switch";
 import { CONTENT_COLUMN, CONTENT_INSET } from "../constants/layout";
 import {
+  getEnabledMeditationShaders,
   getMeditationDuration,
   MEDITATION_DURATION_OPTIONS,
+  setEnabledMeditationShaders,
   setMeditationDuration,
 } from "../settings/meditation-preferences";
+import {
+  BLANK_SHADER_ID,
+  DEFAULT_ENABLED_SHADER_IDS,
+  MEDITATION_SHADERS,
+  type MeditationShaderId,
+} from "../utils/meditation-shaders";
 
-type State = { loading: boolean; duration: number; isDirty: boolean };
+type State = {
+  loading: boolean;
+  duration: number;
+  shaders: MeditationShaderId[];
+  isDirty: boolean;
+};
+
 type Action =
-  | { type: "LOADED"; duration: number }
+  | { type: "LOADED"; duration: number; shaders: MeditationShaderId[] }
   | { type: "SET_DURATION"; duration: number }
+  | { type: "TOGGLE_SHADER"; id: MeditationShaderId }
   | { type: "SYNC" };
 
 /**
@@ -31,6 +47,7 @@ const reducer = (state: State, action: Action): State => {
       return {
         loading: false,
         duration: action.duration,
+        shaders: action.shaders,
         isDirty: false,
       };
     case "SET_DURATION":
@@ -39,31 +56,55 @@ const reducer = (state: State, action: Action): State => {
         duration: action.duration,
         isDirty: true,
       };
+    case "TOGGLE_SHADER": {
+      const selected = state.shaders.includes(action.id);
+      let shaders: MeditationShaderId[];
+
+      if (action.id === BLANK_SHADER_ID) {
+        shaders = selected
+          ? state.shaders.filter((id) => id !== BLANK_SHADER_ID)
+          : [...state.shaders, BLANK_SHADER_ID];
+        if (shaders.length === 0) shaders = [...DEFAULT_ENABLED_SHADER_IDS];
+      } else {
+        shaders = selected
+          ? state.shaders.filter((id) => id !== action.id)
+          : [...state.shaders, action.id];
+        if (shaders.filter((id) => id !== BLANK_SHADER_ID).length === 0) {
+          return state;
+        }
+      }
+
+      return { ...state, shaders, isDirty: true };
+    }
     case "SYNC":
       return { ...state, isDirty: false };
   }
 };
 
+const initialState: State = {
+  loading: true,
+  duration: 60000,
+  shaders: [],
+  isDirty: false,
+};
+
 /**
  * Settings page for the web platform.
  *
- * Shows only the meditation timer duration picker and an informational
- * banner noting that notification and battery-optimisation settings
- * are only available in the native app. Preferences are stored via
+ * Shows the meditation timer duration and the enabled meditation animations,
+ * plus an informational banner noting that notification and battery-optimisation
+ * settings are only available in the native app. Preferences are stored via
  * AsyncStorage, which is backed by localStorage on web.
  */
 export default function WebSettingsScreen() {
   const insets = useSafeAreaInsets();
-  const [state, dispatch] = useReducer(reducer, {
-    loading: true,
-    duration: 60000,
-    isDirty: false,
-  });
+  const [state, dispatch] = useReducer(reducer, initialState);
 
   useEffect(() => {
     (async () => {
       const dur = await getMeditationDuration();
-      dispatch({ type: "LOADED", duration: dur });
+      const shaders = await getEnabledMeditationShaders();
+      dispatch({ type: "LOADED", duration: dur, shaders });
     })();
   }, []);
 
@@ -71,10 +112,17 @@ export default function WebSettingsScreen() {
     dispatch({ type: "SET_DURATION", duration: value });
   };
 
+  const handleShaderToggle = (id: MeditationShaderId) => {
+    dispatch({ type: "TOGGLE_SHADER", id });
+  };
+
   const handleSave = async () => {
     await setMeditationDuration(state.duration);
+    await setEnabledMeditationShaders(state.shaders);
     dispatch({ type: "SYNC" });
   };
+
+  const blankSelected = state.shaders.includes(BLANK_SHADER_ID);
 
   return (
     <View style={{ flex: 1 }}>
@@ -114,6 +162,36 @@ export default function WebSettingsScreen() {
               />
             ))}
           </Picker>
+        </View>
+
+        <View style={styles.durationCard}>
+          <Text style={styles.durationLabel}>Meditation animations</Text>
+          <Text style={styles.shaderHint}>
+            A random animation is chosen each time you meditate.
+          </Text>
+          {MEDITATION_SHADERS.map((shader) => {
+            const isBlank = shader.id === BLANK_SHADER_ID;
+            const isLastAnimation =
+              state.shaders.filter((id) => id !== BLANK_SHADER_ID).length ===
+                1 && state.shaders.includes(shader.id);
+
+            return (
+              <View
+                key={shader.id}
+                style={[styles.shaderRow, isBlank && styles.shaderRowSpaced]}
+              >
+                <View style={styles.labelContainer}>
+                  <Text style={styles.label}>{shader.label}</Text>
+                </View>
+                <LemuelSwitch
+                  testID={`shader-switch-${shader.id}`}
+                  value={state.shaders.includes(shader.id)}
+                  onValueChange={() => handleShaderToggle(shader.id)}
+                  disabled={!isBlank && (blankSelected || isLastAnimation)}
+                />
+              </View>
+            );
+          })}
         </View>
       </ScrollView>
 
@@ -157,6 +235,29 @@ const styles = StyleSheet.create({
   },
   durationPicker: {
     borderWidth: 0,
+  },
+  shaderHint: {
+    fontSize: 13,
+    color: "#666",
+    marginBottom: 4,
+  },
+  shaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 10,
+  },
+  shaderRowSpaced: {
+    marginTop: 14,
+  },
+  labelContainer: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#333",
   },
   updateBar: {
     position: "absolute",

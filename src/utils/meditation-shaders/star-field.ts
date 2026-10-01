@@ -1,22 +1,22 @@
-import type { DeviceTier } from "../hooks/useDeviceTier";
+import type { DeviceTier } from "../../hooks/useDeviceTier";
+
+/** Nebula shader parameters for a single device performance tier. */
+export interface StarFieldParams {
+  kIterations: number;
+  kVolsteps: number;
+  kStepsize: number;
+  kBrightness: number;
+  kFormuparam: number;
+  kShellFloor: number;
+  kTile: number;
+  kDarkmatter: number;
+}
 
 /**
- * Nebula shader parameters for each device performance tier. Lower tiers
- * reduce the iteration/volume-step counts to keep the fragment shader cheap.
+ * Nebula shader parameters for each device performance tier. Lower tiers reduce
+ * the iteration/volume-step counts to keep the fragment shader cheap.
  */
-export const TIER_SHADER: Record<
-  DeviceTier,
-  {
-    kIterations: number;
-    kVolsteps: number;
-    kStepsize: number;
-    kBrightness: number;
-    kFormuparam: number;
-    kShellFloor: number;
-    kTile: number;
-    kDarkmatter: number;
-  }
-> = {
+export const STAR_FIELD_TIERS: Record<DeviceTier, StarFieldParams> = {
   high: {
     kIterations: 12,
     kVolsteps: 10,
@@ -50,28 +50,24 @@ export const TIER_SHADER: Record<
 };
 
 /**
- * Builds the SkSL fragment shader source for the nebula background animation.
+ * Builds the SkSL fragment shader source for the star field background.
  *
- * @param kIterations - Fractal iteration count.
- * @param kVolsteps - Volume ray-march step count.
- * @param kStepsize - Distance advanced per volume step.
- * @param kBrightness - Overall brightness multiplier.
- * @param kFormuparam - Fractal fold parameter.
- * @param kShellFloor - Minimum shell distance (prevents banding).
- * @param kTile - Domain-repeat tile size.
- * @param kDarkmatter - Dark-matter attenuation factor.
+ * @param params - Tier-specific shader parameters.
  * @returns The complete SkSL shader source string.
  */
-export const makeSkSL = (
-  kIterations: number,
-  kVolsteps: number,
-  kStepsize: number,
-  kBrightness: number,
-  kFormuparam: number,
-  kShellFloor: number,
-  kTile: number,
-  kDarkmatter: number,
-): string => `uniform float2 u_resolution;
+export const makeStarFieldSkSL = (params: StarFieldParams): string => {
+  const {
+    kIterations,
+    kVolsteps,
+    kStepsize,
+    kBrightness,
+    kFormuparam,
+    kShellFloor,
+    kTile,
+    kDarkmatter,
+  } = params;
+
+  return `uniform float2 u_resolution;
 uniform float u_time;
 
 const float kIterations = ${kIterations.toFixed(1)};
@@ -128,3 +124,4 @@ half4 main(vec2 xy) {
     v = mix(vec3(length(v)), v, kSaturation);
     return half4(v * 0.01, 1.0);
 }`;
+};

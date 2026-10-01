@@ -32,6 +32,7 @@ import {
 } from "../constants/meditation";
 import { useDeviceTier } from "../hooks/useDeviceTier";
 import { useFitFontSize } from "../hooks/useFitFontSize";
+import { useMeditationShader } from "../hooks/useMeditationShader";
 import { useProverbForTheDay } from "../hooks/useProverbForTheDay";
 import type { Proverb } from "../models/proverb";
 import { getMeditationDuration } from "../settings/meditation-preferences";
@@ -83,6 +84,7 @@ export default function WebMeditationScreen() {
   const animationStarted = useRef(false);
 
   const tier = useDeviceTier();
+  const shader = useMeditationShader();
 
   const handleLayout = useCallback((e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
@@ -96,12 +98,12 @@ export default function WebMeditationScreen() {
   }, [tier]);
 
   useEffect(() => {
-    const cfg = TIER_GLOW_STEP;
     remoteLog("debug", "[MeditationScreen] Shader configured (web)", {
+      shader: shader.id,
       tier,
       glowLayers: sampledGlowLayers.length,
     });
-  }, [tier, sampledGlowLayers]);
+  }, [shader, tier, sampledGlowLayers]);
 
   useEffect(() => {
     (async () => {
@@ -196,6 +198,7 @@ export default function WebMeditationScreen() {
           }}
           getComponent={() => import("../components/meditation-canvas")}
           componentProps={{
+            shaderId: shader.id,
             outlinePath,
             segments,
             sampledGlowLayers,
@@ -217,7 +220,14 @@ export default function WebMeditationScreen() {
           <Animated.View style={[styles.textContainer, textAnimatedStyle]}>
             <ScrollView>
               <Text
-                style={[styles.proverbText, { fontSize, lineHeight: fontSize }]}
+                style={[
+                  styles.proverbText,
+                  {
+                    fontSize,
+                    lineHeight: fontSize,
+                    color: shader.textColour,
+                  },
+                ]}
                 onTextLayout={onTextLayout}
               >
                 {proverbData.proverb}
@@ -283,7 +293,6 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   proverbText: {
-    color: "#b8c8ff",
     textAlign: "left",
   },
   captureButton: {

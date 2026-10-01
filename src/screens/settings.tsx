@@ -2,16 +2,20 @@ import { Picker } from "@react-native-picker/picker";
 import * as Notifications from "expo-notifications";
 import { Stack, useNavigation } from "expo-router";
 import { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getReplyNotificationsEnabled, updateAccount } from "../api/account";
 import { remoteLog } from "../api/remote-logger";
 import { useAuth } from "../auth/auth-context";
 import { ExpandableSection } from "../components/expandable-section";
 import { LemuelButton } from "../components/lemuel-button";
+import { LemuelSwitch } from "../components/lemuel-switch";
 import { TimePicker } from "../components/time-picker";
 import { CONTENT_INSET } from "../constants/layout";
-import { useSettingsPreferences } from "../hooks/useSettingsPreferences";
+import {
+  shaderSelectionKey,
+  useSettingsPreferences,
+} from "../hooks/useSettingsPreferences";
 
 import {
   type NotificationMode,
@@ -27,6 +31,7 @@ import {
 import { ensureNotificationsScheduled } from "../notifications/push-listener";
 import {
   MEDITATION_DURATION_OPTIONS,
+  setEnabledMeditationShaders,
   setMeditationDuration,
 } from "../settings/meditation-preferences";
 import {
@@ -34,6 +39,10 @@ import {
   openBatteryOptimizationSettings,
 } from "../utils/battery-optimization";
 import { showDialog } from "../utils/dialog";
+import {
+  BLANK_SHADER_ID,
+  MEDITATION_SHADERS,
+} from "../utils/meditation-shaders";
 export default function SettingsScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -53,6 +62,7 @@ export default function SettingsScreen() {
     scheduledHour,
     scheduledMinute,
     meditationDuration,
+    enabledShaders,
     snapshotRef,
     setEnabled,
     setMode,
@@ -63,6 +73,7 @@ export default function SettingsScreen() {
     setScheduledHour,
     setScheduledMinute,
     setMeditationDuration: setMeditationDuration_,
+    toggleShader,
     isDirty,
     setIsDirty,
   } = useSettingsPreferences();
@@ -77,6 +88,7 @@ export default function SettingsScreen() {
     await setScheduledTimeHour(parseInt(scheduledHour, 10) || 9);
     await setScheduledTimeMinute(parseInt(scheduledMinute, 10) || 0);
     await setMeditationDuration(meditationDuration);
+    await setEnabledMeditationShaders(enabledShaders);
     await ensureNotificationsScheduled(2, true);
     snapshotRef.current = {
       enabled,
@@ -88,6 +100,7 @@ export default function SettingsScreen() {
       scheduledHour,
       scheduledMinute,
       meditationDuration: meditationDuration.toString(),
+      enabledShaders: shaderSelectionKey(enabledShaders),
     };
     setIsDirty(false);
   };
@@ -164,6 +177,8 @@ export default function SettingsScreen() {
     }
   };
 
+  const blankSelected = enabledShaders.includes(BLANK_SHADER_ID);
+
   return (
     <View style={{ flex: 1 }}>
       <Stack.Screen options={{ title: "Settings" }} />
@@ -191,12 +206,7 @@ export default function SettingsScreen() {
               </Text>
             </View>
             {!loading && (
-              <Switch
-                value={enabled}
-                onValueChange={handleToggle}
-                trackColor={{ false: "#d3d3d3", true: "black" }}
-                thumbColor={enabled ? "black" : "#f4f3f4"}
-              />
+              <LemuelSwitch value={enabled} onValueChange={handleToggle} />
             )}
           </View>
 
@@ -246,11 +256,9 @@ export default function SettingsScreen() {
                 </Text>
               </View>
               {!replyNotificationsLoading && (
-                <Switch
+                <LemuelSwitch
                   value={replyNotificationsEnabled}
                   onValueChange={handleReplyNotificationsToggle}
-                  trackColor={{ false: "#d3d3d3", true: "black" }}
-                  thumbColor={replyNotificationsEnabled ? "black" : "#f4f3f4"}
                 />
               )}
             </View>
@@ -273,6 +281,36 @@ export default function SettingsScreen() {
               />
             ))}
           </Picker>
+        </View>
+
+        <View style={styles.durationCard}>
+          <Text style={styles.durationLabel}>Meditation animations</Text>
+          <Text style={styles.shaderHint}>
+            A random animation is chosen each time you meditate.
+          </Text>
+          {MEDITATION_SHADERS.map((shader) => {
+            const isBlank = shader.id === BLANK_SHADER_ID;
+            const isLastAnimation =
+              enabledShaders.filter((id) => id !== BLANK_SHADER_ID).length ===
+                1 && enabledShaders.includes(shader.id);
+
+            return (
+              <View
+                key={shader.id}
+                style={[styles.shaderRow, isBlank && styles.shaderRowSpaced]}
+              >
+                <View style={styles.labelContainer}>
+                  <Text style={styles.label}>{shader.label}</Text>
+                </View>
+                <LemuelSwitch
+                  testID={`shader-switch-${shader.id}`}
+                  value={enabledShaders.includes(shader.id)}
+                  onValueChange={() => toggleShader(shader.id)}
+                  disabled={!isBlank && (blankSelected || isLastAnimation)}
+                />
+              </View>
+            );
+          })}
         </View>
       </ScrollView>
 
@@ -330,6 +368,20 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "#333",
     marginBottom: 12,
+  },
+  shaderHint: {
+    fontSize: 13,
+    color: "#666",
+    marginBottom: 4,
+  },
+  shaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 10,
+  },
+  shaderRowSpaced: {
+    marginTop: 14,
   },
   updateButtonWrapper: {
     position: "absolute",
