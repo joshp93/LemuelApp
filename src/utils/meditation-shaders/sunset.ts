@@ -36,6 +36,10 @@ export const SUNSET_TIERS: Record<DeviceTier, SunsetParams> = {
  *   puts the sun dead ahead at ~16:9; on a phone it swings the sun off-screen
  *   entirely. `uvMouse.x = 0.5 * AR` makes the horizontal offset exactly zero at
  *   any aspect.
+ * - **The sun is 50% wider.** Its size is the width of the Mie forward lobe,
+ *   set by the source's `SOFT_SUN` concentration. 0.9957 (down from 0.999)
+ *   widens the disc by half at any resolution, and it is a compile-time
+ *   constant, so the cost is unchanged.
  * - `#define`/`#if` blocks are baked, `iMouse` is replaced by the source's own
  *   initial-view defaults, and `gl_FragCoord` becomes the passed coordinate.
  * - The fragment coordinate is flipped, because Skia's is y-down and
@@ -49,6 +53,19 @@ export const SUNSET_TIERS: Record<DeviceTier, SunsetParams> = {
  *   ripple at `O.y / D.y`, which is infinite on the horizon row, and my `hash21`
  *   substitute propagated that to a NaN that Skia rendered as a bright
  *   one-pixel line across the middle of the screen.
+ * - **The sea reflects the sky from the camera, without moving the ray origin.**
+ *   The source moved the origin to where the view ray strikes the water before
+ *   reflecting it. That point sits up to `50 / |D.y|` metres away, and
+ *   `densities` measures altitude against the planet's sphere, so at large canvas
+ *   heights the "sea surface" landed nearly a kilometre *above* that sphere. The
+ *   reflected ray then integrated a different atmosphere from the sky ray beside
+ *   it, and the first water row came out brighter than the last sky row — a
+ *   bright line across the horizon, in the sky's own colour, that grew with
+ *   resolution. Leaving the origin alone makes the sea an exact mirror of the
+ *   sky, dimmed to the source's 0.6.
+ * - **The water-surface ripple went with it.** It was driven by the displaced
+ *   point's coordinates, so it could not survive, and it moved the water by a
+ *   mean of 0.4/255 against a maximum of 255 — invisible either way.
  * - **The view ray is sampled on a quadratic distribution, not an even one.**
  *   Sampling evenly from the camera puts the densest sample — the camera itself,
  *   at sea level — at the head of a slab up to 100 km long, which over-counts the
@@ -80,7 +97,7 @@ const float kSunIntensity = 5.0;
 const float g = 0.45;
 const float g2 = g * g;
 const float kTs = (kCameraHeight / 2.5e5);
-const float s = 0.999;
+const float s = 0.9957;
 const float s2 = s;
 const float Hr = 8e3;
 const float Hm = 1.2e3;
@@ -88,12 +105,6 @@ const float Hm = 1.2e3;
 const vec3 bM = vec3(21e-6);
 const vec3 bR = vec3(5.8e-6, 13.5e-6, 33.1e-6);
 const vec3 C = vec3(0.0, -R0, 0.0);
-
-float hash21(vec2 n) {
-    return fract(sin(dot(n, vec2(12.9898, 4.1414))) * 43758.5453);
-}
-
-float noise(vec2 v) { return hash21(floor(v + 0.5)); }
 
 void densities(vec3 pos, out float rayleigh, out float mie) {
     float h = length(pos - C) - R0;
@@ -182,10 +193,7 @@ half4 main(vec2 xy) {
     float att = 1.0;
 
     if (D.y < -kTs) {
-        float L = -O.y / D.y;
-        O = O + D * L;
         D.y = -D.y;
-        D = normalize(D + vec3(0.0, 0.003 * sin(u_time + 6.2831 * noise(O.xz + vec2(0.0, -u_time * 1e3))), 0.0));
         att = 0.6;
     }
 

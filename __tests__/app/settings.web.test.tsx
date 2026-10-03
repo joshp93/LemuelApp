@@ -163,7 +163,7 @@ describe("WebSettingsScreen", () => {
         expect(getByText("Star field")).toBeTruthy();
         expect(getByText("Gas giant")).toBeTruthy();
         expect(getByText("Sine mountains")).toBeTruthy();
-        expect(getByText("Sunset")).toBeTruthy();
+        expect(getByText("Sunset over sea")).toBeTruthy();
         expect(getByText("Don't show an animation")).toBeTruthy();
       });
     });

@@ -235,6 +235,11 @@ describe("makeSunsetSkSL", () => {
     expect(base).toContain("vec2 uvMouse = vec2(0.5 * AR,");
   });
 
+  it("widens the sun by half, from the source's lobe concentration", () => {
+    expect(base).toContain("const float s = 0.9957;");
+    expect(base).toContain("const float s2 = s;");
+  });
+
   it("carries no texture, mouse or preprocessor dependency", () => {
     expect(base).not.toContain("iChannel");
     expect(base).not.toContain("texture(");
@@ -250,10 +255,15 @@ describe("makeSunsetSkSL", () => {
     expect(base).not.toContain("float(i) * dl");
   });
 
-  it("divides by the view ray's vertical component only where it is bounded", () => {
-    expect(base.split("/ D.y").length - 1).toBe(1);
-    expect(base).toContain("float L = -O.y / D.y;");
+  it("never divides by the view ray's vertical component", () => {
+    expect(base).not.toContain("/ D.y");
     expect(base).toContain("if (D.y < -kTs) {");
+  });
+
+  it("mirrors the sea from the camera rather than from the water's surface", () => {
+    expect(base).not.toContain("O = O + D * L;");
+    expect(base).toContain("D.y = -D.y;");
+    expect(base).toContain("att = 0.6;");
   });
 
   it("drops the source's star and aurora layers, which never contribute a pixel", () => {

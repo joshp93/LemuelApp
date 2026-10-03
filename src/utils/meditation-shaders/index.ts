@@ -61,7 +61,7 @@ export const MEDITATION_SHADERS: readonly MeditationShader[] = [
   },
   {
     id: "sunset",
-    label: "Sunset",
+    label: "Sunset over sea",
     textColour: PROVERB_TEXT_COLOR_DARK,
     makeSkSL: (tier) => makeSunsetSkSL(SUNSET_TIERS[tier]),
   },
