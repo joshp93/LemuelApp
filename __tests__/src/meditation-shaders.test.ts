@@ -244,6 +244,24 @@ describe("makeSunsetSkSL", () => {
     expect(base).not.toContain("#if");
   });
 
+  it("samples the view ray on a quadratic distribution", () => {
+    expect(base).toContain("float l = L * tt * tt;");
+    expect(base).toContain("float dli = L * (ttn * ttn - tt * tt);");
+    expect(base).not.toContain("float(i) * dl");
+  });
+
+  it("divides by the view ray's vertical component only where it is bounded", () => {
+    expect(base.split("/ D.y").length - 1).toBe(1);
+    expect(base).toContain("float L = -O.y / D.y;");
+    expect(base).toContain("if (D.y < -kTs) {");
+  });
+
+  it("drops the source's star and aurora layers, which never contribute a pixel", () => {
+    expect(base).not.toContain("stars(");
+    expect(base).not.toContain("aurora(");
+    expect(base).not.toContain("triNoise2d");
+  });
+
   it("produces different output for different step counts", () => {
     expect(makeSunsetSkSL({ steps: 4, stepss: 4 })).not.toBe(base);
   });
