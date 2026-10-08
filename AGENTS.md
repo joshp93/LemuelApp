@@ -222,6 +222,7 @@ src/
                   # expandable-section, fade-in-down, header-menu, lemuel-button,
                   # lemuel-keyboard-avoiding-view, lemuel-keyboard-aware-scroll-view,
                   # lemuel-loading-screen, lemuel-switch, meditation-canvas,
+                  # meditation-capture-button (shared by both meditation screens),
                   # month-picker,
                   # not-today-banner, proverb-card, proverb-note-card,
                   # proverb-reference-header-text, reaction-bar, reply-card,
@@ -230,7 +231,9 @@ src/
   constants/      # theme (colours), layout (content width/inset/column),
                   # meditation (shared shader constants)
   hooks/          # useProverbForTheDay, useSettingsPreferences, useFitFontSize,
-                  # useUnsavedChanges, useDeviceTier
+                  # useUnsavedChanges, useDeviceTier, useMeditationShader,
+                  # useMeditationTimer, useMeditationSegments, useSerializedSave,
+                  # useAutoSave
   models/         # Zod schemas + response types (proverb, daily-proverb,
                   # reactions-and-replies)
   notifications/  # daily-proverb-notification (+ .web), notification-preferences,
@@ -238,10 +241,11 @@ src/
                   # notification-response (+ .web, tap routing)
   screens/        # Screens that differ per platform: sign-in, settings, meditation
                   # (each with a .tsx and a .web.tsx sibling)
-  settings/       # meditation-preferences (duration + duration options)
+  settings/       # meditation-preferences (duration + duration options),
+                  # shader-selection (shared toggle rules for both settings screens)
   utils/          # auth-redirect, battery-optimization, confirm (+ .web), date,
-                  # dialog (+ .web), email, format, layout, password,
-                  # proverb-helper
+                  # dialog (+ .web), email, format, layout, meditation-outline,
+                  # password, proverb-helper, time-part
   utils/meditation-shaders/  # one SkSL generator per background animation
                   # (star-field, gas-giant, sine-mountains, sunset, blank)
                   # + the registry in index.ts, which also carries each
@@ -284,6 +288,20 @@ __tests__/        # Jest tests mirroring the source tree
 editor and displayed as community notes. The **private flag is stored and shown
 in the editor but is not enforced** — every note is currently visible to
 everyone.
+
+**Recording a meditation when a note is opened is deliberate.** The note editor
+page (`app/notes/users/[uuid]/[ref].tsx`) calls `recordMeditationCompletion` on
+mount. This is an intentional fallback, not a bug and not a duplicate write:
+
+- `POST /accounts/{uuid}/meditations/{date}` is **idempotent** per
+  `{uuid}/{date}`, so recording a day that was already recorded is a no-op.
+- It makes a completion land even when the write from the meditation screen
+  itself never reached the backend — the app was backgrounded, the request
+  failed, or the timer was interrupted.
+- Reaching the page from the "My meditations" list is safe for the same reason.
+
+Do not remove or guard this call, and do not report it as an
+"opening a note records a meditation" bug.
 
 ---
 

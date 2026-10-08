@@ -271,15 +271,18 @@ src/
   auth/         # Auth context, token storage/refresh, `withAuth` route guard
   components/   # Shared UI (proverb card, note cards, note editors, reactions,
                 # replies, menus, pickers, buttons, loading screen, meditation
-                # canvas, …)
+                # canvas + capture button, …)
   constants/    # theme, layout (content width/inset/column), meditation constants
   hooks/        # useProverbForTheDay, useSettingsPreferences, useFitFontSize,
-                # useUnsavedChanges, useDeviceTier
+                # useUnsavedChanges, useDeviceTier, useMeditationShader,
+                # useMeditationTimer, useMeditationSegments, useSerializedSave,
+                # useAutoSave
   models/       # Zod schemas and response types
   notifications/# Scheduling, preferences, FCM push listener, tap routing
   screens/      # Screens with per-platform variants (sign-in, settings, meditation)
-  settings/     # Meditation preferences
-  utils/        # date, email, password, format, proverb-helper, dialogs, layout, shader
+  settings/     # Meditation preferences, shared shader-selection rules
+  utils/        # date, email, password, format, time-part, proverb-helper, dialogs,
+                # layout, meditation-outline, shader
   widgets/      # Voltra Android widget
 
 __tests__/      # Jest tests, mirroring the source tree

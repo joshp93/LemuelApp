@@ -1,7 +1,7 @@
 import { WithSkiaWeb } from "@shopify/react-native-skia/lib/module/web";
 import { version } from "canvaskit-wasm/package.json";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Stack, useLocalSearchParams } from "expo-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Dimensions,
   type LayoutChangeEvent,
@@ -12,18 +12,15 @@ import {
 } from "react-native";
 import Animated, {
   useAnimatedStyle,
-  useDerivedValue,
   useSharedValue,
-  withTiming,
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { recordMeditationCompletion } from "../api/meditation";
 import { remoteLog } from "../api/remote-logger";
 import { useAuth } from "../auth/auth-context";
-import { LemuelButton } from "../components/lemuel-button";
+import { MeditationCaptureButton } from "../components/meditation-capture-button";
 import { Text } from "../components/themed-text";
 import {
-  ACCENT_COLOR,
   DEFAULT_CORNER_RADIUS,
   FONT_SIZES,
   glowLayers,
@@ -32,26 +29,27 @@ import {
 } from "../constants/meditation";
 import { useDeviceTier } from "../hooks/useDeviceTier";
 import { useFitFontSize } from "../hooks/useFitFontSize";
+import { useMeditationSegments } from "../hooks/useMeditationSegments";
 import { useMeditationShader } from "../hooks/useMeditationShader";
+import { useMeditationTimer } from "../hooks/useMeditationTimer";
 import { useProverbForTheDay } from "../hooks/useProverbForTheDay";
 import type { Proverb } from "../models/proverb";
-import { getMeditationDuration } from "../settings/meditation-preferences";
+import { toLocalDateString } from "../utils/date";
+import { buildMeditationOutline } from "../utils/meditation-outline";
 
 const CORNER_RADIUS = DEFAULT_CORNER_RADIUS;
 
 /**
  * Meditation screen for web.
  *
- * Uses {@linkcode WithSkiaWeb} to defer loading the Skia glow-arc canvas
- * until CanvasKit WASM has finished loading. During SSR and CanvasKit
- * initialisation a plain black background is shown. The nebula shader,
- * keep-awake and battery APIs are omitted — they either require native
- * modules or are not available on web.
+ * Uses {@linkcode WithSkiaWeb} to defer loading the Skia glow-arc canvas until
+ * CanvasKit WASM has finished loading. During SSR and CanvasKit initialisation
+ * a plain black background is shown. The corner radius is a constant rather
+ * than a device measurement, and the keep-awake and battery APIs are omitted —
+ * they either require native modules or are not available on web.
  */
 export default function WebMeditationScreen() {
-  const [isComplete, setIsComplete] = useState(false);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
-  const [durationMs, setDurationMs] = useState(60000);
   const {
     proverb: paramProverb,
     ref: paramRef,
@@ -67,30 +65,38 @@ export default function WebMeditationScreen() {
     ? { proverb: paramProverb, ref: paramRef }
     : null;
 
-  const effectiveDate = paramDate ?? new Date().toISOString().split("T")[0];
+  const effectiveDate = paramDate ?? toLocalDateString(new Date());
 
   const hookResult = useProverbForTheDay(paramDate);
   const proverbData = paramProverbData ?? hookResult.proverb;
   const loading = hasParamProverb ? false : hookResult.loading;
 
   const { user } = useAuth();
-  const router = useRouter();
   const { height: windowHeight } = useWindowDimensions();
   const screenHeight = Dimensions.get("screen").height;
   const hasVisibleNavBar = screenHeight - windowHeight > 30;
-  const progress = useSharedValue(0);
-  const textOpacity = useSharedValue(0);
-  const resolution = useSharedValue([0, 0]);
-  const animationStarted = useRef(false);
 
   const tier = useDeviceTier();
   const shader = useMeditationShader();
 
-  const handleLayout = useCallback((e: LayoutChangeEvent) => {
-    const { width, height } = e.nativeEvent.layout;
-    setCanvasSize({ width, height });
-    resolution.value = [width, height];
-  }, []);
+  const complete = useCallback(() => {
+    void recordMeditationCompletion(user?.userId ?? "", effectiveDate);
+  }, [user?.userId, effectiveDate]);
+
+  const { progress, textOpacity, isComplete } = useMeditationTimer({
+    ready: !loading && proverbData !== null && shader !== null,
+    onComplete: complete,
+  });
+
+  const resolution = useSharedValue([0, 0]);
+  const handleLayout = useCallback(
+    (e: LayoutChangeEvent) => {
+      const { width, height } = e.nativeEvent.layout;
+      setCanvasSize({ width, height });
+      resolution.value = [width, height];
+    },
+    [resolution],
+  );
 
   const sampledGlowLayers = useMemo(() => {
     const step = TIER_GLOW_STEP[tier];
@@ -99,33 +105,11 @@ export default function WebMeditationScreen() {
 
   useEffect(() => {
     remoteLog("debug", "[MeditationScreen] Shader configured (web)", {
-      shader: shader.id,
+      shader: shader?.id ?? null,
       tier,
       glowLayers: sampledGlowLayers.length,
     });
   }, [shader, tier, sampledGlowLayers]);
-
-  useEffect(() => {
-    (async () => {
-      const dur = await getMeditationDuration();
-      setDurationMs(dur);
-    })();
-  }, []);
-
-  useEffect(() => {
-    if (!animationStarted.current && !loading && proverbData) {
-      animationStarted.current = true;
-      const userId = user?.userId ?? "";
-
-      progress.value = withTiming(1, { duration: durationMs }, (finished) => {
-        if (finished) {
-          setIsComplete(true);
-          recordMeditationCompletion(userId, effectiveDate);
-        }
-      });
-      textOpacity.value = withTiming(1, { duration: 1000 });
-    }
-  }, [loading, proverbData, durationMs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const textAnimatedStyle = useAnimatedStyle(() => ({
     opacity: textOpacity.value,
@@ -138,48 +122,19 @@ export default function WebMeditationScreen() {
     FONT_SIZES,
   );
 
-  const segments = [
-    {
-      start: useDerivedValue(() => 0.25),
-      end: useDerivedValue(() => 0.25 + progress.value * 0.25),
-    },
-    {
-      start: useDerivedValue(() => 0.25 - progress.value * 0.25),
-      end: useDerivedValue(() => 0.25),
-    },
-    {
-      start: useDerivedValue(() => 0.75 - progress.value * 0.25),
-      end: useDerivedValue(() => 0.75),
-    },
-    {
-      start: useDerivedValue(() => 0.75),
-      end: useDerivedValue(() => 0.75 + progress.value * 0.25),
-    },
-  ];
+  const segments = useMeditationSegments(progress);
 
-  const outlinePath = useMemo(() => {
-    const { width: W, height: H } = canvasSize;
-    if (W === 0 || H === 0) return null;
+  const outlinePath = useMemo(
+    () =>
+      buildMeditationOutline(
+        canvasSize.width,
+        canvasSize.height,
+        CORNER_RADIUS,
+      ),
+    [canvasSize],
+  );
 
-    const R = CORNER_RADIUS;
-    const cx = W / 2;
-
-    const d = [
-      `M ${cx} 0`,
-      `L ${W - R} 0`,
-      `A ${R} ${R} 0 0 1 ${W} ${R}`,
-      `L ${W} ${H - R}`,
-      `A ${R} ${R} 0 0 1 ${W - R} ${H}`,
-      `L ${R} ${H}`,
-      `A ${R} ${R} 0 0 1 0 ${H - R}`,
-      `L 0 ${R}`,
-      `A ${R} ${R} 0 0 1 ${R} 0`,
-      `L ${cx} 0`,
-      "Z",
-    ].join(" ");
-
-    return d;
-  }, [canvasSize]);
+  const showCanvas = outlinePath !== null && shader !== null;
 
   const innerContent = (
     <>
@@ -190,7 +145,7 @@ export default function WebMeditationScreen() {
           statusBarHidden: true,
         }}
       />
-      {outlinePath ? (
+      {showCanvas ? (
         <WithSkiaWeb
           opts={{
             locateFile: (file) =>
@@ -216,7 +171,7 @@ export default function WebMeditationScreen() {
       )}
 
       <View style={styles.overlay}>
-        {proverbData && !loading && (
+        {proverbData && !loading && shader && (
           <Animated.View style={[styles.textContainer, textAnimatedStyle]}>
             <ScrollView>
               <Text
@@ -236,22 +191,11 @@ export default function WebMeditationScreen() {
           </Animated.View>
         )}
 
-        {isComplete && (
-          <LemuelButton
-            style={styles.captureButton}
-            onPress={() => {
-              router.replace({
-                pathname: "/notes/users/[uuid]/[ref]",
-                params: {
-                  uuid: user?.userId ?? "{{uuid}}",
-                  ref: proverbData!.ref,
-                  date: effectiveDate,
-                },
-              });
-            }}
-          >
-            Capture your thoughts...
-          </LemuelButton>
+        {isComplete && proverbData && (
+          <MeditationCaptureButton
+            proverbRef={proverbData.ref}
+            date={effectiveDate}
+          />
         )}
       </View>
     </>
@@ -294,11 +238,5 @@ const styles = StyleSheet.create({
   },
   proverbText: {
     textAlign: "left",
-  },
-  captureButton: {
-    marginHorizontal: INSET,
-    marginBottom: 36,
-    backgroundColor: ACCENT_COLOR,
-    padding: 15,
   },
 });

@@ -7,6 +7,7 @@ import type {
 import { convertDisplayProverbToProverbKey } from "../utils/proverb-helper";
 import { getValidIdToken } from "./auth";
 import { LEMUEL_API_BASE_URL } from "./constants";
+import { remoteLog } from "./remote-logger";
 
 /**
  * Response shape returned by the GET and POST note endpoints.
@@ -122,8 +123,6 @@ export async function saveUserNote(
   const url = `${LEMUEL_API_BASE_URL}/notes/users/${uuid}/${convertDisplayProverbToProverbKey(ref)}`;
   const body = JSON.stringify({ note, date, isPrivate });
 
-  console.log("[saveUserNote] POST", url, body);
-
   const response = await fetch(url, {
     method: "POST",
     headers: {
@@ -135,15 +134,15 @@ export async function saveUserNote(
 
   if (!response.ok) {
     const text = await response.text();
-    console.error("[saveUserNote] Failed:", response.status, text);
+    remoteLog("error", "[Notes] Failed to save user note", {
+      status: response.status,
+    });
     throw new Error(
       `Failed to save user note: ${response.status} ${response.statusText} — ${text}`,
     );
   }
 
-  const json = await response.json();
-  console.log("[saveUserNote] Success");
-  return json as UserNoteResponse;
+  return (await response.json()) as UserNoteResponse;
 }
 
 /**
@@ -173,8 +172,6 @@ export async function deleteUserNote(
   );
   url.searchParams.set("date", date);
 
-  console.log("[deleteUserNote] DELETE", url.toString());
-
   const response = await fetch(url.toString(), {
     method: "DELETE",
     headers: { Authorization: token },
@@ -182,13 +179,14 @@ export async function deleteUserNote(
 
   if (!response.ok) {
     const text = await response.text();
-    console.error("[deleteUserNote] Failed:", response.status, text);
+    remoteLog("error", "[Notes] Failed to delete user note", {
+      status: response.status,
+    });
     throw new Error(
       `Failed to delete user note: ${response.status} ${response.statusText} — ${text}`,
     );
   }
 
-  console.log("[deleteUserNote] Success");
   return true;
 }
 
@@ -292,8 +290,6 @@ export async function putReaction(
   const url = `${LEMUEL_API_BASE_URL}/notes/users/${noteAuthorUuid}/${convertDisplayProverbToProverbKey(ref)}/reactions`;
   const body = JSON.stringify({ reactionType, date });
 
-  console.log("[putReaction] PUT", url, body);
-
   const response = await fetch(url, {
     method: "PUT",
     headers: {
@@ -305,13 +301,13 @@ export async function putReaction(
 
   if (!response.ok) {
     const text = await response.text();
-    console.error("[putReaction] Failed:", response.status, text);
+    remoteLog("error", "[Notes] Failed to put reaction", {
+      status: response.status,
+    });
     throw new Error(
       `Failed to put reaction: ${response.status} ${response.statusText} — ${text}`,
     );
   }
-
-  console.log("[putReaction] Success");
 }
 
 /**
@@ -337,8 +333,6 @@ export async function deleteReaction(
   );
   url.searchParams.set("date", date);
 
-  console.log("[deleteReaction] DELETE", url.toString());
-
   const response = await fetch(url.toString(), {
     method: "DELETE",
     headers: { Authorization: token },
@@ -346,13 +340,13 @@ export async function deleteReaction(
 
   if (!response.ok) {
     const text = await response.text();
-    console.error("[deleteReaction] Failed:", response.status, text);
+    remoteLog("error", "[Notes] Failed to delete reaction", {
+      status: response.status,
+    });
     throw new Error(
       `Failed to delete reaction: ${response.status} ${response.statusText} — ${text}`,
     );
   }
-
-  console.log("[deleteReaction] Success");
 }
 
 /**
@@ -383,8 +377,6 @@ export async function getReactions(
 
   const url = `${LEMUEL_API_BASE_URL}/notes/users/${noteAuthorUuid}/${convertDisplayProverbToProverbKey(ref)}/reactions?${params.toString()}`;
 
-  console.log("[getReactions] GET", url);
-
   const response = await fetch(url, {
     method: "GET",
     headers: { Authorization: token },
@@ -392,18 +384,15 @@ export async function getReactions(
 
   if (!response.ok) {
     const text = await response.text();
-    console.error("[getReactions] Failed:", response.status, text);
+    remoteLog("error", "[Notes] Failed to get reactions", {
+      status: response.status,
+    });
     throw new Error(
       `Failed to get reactions: ${response.status} ${response.statusText} — ${text}`,
     );
   }
 
-  const json = await response.json();
-  console.log(
-    "[getReactions] Success, count:",
-    (json as GetReactionsResponse).reactions?.length ?? 0,
-  );
-  return json as GetReactionsResponse;
+  return (await response.json()) as GetReactionsResponse;
 }
 
 /**
@@ -413,8 +402,12 @@ export async function getReactions(
  * @param ref - The proverb reference, e.g. `Proverbs3:5`.
  * @param date - The date of the daily proverb, e.g. "2026-06-16".
  * @param content - Plain-text reply content.
- * @param isUpdate - When true, skips notification on the backend.
- * @returns The created reply entity.
+ * @param isUpdate - When true, edits the reply named by `sk` and skips the
+ *                   notification on the backend.
+ * @param sk - The sort key of the reply being edited, as returned by
+ *             {@linkcode getReplies}. Required when `isUpdate` is true; omitted
+ *             when creating, since a new reply has no key yet.
+ * @returns The created or updated reply entity.
  * @throws If the request fails or if not authenticated.
  */
 export async function postReply(
@@ -423,6 +416,7 @@ export async function postReply(
   date: string,
   content: string,
   isUpdate?: boolean,
+  sk?: string,
 ): Promise<ReplyEntity> {
   const token = await getValidIdToken();
   if (!token) {
@@ -430,9 +424,7 @@ export async function postReply(
   }
 
   const url = `${LEMUEL_API_BASE_URL}/notes/users/${noteAuthorUuid}/${convertDisplayProverbToProverbKey(ref)}/replies`;
-  const body = JSON.stringify({ content, date, isUpdate });
-
-  console.log("[postReply] POST", url, body);
+  const body = JSON.stringify({ content, date, isUpdate, sk });
 
   const response = await fetch(url, {
     method: "POST",
@@ -445,15 +437,15 @@ export async function postReply(
 
   if (!response.ok) {
     const text = await response.text();
-    console.error("[postReply] Failed:", response.status, text);
+    remoteLog("error", "[Notes] Failed to post reply", {
+      status: response.status,
+    });
     throw new Error(
       `Failed to post reply: ${response.status} ${response.statusText} — ${text}`,
     );
   }
 
-  const json = await response.json();
-  console.log("[postReply] Success:", json);
-  return json as ReplyEntity;
+  return (await response.json()) as ReplyEntity;
 }
 
 /**
@@ -489,8 +481,6 @@ export async function getReplies(
 
   const url = `${LEMUEL_API_BASE_URL}/notes/users/${noteAuthorUuid}/${convertDisplayProverbToProverbKey(ref)}/replies?${params.toString()}`;
 
-  console.log("[getReplies] GET", url);
-
   const response = await fetch(url, {
     method: "GET",
     headers: { Authorization: token },
@@ -498,18 +488,15 @@ export async function getReplies(
 
   if (!response.ok) {
     const text = await response.text();
-    console.error("[getReplies] Failed:", response.status, text);
+    remoteLog("error", "[Notes] Failed to get replies", {
+      status: response.status,
+    });
     throw new Error(
       `Failed to get replies: ${response.status} ${response.statusText} — ${text}`,
     );
   }
 
-  const json = await response.json();
-  console.log(
-    "[getReplies] Success, count:",
-    (json as GetRepliesResponse).items?.length ?? 0,
-  );
-  return json as GetRepliesResponse;
+  return (await response.json()) as GetRepliesResponse;
 }
 
 /**
@@ -538,8 +525,6 @@ export async function deleteReply(
   url.searchParams.set("date", date);
   url.searchParams.set("replySk", replySk);
 
-  console.log("[deleteReply] DELETE", url.toString());
-
   const response = await fetch(url.toString(), {
     method: "DELETE",
     headers: { Authorization: token },
@@ -547,11 +532,11 @@ export async function deleteReply(
 
   if (!response.ok) {
     const text = await response.text();
-    console.error("[deleteReply] Failed:", response.status, text);
+    remoteLog("error", "[Notes] Failed to delete reply", {
+      status: response.status,
+    });
     throw new Error(
       `Failed to delete reply: ${response.status} ${response.statusText} — ${text}`,
     );
   }
-
-  console.log("[deleteReply] Success");
 }

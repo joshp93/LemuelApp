@@ -21,12 +21,12 @@ describe("useMeditationShader", () => {
     jest.restoreAllMocks();
   });
 
-  it("starts on the default shader before preferences resolve", () => {
+  it("is null until preferences resolve, so no shader is painted first", () => {
     mockGetEnabledMeditationShaders.mockReturnValue(new Promise(() => {}));
 
     const { result } = renderHook(() => useMeditationShader());
 
-    expect(result.current.id).toBe(DEFAULT_SHADER_ID);
+    expect(result.current).toBeNull();
   });
 
   it("resolves to an enabled shader", async () => {
@@ -35,7 +35,7 @@ describe("useMeditationShader", () => {
     const { result } = renderHook(() => useMeditationShader());
 
     await waitFor(() => {
-      expect(result.current.id).toBe("gas-giant");
+      expect(result.current?.id).toBe("gas-giant");
     });
   });
 
@@ -50,7 +50,7 @@ describe("useMeditationShader", () => {
     const { result } = renderHook(() => useMeditationShader());
 
     await waitFor(() => {
-      expect(result.current.id).toBe("sine-mountains");
+      expect(result.current?.id).toBe("sine-mountains");
     });
   });
 
@@ -60,7 +60,7 @@ describe("useMeditationShader", () => {
     const { result } = renderHook(() => useMeditationShader());
 
     await waitFor(() => {
-      expect(result.current.id).toBe(DEFAULT_SHADER_ID);
+      expect(result.current?.id).toBe(DEFAULT_SHADER_ID);
     });
   });
 
@@ -70,8 +70,8 @@ describe("useMeditationShader", () => {
     const { result } = renderHook(() => useMeditationShader());
 
     await waitFor(() => {
-      expect(result.current.id).toBe("gas-giant");
+      expect(result.current?.id).toBe("gas-giant");
     });
-    expect(result.current.makeSkSL("high")).toContain("half4 main(vec2 xy) {");
+    expect(result.current?.makeSkSL("high")).toContain("half4 main(vec2 xy) {");
   });
 });

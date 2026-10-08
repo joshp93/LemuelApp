@@ -20,10 +20,11 @@ function mockDate(iso: string) {
 describe("MonthPicker", () => {
   afterEach(() => {
     jest.useRealTimers();
+    jest.restoreAllMocks();
   });
 
   it("should disable future dates even when API returns them", async () => {
-    mockDate("2026-06-15T12:00:00Z");
+    mockDate("2026-06-15T12:00:00");
 
     mockGetDailyProverbsForMonth.mockResolvedValue([
       { sk: "2026-06-14", ref: "Proverbs 14:1" },
@@ -56,7 +57,7 @@ describe("MonthPicker", () => {
   });
 
   it("should allow selecting today and confirming", async () => {
-    mockDate("2026-06-15T12:00:00Z");
+    mockDate("2026-06-15T12:00:00");
 
     mockGetDailyProverbsForMonth.mockResolvedValue([
       { sk: "2026-06-15", ref: "Proverbs 15:1" },
@@ -86,7 +87,7 @@ describe("MonthPicker", () => {
   });
 
   it("should allow selecting the last day of a month when it is today", async () => {
-    mockDate("2026-05-31T12:00:00Z");
+    mockDate("2026-05-31T12:00:00");
 
     mockGetDailyProverbsForMonth.mockResolvedValue([
       { sk: "2026-05-29", ref: "Proverbs 29:1" },
@@ -120,7 +121,7 @@ describe("MonthPicker", () => {
   });
 
   it("should show loading indicator while fetching", async () => {
-    mockDate("2026-06-01T12:00:00Z");
+    mockDate("2026-06-01T12:00:00");
 
     let resolvePromise!: (value: { sk: string; ref: string }[]) => void;
     const promise = new Promise<{ sk: string; ref: string }[]>((resolve) => {
@@ -142,5 +143,61 @@ describe("MonthPicker", () => {
     });
 
     resolvePromise([{ sk: "2026-06-01", ref: "Proverbs 1:1" }]);
+  });
+
+  it("should treat the local date as today when UTC is still a day behind", async () => {
+    mockDate("2026-06-15T00:30:00");
+    jest
+      .spyOn(Date.prototype, "toISOString")
+      .mockReturnValue("2026-06-14T23:30:00.000Z");
+
+    mockGetDailyProverbsForMonth.mockResolvedValue([
+      { sk: "2026-06-14", ref: "Proverbs 14:1" },
+      { sk: "2026-06-15", ref: "Proverbs 15:1" },
+    ]);
+
+    const { getByTestId } = render(
+      <MonthPicker
+        visible
+        onClose={jest.fn()}
+        onSelectDay={jest.fn()}
+        initialMonth="2026-06"
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getByTestId("day-2026-06-15")).toBeTruthy();
+    });
+
+    expect(getByTestId("day-2026-06-15")).not.toBeDisabled();
+    expect(getByTestId("day-2026-06-14")).not.toBeDisabled();
+  });
+
+  it("should not enable tomorrow when UTC has already rolled over", async () => {
+    mockDate("2026-06-15T23:30:00");
+    jest
+      .spyOn(Date.prototype, "toISOString")
+      .mockReturnValue("2026-06-16T02:30:00.000Z");
+
+    mockGetDailyProverbsForMonth.mockResolvedValue([
+      { sk: "2026-06-15", ref: "Proverbs 15:1" },
+      { sk: "2026-06-16", ref: "Proverbs 16:1" },
+    ]);
+
+    const { getByTestId } = render(
+      <MonthPicker
+        visible
+        onClose={jest.fn()}
+        onSelectDay={jest.fn()}
+        initialMonth="2026-06"
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getByTestId("day-2026-06-16")).toBeTruthy();
+    });
+
+    expect(getByTestId("day-2026-06-15")).not.toBeDisabled();
+    expect(getByTestId("day-2026-06-16")).toBeDisabled();
   });
 });

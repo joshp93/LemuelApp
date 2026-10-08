@@ -4,7 +4,6 @@ import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { LemuelLoadingScreen } from "./lemuel-loading-screen";
 
 interface WebNoteEditorProps {
-  notesLoading: boolean;
   editorContent: string;
   onChange: (html: string) => void;
   onDelete: () => void;
@@ -38,11 +37,14 @@ const TOOLBAR_ACTIONS: ToolbarAction[] = [
 /**
  * Rich-text note editor for web.
  * Uses a `contentEditable` div and `document.execCommand` for formatting.
- * Returns `null` during server-side rendering (no browser DOM available).
+ *
+ * Nothing is drawn until `contentLoaded`, so the user never sees an empty
+ * editing surface that is still waiting for the note or the proverb. That also
+ * keeps the DOM off the server render, where `contentLoaded` is always false.
+ *
  * @returns The editor toolbar and content area, or a loading state.
  */
 export default function WebNoteEditor({
-  notesLoading,
   editorContent,
   onChange,
   onDelete,
@@ -50,11 +52,6 @@ export default function WebNoteEditor({
   contentLoaded,
 }: WebNoteEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
-  const isBrowser = useRef(false);
-
-  useEffect(() => {
-    isBrowser.current = true;
-  }, []);
 
   useEffect(() => {
     if (!contentLoaded || !editorRef.current) return;
@@ -89,38 +86,34 @@ export default function WebNoteEditor({
     }
   }, [onChange]);
 
-  const isBrowserReady = isBrowser.current;
+  if (!contentLoaded) {
+    return <LemuelLoadingScreen />;
+  }
 
   return (
     <>
-      {!notesLoading && (
-        <Toolbar
-          actions={TOOLBAR_ACTIONS}
-          onAction={exec}
-          onDelete={onDelete}
-          deleting={deleting}
-        />
-      )}
-      {notesLoading ? (
-        <LemuelLoadingScreen />
-      ) : isBrowserReady ? (
-        <div
-          ref={editorRef}
-          contentEditable
-          suppressContentEditableWarning
-          onInput={handleInput}
-          style={{
-            minHeight: 150,
-            padding: 12,
-            fontSize: 16,
-            fontFamily: "Nunito, sans-serif",
-            color: "#333",
-            outline: "none",
-            lineHeight: 1.5,
-          }}
-          data-placeholder="Capture your thoughts..."
-        />
-      ) : null}
+      <Toolbar
+        actions={TOOLBAR_ACTIONS}
+        onAction={exec}
+        onDelete={onDelete}
+        deleting={deleting}
+      />
+      <div
+        ref={editorRef}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={handleInput}
+        style={{
+          minHeight: 150,
+          padding: 12,
+          fontSize: 16,
+          fontFamily: "Nunito, sans-serif",
+          color: "#333",
+          outline: "none",
+          lineHeight: 1.5,
+        }}
+        data-placeholder="Capture your thoughts..."
+      />
     </>
   );
 }

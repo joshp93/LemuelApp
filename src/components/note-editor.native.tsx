@@ -9,7 +9,6 @@ import {
 import { LemuelLoadingScreen } from "./lemuel-loading-screen";
 
 interface NoteEditorProps {
-  notesLoading: boolean;
   editorContent: string;
   onChange: (html: string) => void;
   onDelete: () => void;
@@ -30,10 +29,13 @@ const TOOLBAR_ACTIONS = [
  * Rich-text note editor for Android and iOS.
  * Uses `react-native-pell-rich-editor` for formatting (bold, italic,
  * underline, lists) and a WebView-based editing surface.
+ *
+ * Nothing is drawn until `contentLoaded`, so the user never sees an empty
+ * editing surface that is still waiting for the note or the proverb.
+ *
  * @returns The editor toolbar and content area, or a loading state.
  */
 export default function NoteEditor({
-  notesLoading,
   editorContent,
   onChange,
   onDelete,
@@ -50,44 +52,42 @@ export default function NoteEditor({
     return () => clearTimeout(timer);
   }, [contentLoaded]);
 
+  if (!contentLoaded) {
+    return <LemuelLoadingScreen />;
+  }
+
   return (
     <>
-      {!notesLoading && (
-        <View style={styles.toolbarRow}>
-          <View style={styles.toolbarFlex}>
-            <RichToolbar
-              editor={richTextRef}
-              actions={TOOLBAR_ACTIONS}
-              iconSize={24}
-              iconTint="white"
-              selectedIconTint="#ccc"
-              style={styles.toolbarInner}
-            />
-          </View>
-          <DeleteButton onPress={onDelete} disabled={deleting} />
+      <View style={styles.toolbarRow}>
+        <View style={styles.toolbarFlex}>
+          <RichToolbar
+            editor={richTextRef}
+            actions={TOOLBAR_ACTIONS}
+            iconSize={24}
+            iconTint="white"
+            selectedIconTint="#ccc"
+            style={styles.toolbarInner}
+          />
         </View>
-      )}
-      {notesLoading ? (
-        <LemuelLoadingScreen />
-      ) : (
-        <RichEditor
-          ref={richTextRef}
-          onChange={onChange}
-          placeholder="Capture your thoughts..."
-          editorStyle={{
-            backgroundColor: "#fff",
-            color: "#333",
-            placeholderColor: "#999",
-            contentCSSText:
-              "font-size: 16px; font-family: Nunito; padding: 8px; overflow: hidden;",
-          }}
-          initialContentHTML={editorContent}
-          initialHeight={150}
-          autoCapitalize="sentences"
-          autoCorrect
-          style={{ minHeight: 150 }}
-        />
-      )}
+        <DeleteButton onPress={onDelete} disabled={deleting} />
+      </View>
+      <RichEditor
+        ref={richTextRef}
+        onChange={onChange}
+        placeholder="Capture your thoughts..."
+        editorStyle={{
+          backgroundColor: "#fff",
+          color: "#333",
+          placeholderColor: "#999",
+          contentCSSText:
+            "font-size: 16px; font-family: Nunito; padding: 8px; overflow: hidden;",
+        }}
+        initialContentHTML={editorContent}
+        initialHeight={150}
+        autoCapitalize="sentences"
+        autoCorrect
+        style={{ minHeight: 150 }}
+      />
     </>
   );
 }

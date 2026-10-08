@@ -11,6 +11,7 @@ import { useMemo } from "react";
 import type { SharedValue } from "react-native-reanimated";
 import { useDerivedValue } from "react-native-reanimated";
 import type { DeviceTier } from "../hooks/useDeviceTier";
+import type { MeditationSegment } from "../hooks/useMeditationSegments";
 import {
   getMeditationShader,
   type MeditationShaderId,
@@ -22,16 +23,10 @@ interface GlowLayer {
   a: number;
 }
 
-/** A progress segment with derived start/end values driven by an animation. */
-interface ArcSegment {
-  start: SharedValue<number>;
-  end: SharedValue<number>;
-}
-
 interface MeditationCanvasProps {
   shaderId: MeditationShaderId;
   outlinePath: string;
-  segments: ArcSegment[];
+  segments: MeditationSegment[];
   sampledGlowLayers: GlowLayer[];
   tier: DeviceTier;
   resolution: SharedValue<number[]>;

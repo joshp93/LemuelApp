@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { getDailyProverbsForMonth } from "../api/daily-proverbs";
+import { toLocalDateString } from "../utils/date";
 import { pad } from "../utils/format";
 import { convertProverbKeyToDisplayProverb } from "../utils/proverb-helper";
 import { Text } from "./themed-text";
@@ -34,7 +35,7 @@ export function MonthPicker({
   );
   const [loadingDays, setLoadingDays] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
-  const todayStr = useMemo(() => new Date().toISOString().split("T")[0], []);
+  const todayStr = useMemo(() => toLocalDateString(new Date()), []);
 
   useEffect(() => {
     if (!visible) return;

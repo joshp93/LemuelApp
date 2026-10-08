@@ -1,12 +1,16 @@
 import * as Auth from "../../src/api/auth";
 import {
+  deleteUserNote,
   getProverbNotes,
   getUserNote,
   getUserNotes,
+  postReply,
   saveUserNote,
 } from "../../src/api/notes";
+import { remoteLog } from "../../src/api/remote-logger";
 
 const mockGetValidIdToken = jest.spyOn(Auth, "getValidIdToken");
+const mockRemoteLog = remoteLog as jest.MockedFunction<typeof remoteLog>;
 
 global.fetch = jest.fn();
 
@@ -327,5 +331,150 @@ describe("getUserNotes", () => {
     mockGetValidIdToken.mockResolvedValue(null);
 
     await expect(getUserNotes("uuid-1")).rejects.toThrow("Not authenticated");
+  });
+});
+
+describe("postReply", () => {
+  const mockFetch = fetch as jest.MockedFunction<typeof fetch>;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should send the reply sort key when editing an existing reply", async () => {
+    const mockResponse = {
+      pk: "uuid-1",
+      sk: "2026-06-02#REPLY#abc",
+      content: "edited",
+      date: "2026-06-02",
+      authorUuid: "uuid-1",
+      displayName: "Test",
+    };
+
+    mockGetValidIdToken.mockResolvedValue("valid-token");
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(mockResponse),
+    } as Response);
+
+    const result = await postReply(
+      "uuid-1",
+      "Proverbs3:5",
+      "2026-06-02",
+      "edited",
+      true,
+      "reply#2026-06-02T10:00:00.000Z",
+    );
+
+    expect(result).toEqual(mockResponse);
+
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain("/notes/users/uuid-1/Proverbs3:5/replies");
+    expect(JSON.parse(init.body as string)).toEqual({
+      content: "edited",
+      date: "2026-06-02",
+      isUpdate: true,
+      sk: "reply#2026-06-02T10:00:00.000Z",
+    });
+  });
+
+  it("should omit the reply sort key when creating a reply", async () => {
+    mockGetValidIdToken.mockResolvedValue("valid-token");
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ sk: "new-reply" }),
+    } as Response);
+
+    await postReply("uuid-1", "Proverbs3:5", "2026-06-02", "hello");
+
+    const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(init.body as string);
+    expect(body).toEqual({ content: "hello", date: "2026-06-02" });
+    expect(body).not.toHaveProperty("sk");
+  });
+
+  it("should throw on API failure", async () => {
+    mockGetValidIdToken.mockResolvedValue("valid-token");
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      statusText: "Internal Server Error",
+      text: async () => "server error",
+    } as Response);
+
+    await expect(
+      postReply("uuid-1", "Proverbs3:5", "2026-06-02", "hello"),
+    ).rejects.toThrow(
+      "Failed to post reply: 500 Internal Server Error — server error",
+    );
+  });
+});
+
+describe("device log hygiene", () => {
+  const mockFetch = fetch as jest.MockedFunction<typeof fetch>;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should not log the request URL or the note body", async () => {
+    mockGetValidIdToken.mockResolvedValue("valid-token");
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ note: "<p>private thoughts</p>" }),
+    } as Response);
+
+    await saveUserNote(
+      "uuid-1",
+      "Proverbs3:5",
+      "<p>private thoughts</p>",
+      "2026-06-02",
+    );
+
+    expect(console.log).not.toHaveBeenCalled();
+    expect(console.error).not.toHaveBeenCalled();
+  });
+
+  it("should report a failed save through remoteLog without the response body", async () => {
+    mockGetValidIdToken.mockResolvedValue("valid-token");
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      statusText: "Internal Server Error",
+      text: async () => "server error",
+    } as Response);
+
+    await expect(
+      saveUserNote(
+        "uuid-1",
+        "Proverbs3:5",
+        "<p>private thoughts</p>",
+        "2026-06-02",
+      ),
+    ).rejects.toThrow();
+
+    expect(mockRemoteLog).toHaveBeenCalledWith(
+      "error",
+      "[Notes] Failed to save user note",
+      { status: 500 },
+    );
+    expect(console.log).not.toHaveBeenCalled();
+    expect(console.error).not.toHaveBeenCalled();
+  });
+
+  it("should not log when deleting a note", async () => {
+    mockGetValidIdToken.mockResolvedValue("valid-token");
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+    } as Response);
+
+    await deleteUserNote("uuid-1", "Proverbs3:5", "2026-06-02");
+
+    expect(console.log).not.toHaveBeenCalled();
+    expect(console.error).not.toHaveBeenCalled();
   });
 });

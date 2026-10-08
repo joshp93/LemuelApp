@@ -8,8 +8,13 @@ import {
   View,
 } from "react-native";
 import { pad } from "../utils/format";
+import { parseTimePart } from "../utils/time-part";
 
 type TimePickerMode = "random" | "scheduled";
+
+const DEFAULT_START_HOUR = 9;
+const DEFAULT_END_HOUR = 19;
+const DEFAULT_MINUTE = 0;
 
 interface TimePickerProps {
   mode: TimePickerMode;
@@ -36,17 +41,17 @@ export function TimePicker({
 }: TimePickerProps) {
   const [picking, setPicking] = useState<"start" | "end" | null>(null);
 
+  const startHour = parseTimePart(hour, DEFAULT_START_HOUR);
+  const startMinute = parseTimePart(minute, DEFAULT_MINUTE);
+  const finishHour = parseTimePart(endHour, DEFAULT_END_HOUR);
+  const finishMinute = parseTimePart(endMinute, DEFAULT_MINUTE);
+
   const getPickerDate = (): Date => {
     const d = new Date();
     if (picking === "start") {
-      d.setHours(parseInt(hour, 10) || 9, parseInt(minute, 10) || 0, 0, 0);
+      d.setHours(startHour, startMinute, 0, 0);
     } else if (picking === "end") {
-      d.setHours(
-        parseInt(endHour ?? "19", 10) || 19,
-        parseInt(endMinute ?? "0", 10) || 0,
-        0,
-        0,
-      );
+      d.setHours(finishHour, finishMinute, 0, 0);
     }
     return d;
   };
@@ -84,7 +89,7 @@ export function TimePicker({
           onPress={() => setPicking("start")}
         >
           <Text style={styles.timeDisplayText}>
-            {pad(parseInt(hour, 10))}:{pad(parseInt(minute, 10))}
+            {pad(startHour)}:{pad(startMinute)}
           </Text>
         </TouchableOpacity>
         {mode === "random" && (
@@ -96,8 +101,7 @@ export function TimePicker({
               onPress={() => setPicking("end")}
             >
               <Text style={styles.timeDisplayText}>
-                {pad(parseInt(endHour ?? "19", 10))}:
-                {pad(parseInt(endMinute ?? "0", 10))}
+                {pad(finishHour)}:{pad(finishMinute)}
               </Text>
             </TouchableOpacity>
           </>
@@ -105,9 +109,7 @@ export function TimePicker({
       </View>
 
       {mode === "random" &&
-        parseInt(hour, 10) * 60 + parseInt(minute, 10) >=
-          parseInt(endHour ?? "19", 10) * 60 +
-            parseInt(endMinute ?? "0", 10) && (
+        startHour * 60 + startMinute >= finishHour * 60 + finishMinute && (
           <Text style={styles.validationText}>
             Start time must be before end time
           </Text>

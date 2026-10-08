@@ -137,18 +137,40 @@ describe("WebSettingsScreen", () => {
     });
   });
 
-  it("persists the new duration when Update is pressed", async () => {
-    const { getByText, getByTestId } = render(<WebSettingsScreen />);
+  it("persists the new duration as soon as the picker changes", async () => {
+    const { getByTestId } = render(<WebSettingsScreen />);
     await act(async () => {
       jest.advanceTimersByTime(300);
     });
 
     fireEvent.press(getByTestId("picker-change"));
-    fireEvent.press(getByText("Update"));
 
     await waitFor(() => {
       expect(mockSetMeditationDuration).toHaveBeenCalledWith(120000);
     });
+  });
+
+  it("has no Update button", async () => {
+    const { queryByText } = render(<WebSettingsScreen />);
+    await act(async () => {
+      jest.advanceTimersByTime(300);
+    });
+
+    expect(queryByText("Update")).toBeNull();
+  });
+
+  it("does not write the values it has just loaded", async () => {
+    render(<WebSettingsScreen />);
+    await act(async () => {
+      jest.advanceTimersByTime(300);
+    });
+
+    await waitFor(() => {
+      expect(mockGetMeditationDuration).toHaveBeenCalled();
+    });
+
+    expect(mockSetMeditationDuration).not.toHaveBeenCalled();
+    expect(mockSetEnabledMeditationShaders).not.toHaveBeenCalled();
   });
 
   describe("meditation animations", () => {
@@ -235,14 +257,13 @@ describe("WebSettingsScreen", () => {
       });
     });
 
-    it("persists the selection when Update is pressed", async () => {
-      const { getByTestId, getByText } = render(<WebSettingsScreen />);
+    it("persists the selection as soon as the switch changes", async () => {
+      const { getByTestId } = render(<WebSettingsScreen />);
       await act(async () => {
         jest.advanceTimersByTime(300);
       });
 
       fireEvent(getByTestId("shader-switch-gas-giant"), "valueChange", true);
-      fireEvent.press(getByText("Update"));
 
       await waitFor(() => {
         expect(mockSetEnabledMeditationShaders).toHaveBeenCalledWith([

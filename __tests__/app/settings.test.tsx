@@ -9,11 +9,15 @@ import {
   getRandomWindowStartMinute,
   getScheduledTimeHour,
   getScheduledTimeMinute,
+  setNotificationsEnabled,
+  setRandomWindowHourStart,
+  setScheduledTimeHour,
 } from "../../src/notifications/notification-preferences";
 import {
   getEnabledMeditationShaders,
   getMeditationDuration,
   setEnabledMeditationShaders,
+  setMeditationDuration,
 } from "../../src/settings/meditation-preferences";
 
 jest.mock("expo-router", () => ({
@@ -315,23 +319,6 @@ describe("SettingsScreen", () => {
       });
     });
 
-    it("marks the form dirty when a shader is toggled", async () => {
-      const { getByTestId, queryByText } = render(<SettingsScreen />);
-      await act(async () => {
-        jest.advanceTimersByTime(300);
-      });
-
-      await waitFor(() => {
-        expect(queryByText("Update")).toBeNull();
-      });
-
-      fireEvent(getByTestId("shader-switch-gas-giant"), "valueChange", true);
-
-      await waitFor(() => {
-        expect(queryByText("Update")).toBeTruthy();
-      });
-    });
-
     it("prevents turning off the last enabled shader", async () => {
       const { getByTestId } = render(<SettingsScreen />);
       await act(async () => {
@@ -348,19 +335,145 @@ describe("SettingsScreen", () => {
       });
     });
 
-    it("persists the selection when Update is pressed", async () => {
-      const { getByTestId, getByText } = render(<SettingsScreen />);
+    it("refuses to remove the last animation even when the row is toggled directly", async () => {
+      const { getByTestId } = render(<SettingsScreen />);
       await act(async () => {
         jest.advanceTimersByTime(300);
       });
 
+      fireEvent(getByTestId("shader-switch-star-field"), "valueChange", false);
+
+      await waitFor(() => {
+        expect(getByTestId("shader-switch-star-field").props.value).toBe(true);
+      });
+      expect(setEnabledMeditationShaders).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("auto-save", () => {
+    it("has no Update button", async () => {
+      const { queryByText } = render(<SettingsScreen />);
+      await act(async () => {
+        jest.advanceTimersByTime(300);
+      });
+
+      expect(queryByText("Update")).toBeNull();
+    });
+
+    it("does not write the values it has just loaded", async () => {
+      render(<SettingsScreen />);
+      await act(async () => {
+        jest.advanceTimersByTime(300);
+      });
+
+      await waitFor(() => {
+        expect(mockGetMeditationDuration).toHaveBeenCalled();
+      });
+
+      expect(setNotificationsEnabled).not.toHaveBeenCalled();
+      expect(setMeditationDuration).not.toHaveBeenCalled();
+      expect(setEnabledMeditationShaders).not.toHaveBeenCalled();
+    });
+
+    it("persists a shader change without pressing anything", async () => {
+      const { getByTestId } = render(<SettingsScreen />);
+      await act(async () => {
+        jest.advanceTimersByTime(300);
+      });
+
+      await waitFor(() => {
+        expect(getByTestId("shader-switch-gas-giant").props.value).toBe(false);
+      });
+
       fireEvent(getByTestId("shader-switch-gas-giant"), "valueChange", true);
-      fireEvent.press(getByText("Update"));
 
       await waitFor(() => {
         expect(setEnabledMeditationShaders).toHaveBeenCalledWith([
           "star-field",
           "gas-giant",
+        ]);
+      });
+    });
+
+    it("persists the meditation duration without pressing anything", async () => {
+      const { getByTestId } = render(<SettingsScreen />);
+      await act(async () => {
+        jest.advanceTimersByTime(300);
+      });
+
+      fireEvent(getByTestId("duration-picker"), "valueChange", 300000);
+
+      await waitFor(() => {
+        expect(setMeditationDuration).toHaveBeenCalledWith(300000);
+      });
+    });
+
+    it("stores a midnight start hour as 0 rather than the 09:00 fallback", async () => {
+      mockGetRandomWindowHourStart.mockResolvedValue(0);
+      mockGetScheduledTimeHour.mockResolvedValue(0);
+
+      const { getByTestId } = render(<SettingsScreen />);
+      await act(async () => {
+        jest.advanceTimersByTime(300);
+      });
+
+      await waitFor(() => {
+        expect(getByTestId("shader-switch-gas-giant").props.value).toBe(false);
+      });
+
+      fireEvent(getByTestId("shader-switch-gas-giant"), "valueChange", true);
+
+      await waitFor(() => {
+        expect(setRandomWindowHourStart).toHaveBeenCalledWith(0);
+        expect(setScheduledTimeHour).toHaveBeenCalledWith(0);
+      });
+    });
+
+    it("holds a later write until the in-flight one lands, then stores the newest values", async () => {
+      const mockSetNotificationsEnabled =
+        setNotificationsEnabled as jest.MockedFunction<
+          typeof setNotificationsEnabled
+        >;
+      let releaseFirst!: () => void;
+      mockSetNotificationsEnabled.mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            releaseFirst = resolve;
+          }),
+      );
+
+      const { getByTestId } = render(<SettingsScreen />);
+      await act(async () => {
+        jest.advanceTimersByTime(300);
+      });
+
+      await waitFor(() => {
+        expect(getByTestId("shader-switch-gas-giant").props.value).toBe(false);
+      });
+
+      fireEvent(getByTestId("shader-switch-gas-giant"), "valueChange", true);
+      await waitFor(() => {
+        expect(mockSetNotificationsEnabled).toHaveBeenCalledTimes(1);
+      });
+
+      fireEvent(
+        getByTestId("shader-switch-sine-mountains"),
+        "valueChange",
+        true,
+      );
+      await act(async () => {});
+      expect(setEnabledMeditationShaders).not.toHaveBeenCalled();
+
+      await act(async () => {
+        releaseFirst();
+      });
+
+      await waitFor(() => {
+        const calls = (setEnabledMeditationShaders as jest.Mock).mock.calls;
+        expect(calls.at(-1)?.[0]).toEqual([
+          "star-field",
+          "gas-giant",
+          "sine-mountains",
         ]);
       });
     });

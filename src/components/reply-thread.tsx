@@ -127,6 +127,7 @@ const ReplyThread = memo(function ReplyThread({
         noteDate,
         newContent,
         true,
+        replySk,
       );
       setReplies((prev) =>
         prev.map((r) =>

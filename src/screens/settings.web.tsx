@@ -1,12 +1,11 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
 import { Stack } from "expo-router";
-import { useEffect, useReducer } from "react";
+import { useCallback, useEffect, useReducer } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LemuelButton } from "../components/lemuel-button";
 import { LemuelSwitch } from "../components/lemuel-switch";
 import { CONTENT_COLUMN, CONTENT_INSET } from "../constants/layout";
+import { useAutoSave } from "../hooks/useAutoSave";
 import {
   getEnabledMeditationShaders,
   getMeditationDuration,
@@ -15,8 +14,11 @@ import {
   setMeditationDuration,
 } from "../settings/meditation-preferences";
 import {
+  isShaderToggleDisabled,
+  toggleShaderSelection,
+} from "../settings/shader-selection";
+import {
   BLANK_SHADER_ID,
-  DEFAULT_ENABLED_SHADER_IDS,
   MEDITATION_SHADERS,
   type MeditationShaderId,
 } from "../utils/meditation-shaders";
@@ -25,14 +27,12 @@ type State = {
   loading: boolean;
   duration: number;
   shaders: MeditationShaderId[];
-  isDirty: boolean;
 };
 
 type Action =
   | { type: "LOADED"; duration: number; shaders: MeditationShaderId[] }
   | { type: "SET_DURATION"; duration: number }
-  | { type: "TOGGLE_SHADER"; id: MeditationShaderId }
-  | { type: "SYNC" };
+  | { type: "TOGGLE_SHADER"; id: MeditationShaderId };
 
 /**
  * Reducer for the web settings form.
@@ -48,36 +48,13 @@ const reducer = (state: State, action: Action): State => {
         loading: false,
         duration: action.duration,
         shaders: action.shaders,
-        isDirty: false,
       };
     case "SET_DURATION":
-      return {
-        ...state,
-        duration: action.duration,
-        isDirty: true,
-      };
+      return { ...state, duration: action.duration };
     case "TOGGLE_SHADER": {
-      const selected = state.shaders.includes(action.id);
-      let shaders: MeditationShaderId[];
-
-      if (action.id === BLANK_SHADER_ID) {
-        shaders = selected
-          ? state.shaders.filter((id) => id !== BLANK_SHADER_ID)
-          : [...state.shaders, BLANK_SHADER_ID];
-        if (shaders.length === 0) shaders = [...DEFAULT_ENABLED_SHADER_IDS];
-      } else {
-        shaders = selected
-          ? state.shaders.filter((id) => id !== action.id)
-          : [...state.shaders, action.id];
-        if (shaders.filter((id) => id !== BLANK_SHADER_ID).length === 0) {
-          return state;
-        }
-      }
-
-      return { ...state, shaders, isDirty: true };
+      const shaders = toggleShaderSelection(state.shaders, action.id);
+      return shaders === state.shaders ? state : { ...state, shaders };
     }
-    case "SYNC":
-      return { ...state, isDirty: false };
   }
 };
 
@@ -85,7 +62,6 @@ const initialState: State = {
   loading: true,
   duration: 60000,
   shaders: [],
-  isDirty: false,
 };
 
 /**
@@ -94,19 +70,28 @@ const initialState: State = {
  * Shows the meditation timer duration and the enabled meditation animations,
  * plus an informational banner noting that notification and battery-optimisation
  * settings are only available in the native app. Preferences are stored via
- * AsyncStorage, which is backed by localStorage on web.
+ * AsyncStorage, which is backed by localStorage on web, and written as soon as
+ * a control changes.
  */
 export default function WebSettingsScreen() {
-  const insets = useSafeAreaInsets();
   const [state, dispatch] = useReducer(reducer, initialState);
 
   useEffect(() => {
     (async () => {
-      const dur = await getMeditationDuration();
-      const shaders = await getEnabledMeditationShaders();
-      dispatch({ type: "LOADED", duration: dur, shaders });
+      const [duration, shaders] = await Promise.all([
+        getMeditationDuration(),
+        getEnabledMeditationShaders(),
+      ]);
+      dispatch({ type: "LOADED", duration, shaders });
     })();
   }, []);
+
+  const persist = useCallback(async () => {
+    await setMeditationDuration(state.duration);
+    await setEnabledMeditationShaders(state.shaders);
+  }, [state.duration, state.shaders]);
+
+  useAutoSave(persist, !state.loading);
 
   const handleDurationChange = (value: number) => {
     dispatch({ type: "SET_DURATION", duration: value });
@@ -115,14 +100,6 @@ export default function WebSettingsScreen() {
   const handleShaderToggle = (id: MeditationShaderId) => {
     dispatch({ type: "TOGGLE_SHADER", id });
   };
-
-  const handleSave = async () => {
-    await setMeditationDuration(state.duration);
-    await setEnabledMeditationShaders(state.shaders);
-    dispatch({ type: "SYNC" });
-  };
-
-  const blankSelected = state.shaders.includes(BLANK_SHADER_ID);
 
   return (
     <View style={{ flex: 1 }}>
@@ -169,39 +146,27 @@ export default function WebSettingsScreen() {
           <Text style={styles.shaderHint}>
             A random animation is chosen each time you meditate.
           </Text>
-          {MEDITATION_SHADERS.map((shader) => {
-            const isBlank = shader.id === BLANK_SHADER_ID;
-            const isLastAnimation =
-              state.shaders.filter((id) => id !== BLANK_SHADER_ID).length ===
-                1 && state.shaders.includes(shader.id);
-
-            return (
-              <View
-                key={shader.id}
-                style={[styles.shaderRow, isBlank && styles.shaderRowSpaced]}
-              >
-                <View style={styles.labelContainer}>
-                  <Text style={styles.label}>{shader.label}</Text>
-                </View>
-                <LemuelSwitch
-                  testID={`shader-switch-${shader.id}`}
-                  value={state.shaders.includes(shader.id)}
-                  onValueChange={() => handleShaderToggle(shader.id)}
-                  disabled={!isBlank && (blankSelected || isLastAnimation)}
-                />
+          {MEDITATION_SHADERS.map((shader) => (
+            <View
+              key={shader.id}
+              style={[
+                styles.shaderRow,
+                shader.id === BLANK_SHADER_ID && styles.shaderRowSpaced,
+              ]}
+            >
+              <View style={styles.labelContainer}>
+                <Text style={styles.label}>{shader.label}</Text>
               </View>
-            );
-          })}
+              <LemuelSwitch
+                testID={`shader-switch-${shader.id}`}
+                value={state.shaders.includes(shader.id)}
+                onValueChange={() => handleShaderToggle(shader.id)}
+                disabled={isShaderToggleDisabled(state.shaders, shader.id)}
+              />
+            </View>
+          ))}
         </View>
       </ScrollView>
-
-      {!state.loading && state.isDirty && (
-        <View style={[styles.updateBar, { bottom: insets.bottom + 36 }]}>
-          <View style={[styles.updateBarInner, CONTENT_COLUMN]}>
-            <LemuelButton onPress={handleSave}>Update</LemuelButton>
-          </View>
-        </View>
-      )}
     </View>
   );
 }
@@ -258,14 +223,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "500",
     color: "#333",
-  },
-  updateBar: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-  },
-  updateBarInner: {
-    paddingHorizontal: CONTENT_INSET,
   },
   infoBanner: {
     flexDirection: "row",

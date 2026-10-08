@@ -131,7 +131,7 @@ function UserNotePage({ user: _user }: WithAuthProps) {
     }
   }, [uuid, ref, date, router]);
 
-  const allLoaded = !notesLoading && !proverbLoading && proverb;
+  const contentLoaded = !notesLoading && !proverbLoading;
 
   return (
     <View style={styles.container}>
@@ -169,12 +169,11 @@ function UserNotePage({ user: _user }: WithAuthProps) {
         <View style={styles.editorBox}>
           <Suspense fallback={<LemuelLoadingScreen />}>
             <NoteEditor
-              notesLoading={notesLoading}
               editorContent={editorContent}
               onChange={handleEditorChange}
               onDelete={handleDelete}
               deleting={deleting}
-              contentLoaded={allLoaded}
+              contentLoaded={contentLoaded}
             />
           </Suspense>
           <View
@@ -214,7 +213,7 @@ function UserNotePage({ user: _user }: WithAuthProps) {
             <LemuelButton
               style={styles.saveButton}
               onPress={handleSave}
-              disabled={saving || notesLoading}
+              disabled={saving || !contentLoaded}
             >
               {saving ? "Saving..." : "Save"}
             </LemuelButton>
