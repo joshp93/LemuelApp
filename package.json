@@ -2,6 +2,10 @@
   "name": "lemuel",
   "main": "expo-router/entry",
   "version": "1.0.0",
+  "packageManager": "pnpm@12.3.4",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "start": "expo start",
     "preandroid": "expo prebuild --platform android --clean",
@@ -21,9 +25,10 @@
     "test:watch": "jest --watch",
     "emulator": "C:\\android_sdk\\emulator\\emulator.exe -avd %npm_package_config_emulatorDevice% -use-keycode-forwarding",
     "emulator:cold": "C:\\android_sdk\\emulator\\emulator.exe -avd %npm_package_config_emulatorDevice% -use-keycode-forwarding -no-snapshot-load -wipe-data",
-    "dep:android": "eas build -p android --profile production",
-    "android:submit": "eas submit -p android --latest",
-    "dep:web": "expo export -p web && eas deploy --prod",
+    "release:android": "eas build -p android --profile production",
+    "release:submit": "eas submit -p android --latest --profile production",
+    "release:web": "expo export -p web && eas deploy --prod",
+    "release": "pnpm release:android && pnpm release:submit",
     "login": "eas login"
   },
   "config": {

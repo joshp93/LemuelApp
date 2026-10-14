@@ -256,7 +256,8 @@ src/
 plugins/          # Expo config plugins
   withBlackAccentColor.js       # Android accent colour
   with-unique-notification-ids.js  # Gives each notification a distinct Android ID
-config/           # cognito.ts (user pool + client id), cognito.example.ts template
+config/           # cognito.ts (user pool + client id), cognito.example.ts template,
+                  # version.js (the release version and its Android versionCode)
 __tests__/        # Jest tests mirroring the source tree
 ```
 
@@ -323,6 +324,22 @@ Do not remove or guard this call, and do not report it as an
 - Detect the OS shell before running commands (the dev machine is Windows, so
   PowerShell — no `grep`)
 - New functions and components get concise TSDoc; new behaviour gets unit tests
+
+### Releasing and versioning
+
+- **`package.json` is the single source of truth for the version.** Do not set a
+  version anywhere else, and do not hand-edit an Android `versionCode`.
+- `config/version.js` reads the version and derives the Android `versionCode` as
+  `major * 10000 + minor * 100 + patch`. It is JavaScript rather than TypeScript
+  because Expo's config loader `require`s `app.config.ts` with plain Node
+  resolution, which does not understand `.ts`.
+- `eas.json` sets `appVersionSource: "local"` and no `autoIncrement`, so EAS
+  never writes a version. A release is cut by bumping `package.json` and merging
+  to `main`; the workflow tags `v<version>` only once the build, deploy and
+  submit have all succeeded.
+- **Never put the Google Play service account key in the repository or in a
+  GitHub secret.** It lives on EAS servers only, which is why `eas.json` omits
+  `serviceAccountKeyPath`.
 
 ### UI copy
 

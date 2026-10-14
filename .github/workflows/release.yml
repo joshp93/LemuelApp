@@ -1,0 +1,239 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v5
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Install Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run the gate
+        run: pnpm test
+
+  resolve:
+    name: Resolve version
+    needs: [test]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      tag: ${{ steps.resolve.outputs.tag }}
+      should_release: ${{ steps.resolve.outputs.should_release }}
+    steps:
+      - name: Check out the repository with tags
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Read the version and look for an existing tag
+        id: resolve
+        run: |
+          VERSION="$(jq -r .version package.json)"
+          TAG="v${VERSION}"
+
+          {
+            echo "version=${VERSION}"
+            echo "tag=${TAG}"
+          } >> "$GITHUB_OUTPUT"
+
+          if git rev-parse --verify --quiet "refs/tags/${TAG}" > /dev/null; then
+            echo "Tag ${TAG} already exists, so there is nothing to release."
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Tag ${TAG} does not exist yet, so this run will release it."
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Summarise the release decision
+        run: |
+          {
+            echo "### Release decision"
+            echo ""
+            echo "| | |"
+            echo "| --- | --- |"
+            echo "| Version | \`${{ steps.resolve.outputs.version }}\` |"
+            echo "| Tag | \`${{ steps.resolve.outputs.tag }}\` |"
+            echo "| Releasing | \`${{ steps.resolve.outputs.should_release }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  build-android:
+    name: Build Android
+    needs: [resolve]
+    if: needs.resolve.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    outputs:
+      build_id: ${{ steps.build.outputs.build_id }}
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v5
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Install Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Set up Expo and EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build the production app bundle
+        id: build
+        run: |
+          eas build \
+            --platform android \
+            --profile production \
+            --non-interactive \
+            --wait \
+            --freeze-credentials \
+            --json > build.json
+
+          BUILD_ID="$(jq -r 'if type == "array" then .[0].id else .id end' build.json)"
+          if [ -z "${BUILD_ID}" ] || [ "${BUILD_ID}" = "null" ]; then
+            echo "Could not read a build id from the EAS output:" >&2
+            cat build.json >&2
+            exit 1
+          fi
+
+          echo "build_id=${BUILD_ID}" >> "$GITHUB_OUTPUT"
+          echo "EAS build ${BUILD_ID} finished." >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-web:
+    name: Deploy web
+    needs: [resolve]
+    if: needs.resolve.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v5
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Install Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Set up Expo and EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Export the web build
+        run: pnpm exec expo export --platform web
+
+      - name: Deploy to EAS Hosting
+        run: pnpm exec eas deploy --prod --non-interactive
+
+  submit-android:
+    name: Submit Android
+    needs: [build-android]
+    runs-on: ubuntu-latest
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v5
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Install Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Set up Expo and EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Submit the build to Google Play
+        run: |
+          eas submit \
+            --platform android \
+            --profile production \
+            --id "${{ needs.build-android.outputs.build_id }}" \
+            --non-interactive
+
+  tag-release:
+    name: Tag the release
+    needs: [resolve, build-android, deploy-web, submit-android]
+    if: needs.resolve.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out the repository with tags
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Create and push the tag
+        env:
+          TAG: ${{ needs.resolve.outputs.tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag --annotate "${TAG}" --message "Release ${TAG}"
+          git push origin "refs/tags/${TAG}"
+
+      - name: Open the GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.resolve.outputs.tag }}
+        run: |
+          gh release create "${TAG}" \
+            --title "${TAG}" \
+            --verify-tag \
+            --generate-notes

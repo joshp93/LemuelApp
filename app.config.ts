@@ -1,9 +1,10 @@
 import type { ExpoConfig } from "@expo/config-types";
+import { APP_VERSION, toVersionCode } from "./config/version";
 
 const config: ExpoConfig = {
   name: "Lemuel",
   slug: "lemuel",
-  version: "1.0.0",
+  version: APP_VERSION,
   orientation: "portrait",
   icon: "./assets/images/icon.png",
   scheme: "lemuel",
@@ -14,6 +15,7 @@ const config: ExpoConfig = {
   },
   android: {
     package: "com.lemuel.app",
+    versionCode: toVersionCode(APP_VERSION),
     googleServicesFile: "./google-services.json",
     adaptiveIcon: {
       foregroundImage: "./assets/images/icon.png",

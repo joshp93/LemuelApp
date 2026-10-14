@@ -246,8 +246,66 @@ The app talks to a deployed backend; the base URL lives in
 | `pnpm lint:fix` | Biome check with safe fixes (`--unsafe` for import/format fixes) |
 | `pnpm format` | Biome format |
 | `pnpm lint:eslint` | ESLint |
-| `pnpm deploy` | EAS production Android build |
-| `pnpm android:submit` | Submit the latest Android build |
+| `pnpm release:android` | Build the production Android release (EAS) |
+| `pnpm release:submit` | Submit the latest Android build to Google Play |
+| `pnpm release:web` | Export and deploy the web build to EAS Hosting |
+| `pnpm release` | Build and submit the Android release in one step |
+
+## Releasing
+
+Releases are automated by
+[`.github/workflows/release.yml`](./.github/workflows/release.yml). Pushing to
+`main` runs the full gate, then builds, deploys, submits and tags.
+
+**To cut a release, bump `version` in `package.json` and merge to `main`.** That
+is the only change required. The workflow then:
+
+1. Runs `pnpm test` — on every push and pull request, release or not.
+2. Reads the version from `package.json` and checks whether the tag
+   `v<version>` already exists. If it does, the run stops there, so re-pushing
+   `main` without a version bump does not release again.
+3. Builds the Android app bundle on EAS and submits it to Google Play.
+4. Exports and deploys the web build to EAS Hosting.
+5. Tags the commit `v<version>` and opens a GitHub release.
+
+The tag is created last, so a failed run leaves no tag behind and can simply be
+re-run. The commands in the table above remain available for releasing by hand
+from a machine with your own EAS credentials.
+
+### Versioning
+
+`package.json` is the single source of truth. `config/version.js` reads it, and
+`app.config.ts` derives both `expo.version` and the Android `versionCode` from
+it. `eas.json` therefore sets `appVersionSource: "local"`, with nothing
+auto-incrementing.
+
+The `versionCode` is `major * 10000 + minor * 100 + patch`: `1.0.0` becomes
+`10000` and `1.2.3` becomes `10203`. It grows monotonically with the version,
+which is what the Play Store requires of successive uploads, and each part must
+stay below 100. Prerelease suffixes such as `1.0.0-rc.1` are rejected outright,
+because they would reuse the code of the final release.
+
+> `config/version.js` is JavaScript rather than TypeScript on purpose. Expo's
+> config loader transpiles `app.config.ts` and then `require`s it with Node's
+> default resolution, which only understands `.js`, `.json` and `.node` — a
+> `.ts` helper cannot be imported from a config file.
+
+### One-time setup for CI
+
+- **`EXPO_TOKEN`** — a repository secret holding an Expo access token. Create it
+  as a [robot user](https://docs.expo.dev/accounts/programmatic-access/) scoped
+  to this project rather than using a personal token, then add it under
+  *Settings → Secrets and variables → Actions*.
+- **The Google Play service account key** — uploaded to EAS, **not** to GitHub:
+  *Credentials → Android → `com.lemuel.app`* in the EAS dashboard. Because the
+  key lives on EAS servers, `eas.json` deliberately omits
+  `serviceAccountKeyPath`, so no Play credential exists in this repository, in
+  CI logs, or on a runner. The service account also needs the *Release to
+  production* permission granted in Play Console.
+
+Release notes live in [`CHANGELOG.md`](./CHANGELOG.md), and the copy to paste
+into the Play Console "What's new" field is in
+[`release-data/release-notes.txt`](./release-data/release-notes.txt).
 
 ## Project structure
 
