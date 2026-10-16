@@ -1,6 +1,10 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import Account from "../../app/account";
-import { deleteAccount, getAccountDetails } from "../../src/api/account";
+import {
+  deleteAccount,
+  getAccountDetails,
+  updateAccount,
+} from "../../src/api/account";
 import { confirm } from "../../src/utils/confirm";
 import { notify } from "../../src/utils/dialog";
 
@@ -66,6 +70,9 @@ const mockGetAccountDetails = getAccountDetails as jest.MockedFunction<
 const mockDeleteAccount = deleteAccount as jest.MockedFunction<
   typeof deleteAccount
 >;
+const mockUpdateAccount = updateAccount as jest.MockedFunction<
+  typeof updateAccount
+>;
 const mockConfirm = confirm as jest.MockedFunction<typeof confirm>;
 const mockNotify = notify as jest.MockedFunction<typeof notify>;
 
@@ -126,6 +133,46 @@ describe("Account", () => {
       expect(getByText("test@example.com")).toBeTruthy();
       expect(getByText("5")).toBeTruthy();
       expect(getByText("2")).toBeTruthy();
+    });
+  });
+
+  it("refreshes the signed-in user after the display name is saved", async () => {
+    mockAuthUser.value = {
+      ...mockAuthUser.value,
+      user: {
+        userId: "uuid-123",
+        email: "test@example.com",
+        username: "test@example.com",
+        token: "token",
+        displayName: "Joshua",
+      },
+    };
+    mockGetAccountDetails.mockResolvedValue({
+      pk: "uuid-123",
+      sk: "account",
+      accountCreatedDate: "2025-01-15T10:00:00.000Z",
+      totalMeditations: 5,
+      totalNotes: 2,
+      displayName: "Joshua",
+    });
+    mockUpdateAccount.mockResolvedValue(true);
+
+    const { getByTestId, getByText } = render(<Account />);
+
+    await waitFor(() => {
+      expect(getByTestId("edit-display-name")).toBeTruthy();
+    });
+    fireEvent.press(getByTestId("edit-display-name"));
+    fireEvent.changeText(getByTestId("display-name-input"), "Joshua Pearson");
+    fireEvent.press(getByText("Save"));
+
+    await waitFor(() => {
+      expect(mockUpdateAccount).toHaveBeenCalledWith("uuid-123", {
+        displayName: "Joshua Pearson",
+      });
+    });
+    await waitFor(() => {
+      expect(mockAuthUser.value.refreshUser).toHaveBeenCalled();
     });
   });
 

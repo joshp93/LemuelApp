@@ -6,6 +6,7 @@ import {
   useEffect,
   useState,
 } from "react";
+import { getDisplayName } from "../api/account";
 import * as auth from "../api/auth";
 import { remoteLog } from "../api/remote-logger";
 
@@ -14,6 +15,12 @@ export interface AuthUser {
   username: string;
   email: string;
   token: string;
+  /**
+   * The name shown beside the user's own notes and replies, or an empty string
+   * when it could not be read. Read from the account record, because the tokens
+   * Cognito issues do not carry it.
+   */
+  displayName: string;
 }
 
 interface AuthContextType {
@@ -30,6 +37,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
+  /**
+   * Re-reads who is signed in: the stored tokens, and the display name that
+   * lives on the account record rather than in them.
+   */
   const refreshUser = useCallback(async () => {
     try {
       remoteLog("info", "[Auth] Checking for authenticated user");
@@ -42,7 +53,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const token = await auth.getValidIdToken();
         if (token) {
           remoteLog("info", "[Auth] User signed in successfully");
-          setUser({ ...authenticatedUser, token });
+          setUser({
+            ...authenticatedUser,
+            token,
+            displayName: await getDisplayName(authenticatedUser.userId),
+          });
         } else {
           remoteLog("info", "[Auth] No valid ID token found, user is null");
           setUser(null);

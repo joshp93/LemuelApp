@@ -3,6 +3,7 @@ import { jwtDecode } from "jwt-decode";
 import {
   createAccountRecord,
   getAccountDetails,
+  getDisplayName,
   linkDeviceToken,
 } from "../../src/api/account";
 import * as Auth from "../../src/api/auth";
@@ -78,6 +79,52 @@ describe("getAccountDetails", () => {
     await expect(getAccountDetails("uuid-123")).rejects.toThrow(
       "Not authenticated",
     );
+  });
+});
+
+describe("getDisplayName", () => {
+  const mockFetch = fetch as jest.MockedFunction<typeof fetch>;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should return the display name from the account", async () => {
+    mockGetValidIdToken.mockResolvedValue("valid-token");
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ displayName: "Joshua" }),
+    } as Response);
+
+    await expect(getDisplayName("uuid-123")).resolves.toBe("Joshua");
+  });
+
+  it("should fall back to an empty string when the account is missing", async () => {
+    mockGetValidIdToken.mockResolvedValue("valid-token");
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+    } as Response);
+
+    await expect(getDisplayName("uuid-123")).resolves.toBe("");
+  });
+
+  it("should fall back to an empty string when the request fails", async () => {
+    mockGetValidIdToken.mockResolvedValue("valid-token");
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      statusText: "Internal Server Error",
+    } as Response);
+
+    await expect(getDisplayName("uuid-123")).resolves.toBe("");
+  });
+
+  it("should fall back to an empty string when not authenticated", async () => {
+    mockGetValidIdToken.mockResolvedValue(null);
+
+    await expect(getDisplayName("uuid-123")).resolves.toBe("");
   });
 });
 

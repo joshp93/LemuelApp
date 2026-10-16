@@ -28,7 +28,7 @@ import { formatDate } from "../src/utils/date";
 import { notify } from "../src/utils/dialog";
 
 function Account({ user }: WithAuthProps) {
-  const { signOut } = useAuth();
+  const { signOut, refreshUser } = useAuth();
   const insets = useSafeAreaInsets();
   const [account, setAccount] = useState<AccountDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -78,6 +78,7 @@ function Account({ user }: WithAuthProps) {
     if (ok) {
       setEditingDisplayName(false);
       loadAccount();
+      refreshUser();
     } else {
       setSaveError("Failed to save display name. Please try again.");
     }
@@ -138,6 +139,7 @@ function Account({ user }: WithAuthProps) {
               <View>
                 <TextInput
                   autoFocus
+                  testID="display-name-input"
                   style={[
                     styles.editInput,
                     displayNameError ? styles.editInputError : null,
@@ -192,6 +194,7 @@ function Account({ user }: WithAuthProps) {
                 </Text>
                 <LemuelButton
                   size="sm"
+                  testID="edit-display-name"
                   style={{
                     width: 40,
                     height: 40,

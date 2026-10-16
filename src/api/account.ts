@@ -42,6 +42,25 @@ export async function getAccountDetails(
   return response.json() as Promise<AccountDetails>;
 }
 
+/**
+ * Reads a user's display name, as shown beside their notes and replies.
+ *
+ * Never throws: a name is a decoration on somebody else's content, and a page
+ * that cannot read one should still draw.
+ *
+ * @param uuid - The user's Cognito sub (userId).
+ * @returns The display name, or an empty string when it cannot be read.
+ */
+export async function getDisplayName(uuid: string): Promise<string> {
+  try {
+    const account = await getAccountDetails(uuid);
+    return account?.displayName ?? "";
+  } catch (error) {
+    remoteLog("warn", "[Account] Could not read the display name", { error });
+    return "";
+  }
+}
+
 export async function createAccountRecord(
   displayName: string,
 ): Promise<boolean> {
