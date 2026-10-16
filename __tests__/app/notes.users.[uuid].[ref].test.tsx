@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import { render, waitFor } from "@testing-library/react-native";
+import { StyleSheet } from "react-native";
+import type { ReactTestInstance } from "react-test-renderer";
 import UserNotePage from "../../app/notes/users/[uuid]/[ref]";
 import { recordMeditationCompletion } from "../../src/api/meditation";
 import { getUserNote } from "../../src/api/notes";
@@ -8,6 +10,38 @@ import { useProverbForTheDay } from "../../src/hooks/useProverbForTheDay";
 const mockParams: { value: Record<string, string | undefined> } = {
   value: { uuid: "uuid-123", ref: "Proverbs3:5", date: "2026-06-02" },
 };
+
+jest.mock("react-native-reanimated", () => {
+  const { View } = require("react-native");
+  const Reanimated = {
+    View,
+    Text: require("react-native").Text,
+    Image: require("react-native").Image,
+    ScrollView: require("react-native").ScrollView,
+    FlatList: require("react-native").FlatList,
+  };
+  return {
+    __esModule: true,
+    default: {
+      ...Reanimated,
+      createAnimatedComponent: (comp: any) => comp,
+    },
+    ...Reanimated,
+    createAnimatedComponent: (comp: any) => comp,
+    useAnimatedStyle: () => ({}),
+    useDerivedValue: (fn: any) => ({ value: fn() }),
+    useSharedValue: (initial: any) => ({ value: initial }),
+    withTiming: (toValue: any, _config?: any, callback?: any) => {
+      callback?.(true);
+      return toValue;
+    },
+    runOnJS: (fn: any) => fn,
+    runOnUI: (fn: any) => fn,
+    interpolate: (_val: any, _input: any[], output: any[]) => output[0],
+    Easing: { in: (e: any) => e, out: (e: any) => e, inOut: (e: any) => e },
+    processColor: (c: any) => c,
+  };
+});
 
 jest.mock("expo-router", () => ({
   useRouter: () => ({ replace: jest.fn() }),
@@ -114,6 +148,15 @@ function proverbResult(
   };
 }
 
+/**
+ * The opacity the editor box is drawn at, reading an unset opacity as fully
+ * visible.
+ */
+function editorBoxOpacity(element: ReactTestInstance): number {
+  const style = StyleSheet.flatten(element.props.style);
+  return typeof style?.opacity === "number" ? style.opacity : 1;
+}
+
 describe("UserNotePage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -176,5 +219,40 @@ describe("UserNotePage", () => {
         "2026-06-02",
       );
     });
+  });
+
+  it("keeps the editor box invisible until the first proverb request settles", async () => {
+    mockUseProverbForTheDay.mockReturnValue(
+      proverbResult({ proverb: null, loading: true }),
+    );
+
+    const { findByTestId } = render(<UserNotePage />);
+
+    const box = await findByTestId("note-editor-box");
+    expect(editorBoxOpacity(box)).toBe(0);
+  });
+
+  it("reveals the editor box once the proverb has arrived", async () => {
+    const { findByTestId } = render(<UserNotePage />);
+
+    const box = await findByTestId("note-editor-box");
+    await waitFor(() => {
+      expect(editorBoxOpacity(box)).toBe(1);
+    });
+  });
+
+  it("leaves the editor box alone when the version changes after the first load", async () => {
+    const { findByTestId, rerender } = render(<UserNotePage />);
+
+    const box = await findByTestId("note-editor-box");
+    await waitFor(() => {
+      expect(editorBoxOpacity(box)).toBe(1);
+    });
+
+    mockUseProverbForTheDay.mockReturnValue(proverbResult({ loading: true }));
+    rerender(<UserNotePage />);
+
+    expect(editorBoxOpacity(box)).toBe(1);
+    expect(box.props.pointerEvents).toBe("auto");
   });
 });

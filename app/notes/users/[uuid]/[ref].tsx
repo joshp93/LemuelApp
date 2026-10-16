@@ -15,7 +15,7 @@ import { LemuelButton } from "../../../../src/components/lemuel-button";
 import { LemuelKeyboardAwareScrollView } from "../../../../src/components/lemuel-keyboard-aware-scroll-view";
 import { LemuelLoadingScreen } from "../../../../src/components/lemuel-loading-screen";
 import { LemuelSwitch } from "../../../../src/components/lemuel-switch";
-import { ProverbCard } from "../../../../src/components/proverb-card";
+import { ProverbCrossFade } from "../../../../src/components/proverb-cross-fade";
 import { ProverbReferenceHeaderText } from "../../../../src/components/proverb-reference-header-text";
 import { Text } from "../../../../src/components/themed-text";
 import {
@@ -25,6 +25,7 @@ import {
 import { useFitFontSize } from "../../../../src/hooks/useFitFontSize";
 import { useProverbForTheDay } from "../../../../src/hooks/useProverbForTheDay";
 import { useUnsavedChanges } from "../../../../src/hooks/useUnsavedChanges";
+import type { Proverb } from "../../../../src/models/proverb";
 import { confirm } from "../../../../src/utils/confirm";
 
 const NoteEditor = lazy(() => import("../../../../src/components/note-editor"));
@@ -56,10 +57,26 @@ function UserNotePage({ user: _user }: WithAuthProps) {
   const [isDirty, setIsDirty] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [displayedProverb, setDisplayedProverb] = useState<Proverb | null>(
+    null,
+  );
+
+  useEffect(() => {
+    if (proverb) setDisplayedProverb(proverb);
+  }, [proverb]);
+
+  /**
+   * Whether the first proverb request has finished, however it finished.
+   *
+   * A request that failed still counts: the page has to stay usable when the
+   * proverb cannot be fetched at all, and the alternative is an editor nobody
+   * can reach.
+   */
+  const proverbSettled = displayedProverb !== null || proverbError !== null;
 
   const textBoxHeight = windowHeight * 0.6;
   const { fontSize, onTextLayout } = useFitFontSize(
-    proverb?.proverb,
+    displayedProverb?.proverb,
     textBoxHeight,
     FONT_SIZES,
   );
@@ -131,7 +148,7 @@ function UserNotePage({ user: _user }: WithAuthProps) {
     }
   }, [uuid, ref, date, router]);
 
-  const contentLoaded = !notesLoading && !proverbLoading;
+  const contentLoaded = !notesLoading && proverbSettled;
 
   return (
     <View style={styles.container}>
@@ -159,14 +176,16 @@ function UserNotePage({ user: _user }: WithAuthProps) {
         keyboardShouldPersistTaps="handled"
         bottomOffset={insets.bottom + 8}
       >
-        {proverb && !proverbLoading && !proverbError && (
-          <ProverbCard
-            proverb={proverb}
-            fontSize={fontSize}
-            onTextLayout={onTextLayout}
-          />
-        )}
-        <View style={styles.editorBox}>
+        <ProverbCrossFade
+          proverb={displayedProverb}
+          fontSize={fontSize}
+          onTextLayout={onTextLayout}
+        />
+        <View
+          testID="note-editor-box"
+          style={[styles.editorBox, !proverbSettled && styles.hiddenEditor]}
+          pointerEvents={proverbSettled ? "auto" : "none"}
+        >
           <Suspense fallback={<LemuelLoadingScreen />}>
             <NoteEditor
               editorContent={editorContent}
@@ -242,6 +261,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ccc",
     backgroundColor: "#fff",
+  },
+  hiddenEditor: {
+    opacity: 0,
   },
   saveButton: {
     backgroundColor: "black",
