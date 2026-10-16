@@ -146,8 +146,8 @@ above).
    literal no-op, so an alert silently does nothing — and anything that calls
    `preventDefault()` before showing one will dead-end the UI. Use
    `showDialog` / `notify` from `src/utils/dialog.ts` or `confirm` from
-   `src/utils/confirm.ts`. `Alert` should appear in exactly one place: the native
-   implementation in `src/utils/dialog.ts`.
+   `src/utils/confirm.ts`. `Alert` appears nowhere in the app: the native
+   dialogs are the app's own (see "Dialogs" below).
 2. **Browser dialogs are limited.** `window.alert` has one button and
    `window.confirm` has two, unlabelled. `showDialog` on web therefore uses
    `confirm` for a two-choice dialog and a **sequence of confirms** for three or
@@ -170,6 +170,26 @@ above).
    page states this rather than showing dead controls.
 7. **Keep web perf in mind.** Avoid heavy work at module scope and prefer the
    shared, already-memoised hooks.
+
+---
+
+## Dialogs
+
+`showDialog` / `confirm` / `notify` are promise-based and work on both
+platforms, but they get there differently:
+
+| Piece | Role |
+|---|---|
+| `src/utils/dialog-store.ts` | Holds the one dialog waiting to be answered. Platform-free. |
+| `src/components/dialog-host.tsx` | Mounted once in `app/_layout.tsx`. Draws whatever the store holds. |
+| `src/components/lemuel-dialog.tsx` | The card: black, rounded, white text, actions in a column. |
+| `src/utils/dialog.ts` | Native `showDialog`: hands the request to the store. |
+| `src/utils/dialog.web.ts` | Web `showDialog`: `window.alert` / `window.confirm`, unchanged. |
+
+A dialog cannot be drawn from a plain function, which is why the request goes
+through the store rather than to `Alert`. Asking for a second dialog while one
+is waiting dismisses the first unanswered, matching what `Alert.alert` did.
+On web nothing ever reaches the store, so the host renders nothing.
 
 ---
 
@@ -218,13 +238,15 @@ src/
                   # daily-proverbs, notes (notes + reactions + replies), meditation,
                   # push-token, remote-logger, version-storage, constants (base URL)
   auth/           # auth-context, token-storage, token-utils, with-auth HOC
-  components/     # bottom-sheet-menu, dividing-line, error-boundary,
+  components/     # bottom-sheet-menu, dialog-host, dividing-line, error-boundary,
                   # expandable-section, fade-in-down, header-menu, lemuel-button,
-                  # lemuel-keyboard-avoiding-view, lemuel-keyboard-aware-scroll-view,
+                  # lemuel-dialog, lemuel-keyboard-avoiding-view,
+                  # lemuel-keyboard-aware-scroll-view,
                   # lemuel-loading-screen, lemuel-switch, meditation-canvas,
                   # meditation-capture-button (shared by both meditation screens),
                   # month-picker,
-                  # not-today-banner, proverb-card, proverb-note-card,
+                  # not-today-banner, proverb-card, proverb-cross-fade
+                  # (the shared proverb display), proverb-note-card,
                   # proverb-reference-header-text, reaction-bar, reply-card,
                   # reply-input, reply-thread, themed-text, time-picker,
                   # version-dropdown
@@ -232,8 +254,8 @@ src/
                   # meditation (shared shader constants)
   hooks/          # useProverbForTheDay, useSettingsPreferences, useFitFontSize,
                   # useUnsavedChanges, useDeviceTier, useMeditationShader,
-                  # useMeditationTimer, useMeditationSegments, useSerializedSave,
-                  # useAutoSave
+                  # useMeditationTimer, useMeditationSegments, useMeditationWakeLock,
+                  # useNoteReactions, useSerializedSave, useAutoSave
   models/         # Zod schemas + response types (proverb, daily-proverb,
                   # reactions-and-replies)
   notifications/  # daily-proverb-notification (+ .web), notification-preferences,
@@ -244,8 +266,9 @@ src/
   settings/       # meditation-preferences (duration + duration options),
                   # shader-selection (shared toggle rules for both settings screens)
   utils/          # auth-redirect, battery-optimization, confirm (+ .web), date,
-                  # dialog (+ .web), email, format, layout, meditation-outline,
-                  # password, proverb-helper, time-part
+                  # dialog (+ .web), dialog-store, email, format, layout,
+                  # meditation-outline, password, proverb-helper, reactions,
+                  # replies, time-part, wake-lock
   utils/meditation-shaders/  # one SkSL generator per background animation
                   # (star-field, gas-giant, sine-mountains, sunset, blank)
                   # + the registry in index.ts, which also carries each
@@ -270,7 +293,7 @@ __tests__/        # Jest tests mirroring the source tree
 | Daily proverb | Fetches and shows a proverb for a date from the selected Bible version, with pull-to-refresh | Android + web | `src/hooks/useProverbForTheDay.ts`, `src/api/proverbs.ts`, `src/components/proverb-card.tsx` |
 | Multiple Bible versions | Stores the chosen version in AsyncStorage and re-fetches on change | Android + web | `src/api/available-versions.ts`, `src/api/version-storage.ts`, `src/components/version-dropdown.tsx` |
 | Monthly calendar | Browse past proverbs by tapping a date on a month grid | Android + web | `src/api/daily-proverbs.ts`, `src/components/month-picker.tsx` |
-| Authentication | Email-based sign-up/sign-in with IdToken/AccessToken/RefreshToken in AsyncStorage, proactive refresh before expiry, reactive refresh on 401, silent sign-out on failure | Android + web | `src/auth/*`, `src/api/auth.ts`, `src/api/cognito.ts` |
+| Authentication | Email-based sign-up/sign-in with IdToken/AccessToken/RefreshToken in AsyncStorage, proactive refresh before expiry, reactive refresh on 401, silent sign-out on failure, and a display name read from the account record | Android + web | `src/auth/*`, `src/api/auth.ts`, `src/api/account.ts`, `src/api/cognito.ts` |
 | Auth-guarded routes | `withAuth` HOC redirects to `/email-entry?redirect=…&route=…`, replacing dynamic `[uuid]` segments with `{{uuid}}` so they resolve after login | Android + web | `src/auth/with-auth.tsx`, `src/utils/auth-redirect.ts` |
 | Meditation timer | Full-screen Skia animation (background shader + progress arc), shader complexity adapts to device tier, records completion | Android + web (CanvasKit on web) | `app/meditation.tsx` / `.web.tsx`, `src/components/meditation-canvas.tsx`, `src/utils/meditation-shaders/`, `src/hooks/useMeditationShader.ts`, `src/constants/meditation.ts`, `src/hooks/useDeviceTier.ts` |
 | Meditation animations | Five selectable backgrounds (Star field, Gas giant, Sine mountains, Sunset over sea, and "Don't show an animation" for a blank black canvas). All four animations are enabled by default; the user enables a subset in Settings and one is chosen at random per meditation. "Don't show an animation" is exclusive — selecting it greys the others out. Each background carries its own proverb text colour (Sunset over sea takes a dark grey) | Android + web (CanvasKit on web) | `src/utils/meditation-shaders/`, `src/hooks/useMeditationShader.ts`, `src/settings/meditation-preferences.ts`, `src/constants/meditation.ts` |
@@ -281,7 +304,10 @@ __tests__/        # Jest tests mirroring the source tree
 | Daily reminders | Fixed time or random window, sent-date deduplication, reply notification category, background re-scheduling | **Android only** | `src/notifications/daily-proverb-notification.ts`, `push-listener.ts`, `notification-preferences.ts` |
 | Home-screen widget | Voltra server-driven widget, refreshed hourly by WorkManager with a pre-rendered loading state | **Android only** | `src/widgets/widget-service.tsx`, `initializeWidget.android.ts` |
 | Battery optimisation | Opens the Android battery-optimisation settings, with an explanatory warning in Settings | **Android only** | `src/utils/battery-optimization.ts` |
-| Cross-platform dialogs | Promise-based `showDialog` / `confirm` / `notify` that work on both platforms | Android + web | `src/utils/dialog.ts` (+ `.web.ts`), `src/utils/confirm.ts` (+ `.web.ts`) |
+| Cross-platform dialogs | Promise-based `showDialog` / `confirm` / `notify` that work on both platforms. Native draws the app's own dialog through `dialog-host`; web uses the browser's | Android + web | `src/utils/dialog.ts` (+ `.web.ts`), `src/utils/dialog-store.ts`, `src/components/dialog-host.tsx`, `src/components/lemuel-dialog.tsx`, `src/utils/confirm.ts` (+ `.web.ts`) |
+| Screen wake lock | Holds the screen awake from the moment a meditation opens until the timer ends, and re-takes it on returning to the foreground | Android + web (Screen Wake Lock API) | `src/hooks/useMeditationWakeLock.ts`, `src/utils/wake-lock.ts` |
+| Proverb display | One cross-fading display of the proverb, shared by the home screen and the note editor: the outgoing wording stays until the incoming one has loaded, then the two cross-fade over 500ms | Android + web | `src/components/proverb-cross-fade.tsx` |
+| Optimistic reactions & replies | A reaction, reply, edit or delete is shown at once and settled against the server afterwards — reverting, and keeping the typed text, if the write failed | Android + web | `src/hooks/useNoteReactions.ts`, `src/components/reply-thread.tsx`, `src/utils/replies.ts` |
 | Web content frame | Caps and centres page content at 1024px with full-width backgrounds and viewport-edge scroll bars | **Web only** | `app/_layout.tsx`, `src/constants/layout.ts`, `src/utils/layout.ts` |
 | Remote logging | Fire-and-forget logging to `POST /logs` | Android + web | `src/api/remote-logger.ts` |
 
@@ -428,6 +454,12 @@ Key files:
    `/email-entry?redirect=<path>&route=<routeName>`; on a successful sign-in the
    web and native sign-in screens rebuild the original route with
    `buildRedirectResetAction` (`src/utils/auth-redirect.ts`)
+
+`AuthUser` also carries a **`displayName`**, which the Cognito tokens do not
+hold: `refreshUser` reads it from the account record with `getDisplayName`
+(`src/api/account.ts`), falling back to an empty string when it cannot be read.
+`app/account.tsx` calls `refreshUser()` after the display name is saved, so the
+name used on an optimistic reply is the one the user just set.
 
 ---
 

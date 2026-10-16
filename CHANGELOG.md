@@ -14,12 +14,21 @@ Play submission have all succeeded.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-16
+
 ### Added
 
 - A GitHub Actions release pipeline
   ([`.github/workflows/release.yml`](./.github/workflows/release.yml)) that
   tests, builds the Android app bundle, deploys the web build, submits to Google
   Play, and tags the release. Pull requests run the test gate only.
+- The display is now held awake for the whole of a meditation, on Android and in
+  the browser, so the proverb stays readable without the screen dimming. The lock
+  is taken as soon as the meditation screen opens and released when the timer
+  ends.
+- Dialogs are drawn by the app rather than by Android: black, with white text and
+  rounded corners, matching the rest of the app. This covers the reminders prompt
+  on first launch, the unsaved-changes prompt and the delete confirmations.
 
 ### Changed
 
@@ -30,6 +39,32 @@ Play submission have all succeeded.
 - Submitting to Google Play now authenticates with the service account key stored
   on EAS servers; `eas.json` no longer points at a local key file, so no Play
   credential is present in the repository or in CI.
+- Changing Bible version cross-fades the wording over half a second instead of
+  blanking the page, on the home screen and in the note editor alike. The
+  outgoing wording stays put until the incoming one has arrived, so the content
+  below it never jumps.
+- Reactions, replies, edits and deletes appear as soon as they are made rather
+  than once the server has answered. Each is settled against the server
+  afterwards and put back if the write failed, and a reply that could not be sent
+  returns to the box instead of being lost.
+- A reply you have just written carries your display name straight away, rather
+  than staying anonymous until the server echoed it back.
+- The note editor is no longer interrupted by a version change, and its box stays
+  hidden until the first proverb request has settled.
+
+### Fixed
+
+- The meditation screen no longer let the display sleep while the device was in
+  battery saver — the one case where the wake lock was skipped, and skipped
+  without any record of it. A wake lock that cannot be taken is now reported to
+  the remote log rather than failing silently.
+- The reply menu no longer hides itself when it is reopened while still closing.
+
+### Notes
+
+- The wake lock is an Android window flag, so it needs no permission.
+- The display name is read from the account record rather than the sign-in
+  tokens, which costs one extra request per sign-in.
 
 ## [1.0.0] - 2026-10-14
 
@@ -72,5 +107,6 @@ First public release.
 - iOS is scaffolded in `app.config.ts` but is not a supported or verified
   target.
 
-[Unreleased]: https://github.com/joshp93/LemuelApp/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/joshp93/LemuelApp/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/joshp93/LemuelApp/releases/tag/v1.1.0
 [1.0.0]: https://github.com/joshp93/LemuelApp/releases/tag/v1.0.0
