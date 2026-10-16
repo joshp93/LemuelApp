@@ -20,6 +20,7 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { registerPushToken } from "../src/api/push-token";
 import { AuthProvider } from "../src/auth/auth-context";
+import { DialogHost } from "../src/components/dialog-host";
 import { HeaderMenu } from "../src/components/header-menu";
 import { CONTENT_INSET } from "../src/constants/layout";
 import { COLORS } from "../src/constants/theme";
@@ -156,6 +157,7 @@ function AppContent() {
         <Stack.Screen name="account" />
         <Stack.Screen name="notes/users/[uuid]/[ref]" />
       </Stack>
+      <DialogHost />
     </View>
   );
 }
