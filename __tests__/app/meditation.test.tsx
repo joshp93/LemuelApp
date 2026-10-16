@@ -206,7 +206,7 @@ describe("MeditationScreen", () => {
       });
     });
 
-    it("does not activate wake lock when lowPowerMode is true (battery saver)", async () => {
+    it("activates the wake lock in battery saver too", async () => {
       mockGetPowerStateAsync.mockResolvedValue({
         lowPowerMode: true,
       } as Awaited<ReturnType<typeof getPowerStateAsync>>);
@@ -215,18 +215,26 @@ describe("MeditationScreen", () => {
       renderMeditation();
 
       await waitFor(() => {
-        expect(mockGetPowerStateAsync).toHaveBeenCalled();
+        expect(activateKeepAwakeAsync).toHaveBeenCalledWith("meditation");
       });
-      expect(activateKeepAwakeAsync).not.toHaveBeenCalled();
     });
 
-    it("does not re-activate the wake lock after the screen has unmounted", async () => {
-      let resolvePowerState!: (
-        state: Awaited<ReturnType<typeof getPowerStateAsync>>,
-      ) => void;
-      mockGetPowerStateAsync.mockReturnValue(
-        new Promise((resolve) => {
-          resolvePowerState = resolve;
+    it("activates the wake lock before the timer has started", async () => {
+      mockGetMeditationDuration.mockReturnValue(new Promise(() => {}));
+      mockLocalSearchParams.mockReturnValue(NOTIFICATION_PARAMS);
+
+      renderMeditation();
+
+      await waitFor(() => {
+        expect(activateKeepAwakeAsync).toHaveBeenCalledWith("meditation");
+      });
+    });
+
+    it("releases the wake lock the screen requested when it leaves first", async () => {
+      let resolveActivation!: () => void;
+      (activateKeepAwakeAsync as jest.Mock).mockReturnValue(
+        new Promise<void>((resolve) => {
+          resolveActivation = resolve;
         }),
       );
       mockLocalSearchParams.mockReturnValue(NOTIFICATION_PARAMS);
@@ -234,18 +242,16 @@ describe("MeditationScreen", () => {
       const { unmount } = renderMeditation();
 
       await waitFor(() => {
-        expect(mockGetPowerStateAsync).toHaveBeenCalled();
+        expect(activateKeepAwakeAsync).toHaveBeenCalledWith("meditation");
       });
 
       unmount();
 
       await act(async () => {
-        resolvePowerState({
-          lowPowerMode: false,
-        } as Awaited<ReturnType<typeof getPowerStateAsync>>);
+        resolveActivation();
       });
 
-      expect(activateKeepAwakeAsync).not.toHaveBeenCalled();
+      expect(deactivateKeepAwake).toHaveBeenCalledWith("meditation");
     });
   });
 
@@ -260,16 +266,21 @@ describe("MeditationScreen", () => {
       });
     });
 
-    it("deactivates wake lock on unmount via cleanup effect", () => {
-      mockLocalSearchParams.mockReturnValue({
-        proverb: undefined,
-        ref: undefined,
-      });
+    it("deactivates wake lock when the screen is left mid-meditation", async () => {
+      mockGetMeditationDuration.mockReturnValue(new Promise(() => {}));
+      mockLocalSearchParams.mockReturnValue(NOTIFICATION_PARAMS);
 
       const { unmount } = renderMeditation();
+
+      await waitFor(() => {
+        expect(activateKeepAwakeAsync).toHaveBeenCalledWith("meditation");
+      });
+
       unmount();
 
-      expect(deactivateKeepAwake).toHaveBeenCalledWith("meditation");
+      await waitFor(() => {
+        expect(deactivateKeepAwake).toHaveBeenCalledWith("meditation");
+      });
     });
   });
 

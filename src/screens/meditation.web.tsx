@@ -32,6 +32,7 @@ import { useFitFontSize } from "../hooks/useFitFontSize";
 import { useMeditationSegments } from "../hooks/useMeditationSegments";
 import { useMeditationShader } from "../hooks/useMeditationShader";
 import { useMeditationTimer } from "../hooks/useMeditationTimer";
+import { useMeditationWakeLock } from "../hooks/useMeditationWakeLock";
 import { useProverbForTheDay } from "../hooks/useProverbForTheDay";
 import type { Proverb } from "../models/proverb";
 import { toLocalDateString } from "../utils/date";
@@ -45,8 +46,8 @@ const CORNER_RADIUS = DEFAULT_CORNER_RADIUS;
  * Uses {@linkcode WithSkiaWeb} to defer loading the Skia glow-arc canvas until
  * CanvasKit WASM has finished loading. During SSR and CanvasKit initialisation
  * a plain black background is shown. The corner radius is a constant rather
- * than a device measurement, and the keep-awake and battery APIs are omitted —
- * they either require native modules or are not available on web.
+ * than a device measurement, and the battery API is omitted — it is only read
+ * on native, for the diagnostic that accompanies the wake lock.
  */
 export default function WebMeditationScreen() {
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
@@ -87,6 +88,8 @@ export default function WebMeditationScreen() {
     ready: !loading && proverbData !== null && shader !== null,
     onComplete: complete,
   });
+
+  useMeditationWakeLock(!isComplete);
 
   const resolution = useSharedValue([0, 0]);
   const handleLayout = useCallback(

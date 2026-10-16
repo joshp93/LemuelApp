@@ -8,11 +8,9 @@ import {
   useCanvasSize,
   useClock,
 } from "@shopify/react-native-skia";
-import { getPowerStateAsync } from "expo-battery";
 import { getCornerRadius } from "expo-device-corner-radius";
-import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { Stack, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Dimensions,
   type LayoutChangeEvent,
@@ -44,6 +42,7 @@ import { useFitFontSize } from "../hooks/useFitFontSize";
 import { useMeditationSegments } from "../hooks/useMeditationSegments";
 import { useMeditationShader } from "../hooks/useMeditationShader";
 import { useMeditationTimer } from "../hooks/useMeditationTimer";
+import { useMeditationWakeLock } from "../hooks/useMeditationWakeLock";
 import { useProverbForTheDay } from "../hooks/useProverbForTheDay";
 import type { Proverb } from "../models/proverb";
 import { toLocalDateString } from "../utils/date";
@@ -84,32 +83,16 @@ export default function MeditationScreen() {
   const tier = useDeviceTier();
   const shader = useMeditationShader();
 
-  const keepAwakeAllowed = useRef(true);
-  useEffect(() => {
-    keepAwakeAllowed.current = true;
-    return () => {
-      keepAwakeAllowed.current = false;
-      deactivateKeepAwake("meditation");
-    };
-  }, []);
-
-  const keepAwake = useCallback(() => {
-    getPowerStateAsync().then(({ lowPowerMode }) => {
-      if (lowPowerMode || !keepAwakeAllowed.current) return;
-      activateKeepAwakeAsync("meditation");
-    });
-  }, []);
-
-  const releaseKeepAwake = useCallback(() => {
-    deactivateKeepAwake("meditation");
+  const recordCompletion = useCallback(() => {
     void recordMeditationCompletion(user?.userId ?? "", effectiveDate);
   }, [user?.userId, effectiveDate]);
 
   const { progress, textOpacity, isComplete } = useMeditationTimer({
     ready: !loading && proverbData !== null && shader !== null,
-    onStart: keepAwake,
-    onComplete: releaseKeepAwake,
+    onComplete: recordCompletion,
   });
+
+  useMeditationWakeLock(!isComplete);
 
   const resolution = useSharedValue([0, 0]);
   const handleLayout = useCallback(
