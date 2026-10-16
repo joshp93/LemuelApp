@@ -16,7 +16,6 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   getProverbNotes,
-  getReactions,
   getUserNote,
   type NoteEntity,
   type UserNoteResponse,
@@ -30,14 +29,15 @@ import { LemuelKeyboardAwareScrollView } from "../src/components/lemuel-keyboard
 import { LemuelLoadingScreen } from "../src/components/lemuel-loading-screen";
 import { MonthPicker } from "../src/components/month-picker";
 import { NotTodayBanner } from "../src/components/not-today-banner";
-import { ProverbCard } from "../src/components/proverb-card";
+import { ProverbCrossFade } from "../src/components/proverb-cross-fade";
 import ProverbNoteCard from "../src/components/proverb-note-card";
 import { ProverbReferenceHeaderText } from "../src/components/proverb-reference-header-text";
 import { Text } from "../src/components/themed-text";
 import { CONTENT_COLUMN, CONTENT_INSET } from "../src/constants/layout";
 import { useFitFontSize } from "../src/hooks/useFitFontSize";
+import { useNoteReactions } from "../src/hooks/useNoteReactions";
 import { useProverbForTheDay } from "../src/hooks/useProverbForTheDay";
-import type { GetReactionsResponse } from "../src/models/reactions-and-replies";
+import { reactionKey } from "../src/utils/reactions";
 
 const FONT_SIZES = [56, 40, 24];
 
@@ -66,10 +66,6 @@ export default function Index() {
   const [dataReady, setDataReady] = useState(false);
   const [userNote, setUserNote] = useState<UserNoteResponse | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [reactionData, setReactionData] = useState<
-    Record<string, GetReactionsResponse>
-  >({});
-  const [reactionVersion, setReactionVersion] = useState(0);
 
   const loadPageData = useCallback(async () => {
     if (!proverb?.ref) return;
@@ -100,35 +96,11 @@ export default function Index() {
     setDataReady(true);
   }, [proverb, user, date, todayString]);
 
-  const loadReactions = useCallback(async () => {
-    if (!user || notes.length === 0) return;
-
-    try {
-      const results = await Promise.allSettled(
-        notes.map((n) => getReactions(n.uuid, n.ref, n.date, user.userId)),
-      );
-      const data: Record<string, GetReactionsResponse> = {};
-      results.forEach((result, i) => {
-        if (result.status === "fulfilled") {
-          data[`${notes[i].uuid}#${notes[i].ref}#${notes[i].date}`] =
-            result.value;
-        }
-      });
-      setReactionData(data);
-    } catch {
-      setReactionData({});
-    }
-  }, [notes, user]);
-
-  useEffect(() => {
-    if (dataReady) {
-      loadReactions();
-    }
-  }, [dataReady, loadReactions, reactionVersion]);
-
-  const triggerReactionsRefresh = useCallback(() => {
-    setReactionVersion((v) => v + 1);
-  }, []);
+  const { reactionData, changeReaction } = useNoteReactions({
+    notes,
+    userId: user?.userId ?? null,
+    ready: dataReady,
+  });
 
   const updateNoteReplyCount = useCallback((pk: string, delta: number) => {
     setNotes((prev) =>
@@ -140,11 +112,25 @@ export default function Index() {
     );
   }, []);
 
+  /**
+   * Which proverb the page's notes and user note belong to.
+   *
+   * A version change leaves this alone — the reference and the date are the
+   * same verse either way — so the page can keep what it is showing while the
+   * new wording cross-fades in, instead of falling back to the loading screen.
+   */
+  const pageKey = `${proverb?.ref ?? ""}#${date ?? todayString}`;
+  const loadedKey = useRef<string | null>(null);
+
   useEffect(() => {
     if (!proverb || loading) return;
-    setDataReady(false);
+
+    if (loadedKey.current !== pageKey) {
+      loadedKey.current = pageKey;
+      setDataReady(false);
+    }
     loadPageData();
-  }, [proverb, loading, loadPageData]);
+  }, [proverb, loading, loadPageData, pageKey]);
 
   const loadPageDataRef = useRef(loadPageData);
   loadPageDataRef.current = loadPageData;
@@ -216,7 +202,6 @@ export default function Index() {
                 remoteLog("info", "[Index] Version changed", {
                   version: v,
                 });
-                setDataReady(false);
                 changeVersion(v);
               }}
             />
@@ -256,7 +241,7 @@ export default function Index() {
                 }}
               />
             )}
-            <ProverbCard
+            <ProverbCrossFade
               proverb={proverb}
               fontSize={fontSize}
               onTextLayout={onTextLayout}
@@ -299,7 +284,7 @@ export default function Index() {
                   </Text>
                 )}
                 {notes.map((note) => {
-                  const rk = `${note.uuid}#${note.ref}#${note.date}`;
+                  const rk = reactionKey(note);
                   const rd = reactionData[rk];
                   return (
                     <ProverbNoteCard
@@ -312,7 +297,7 @@ export default function Index() {
                       }
                       replyCount={note.replyCount ?? 0}
                       userReaction={rd?.userReaction}
-                      onReactionChange={triggerReactionsRefresh}
+                      onReactionChange={(next) => changeReaction(note, next)}
                       onReplyCountChange={(delta) =>
                         updateNoteReplyCount(note.pk, delta)
                       }

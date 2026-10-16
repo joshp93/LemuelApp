@@ -1,5 +1,5 @@
 import { MaterialIcons } from "@expo/vector-icons";
-import { memo, useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import Animated from "react-native-reanimated";
 import {
@@ -7,8 +7,10 @@ import {
   getReplies,
   postReply as postReplyApi,
 } from "../api/notes";
+import { remoteLog } from "../api/remote-logger";
 import { useAuth } from "../auth/auth-context";
 import type { ReplyEntity } from "../models/reactions-and-replies";
+import { buildPendingReply, isPendingReply } from "../utils/replies";
 import ReplyCard from "./reply-card";
 import ReplyInput from "./reply-input";
 
@@ -76,6 +78,8 @@ const ReplyThread = memo(function ReplyThread({
   const [replies, setReplies] = useState<ReplyEntity[]>([]);
   const [loading, setLoading] = useState(false);
   const [contentHeight, setContentHeight] = useState(0);
+  const repliesRef = useRef(replies);
+  repliesRef.current = replies;
 
   const loadReplies = useCallback(async () => {
     setLoading(true);
@@ -98,42 +102,109 @@ const ReplyThread = memo(function ReplyThread({
 
   const handlePostReply = useCallback(
     async (content: string) => {
-      const reply = await postReplyApi(
-        noteAuthorUuid,
-        noteRef,
-        noteDate,
+      const authorUuid = user?.userId ?? "";
+      const optimistic = buildPendingReply(
         content,
+        authorUuid,
+        user?.displayName ?? "",
       );
-      setReplies((prev) => [...prev, reply]);
+
+      setReplies((prev) => [...prev, optimistic]);
       onCountChange(1);
+
+      try {
+        const reply = await postReplyApi(
+          noteAuthorUuid,
+          noteRef,
+          noteDate,
+          content,
+        );
+        setReplies((prev) =>
+          prev.map((existing) =>
+            existing.sk === optimistic.sk ? reply : existing,
+          ),
+        );
+      } catch (error) {
+        remoteLog("error", "[Replies] Failed to post reply", { error });
+        setReplies((prev) =>
+          prev.filter((existing) => existing.sk !== optimistic.sk),
+        );
+        onCountChange(-1);
+        throw error;
+      }
     },
-    [noteAuthorUuid, noteRef, noteDate, onCountChange],
+    [noteAuthorUuid, noteRef, noteDate, onCountChange, user?.userId],
   );
 
   const handleDeleteReply = useCallback(
-    async (replySk: string) => {
-      await deleteReplyApi(noteAuthorUuid, noteRef, noteDate, replySk);
-      setReplies((prev) => prev.filter((r) => r.sk !== replySk));
+    (replySk: string) => {
+      const index = repliesRef.current.findIndex(
+        (reply) => reply.sk === replySk,
+      );
+      const removed = index === -1 ? undefined : repliesRef.current[index];
+
+      setReplies((prev) => prev.filter((reply) => reply.sk !== replySk));
       onCountChange(-1);
+
+      const restore = () => {
+        if (removed === undefined) return;
+        setReplies((prev) =>
+          prev.some((reply) => reply.sk === replySk)
+            ? prev
+            : [...prev.slice(0, index), removed, ...prev.slice(index)],
+        );
+        onCountChange(1);
+      };
+
+      deleteReplyApi(noteAuthorUuid, noteRef, noteDate, replySk).catch(
+        (error) => {
+          remoteLog("error", "[Replies] Failed to delete reply", { error });
+          restore();
+        },
+      );
     },
     [noteAuthorUuid, noteRef, noteDate, onCountChange],
   );
 
   const handleEditReply = useCallback(
     async (replySk: string, newContent: string) => {
-      const updated = await postReplyApi(
-        noteAuthorUuid,
-        noteRef,
-        noteDate,
-        newContent,
-        true,
-        replySk,
-      );
+      const previous = repliesRef.current.find(
+        (reply) => reply.sk === replySk,
+      )?.content;
+
       setReplies((prev) =>
-        prev.map((r) =>
-          r.sk === replySk ? { ...r, content: updated.content } : r,
+        prev.map((reply) =>
+          reply.sk === replySk ? { ...reply, content: newContent } : reply,
         ),
       );
+
+      try {
+        const updated = await postReplyApi(
+          noteAuthorUuid,
+          noteRef,
+          noteDate,
+          newContent,
+          true,
+          replySk,
+        );
+        setReplies((prev) =>
+          prev.map((reply) =>
+            reply.sk === replySk
+              ? { ...reply, content: updated.content }
+              : reply,
+          ),
+        );
+      } catch (error) {
+        remoteLog("error", "[Replies] Failed to edit reply", { error });
+        if (previous !== undefined) {
+          setReplies((prev) =>
+            prev.map((reply) =>
+              reply.sk === replySk ? { ...reply, content: previous } : reply,
+            ),
+          );
+        }
+        throw error;
+      }
     },
     [noteAuthorUuid, noteRef, noteDate],
   );
@@ -159,23 +230,20 @@ const ReplyThread = memo(function ReplyThread({
           No replies yet
         </Text>
       )}
-      {replies.map((reply) => (
-        <ReplyCard
-          key={reply.sk}
-          reply={reply}
-          isOwn={reply.authorUuid === user?.userId}
-          onDelete={
-            reply.authorUuid === user?.userId
-              ? () => handleDeleteReply(reply.sk)
-              : undefined
-          }
-          onSaveEdit={
-            reply.authorUuid === user?.userId
-              ? (content) => handleEditReply(reply.sk, content)
-              : undefined
-          }
-        />
-      ))}
+      {replies.map((reply) => {
+        const own = reply.authorUuid === user?.userId && !isPendingReply(reply);
+        return (
+          <ReplyCard
+            key={reply.sk}
+            reply={reply}
+            isOwn={own}
+            onDelete={own ? () => handleDeleteReply(reply.sk) : undefined}
+            onSaveEdit={
+              own ? (edited) => handleEditReply(reply.sk, edited) : undefined
+            }
+          />
+        );
+      })}
       <ReplyInput onSubmit={handlePostReply} />
     </View>
   );

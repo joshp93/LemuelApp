@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-import { act, render, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import {
   AppState,
   type AppStateEvent,
@@ -7,7 +7,11 @@ import {
   type NativeEventSubscription,
 } from "react-native";
 import Index from "../../app/index";
-import { getProverbNotes } from "../../src/api/notes";
+import {
+  getProverbNotes,
+  getReactions,
+  putReaction,
+} from "../../src/api/notes";
 import { useProverbForTheDay } from "../../src/hooks/useProverbForTheDay";
 
 let appStateCallback: ((state: AppStateStatus) => void) | null = null;
@@ -59,7 +63,31 @@ jest.mock("../../src/widgets", () => ({
 jest.mock("../../src/api/notes", () => ({
   ...jest.requireActual("../../src/api/notes"),
   getProverbNotes: jest.fn(),
+  getReactions: jest.fn(),
+  putReaction: jest.fn(),
+  deleteReaction: jest.fn(),
 }));
+
+jest.mock("../../src/components/reaction-bar", () => {
+  const React = require("react");
+  const { Pressable, Text } = require("react-native");
+  return {
+    __esModule: true,
+    default: ({ userReaction, reactionCounts, onReactionChange }: any) =>
+      React.createElement(
+        Pressable,
+        {
+          testID: "react-pray",
+          onPress: () => onReactionChange("🙏"),
+        },
+        React.createElement(
+          Text,
+          null,
+          `${userReaction ?? "none"}|${reactionCounts["🙏"] ?? 0}`,
+        ),
+      ),
+  };
+});
 
 const mockUseAuth = jest.fn().mockReturnValue({ user: null });
 jest.mock("../../src/auth/auth-context", () => ({
@@ -89,6 +117,10 @@ const mockUseProverbForTheDay = useProverbForTheDay as jest.MockedFunction<
 const mockGetProverbNotes = getProverbNotes as jest.MockedFunction<
   typeof getProverbNotes
 >;
+const mockGetReactions = getReactions as jest.MockedFunction<
+  typeof getReactions
+>;
+const mockPutReaction = putReaction as jest.MockedFunction<typeof putReaction>;
 
 const mockProverb = {
   ref: "Proverbs 3:5",
@@ -111,6 +143,8 @@ describe("Index", () => {
     jest.clearAllMocks();
     mockUseAuth.mockReturnValue({ user: null });
     mockGetProverbNotes.mockResolvedValue({ items: [] });
+    mockGetReactions.mockResolvedValue({ reactionCounts: {}, reactions: [] });
+    mockPutReaction.mockResolvedValue(undefined);
     appStateCallback = null;
     jest
       .spyOn(AppState, "addEventListener")
@@ -328,5 +362,96 @@ describe("Index", () => {
     unmount();
 
     expect(listener.remove).toHaveBeenCalled();
+  });
+
+  describe("reactions", () => {
+    const NOTE = {
+      pk: "uuid-1",
+      sk: "Proverbs3:5",
+      displayName: "Proverbs 3:5",
+      note: "<p>My meditation note</p>",
+      dateCreated: "2026-06-02T12:00:00.000Z",
+      date: "2026-06-02",
+      uuid: "uuid-1",
+      ref: "Proverbs3:5",
+    };
+
+    /** Renders the screen with one note by a signed-in user. */
+    function renderWithNote() {
+      mockUseAuth.mockReturnValue({ user: { userId: "user-1" } });
+      mockGetProverbNotes.mockResolvedValue({ items: [NOTE] });
+      mockUseProverbForTheDay.mockReturnValue({
+        ...defaultHookReturn,
+        loading: false,
+        proverb: mockProverb,
+      });
+
+      return render(<Index />);
+    }
+
+    /** Presses the note's reaction control once its note has rendered. */
+    async function pressReaction(
+      getAllByTestId: (id: string) => unknown[],
+    ): Promise<void> {
+      await waitFor(() => {
+        expect(getAllByTestId("react-pray").length).toBeGreaterThan(0);
+      });
+      fireEvent.press(getAllByTestId("react-pray")[0] as never);
+    }
+
+    it("shows the reaction before the server has answered", async () => {
+      mockPutReaction.mockReturnValue(new Promise(() => {}));
+
+      const { getAllByTestId, getAllByText } = renderWithNote();
+
+      await pressReaction(getAllByTestId);
+
+      await waitFor(() => {
+        expect(getAllByText("🙏|1").length).toBeGreaterThan(0);
+      });
+    });
+
+    it("settles on the counts the server reports", async () => {
+      mockGetReactions
+        .mockResolvedValueOnce({ reactionCounts: {}, reactions: [] })
+        .mockResolvedValueOnce({
+          reactionCounts: { "🙏": 5 },
+          userReaction: "🙏",
+          reactions: [],
+        });
+
+      const { getAllByTestId, getAllByText } = renderWithNote();
+
+      await pressReaction(getAllByTestId);
+
+      await waitFor(() => {
+        expect(getAllByText("🙏|5").length).toBeGreaterThan(0);
+      });
+    });
+
+    it("takes the reaction back when the write fails", async () => {
+      let rejectWrite!: (error: Error) => void;
+      mockPutReaction.mockReturnValue(
+        new Promise((_resolve, reject) => {
+          rejectWrite = reject;
+        }),
+      );
+
+      const { getAllByTestId, getAllByText } = renderWithNote();
+
+      await pressReaction(getAllByTestId);
+
+      await waitFor(() => {
+        expect(getAllByText("🙏|1").length).toBeGreaterThan(0);
+      });
+
+      await act(async () => {
+        rejectWrite(new Error("offline"));
+      });
+
+      await waitFor(() => {
+        expect(getAllByText("none|0").length).toBeGreaterThan(0);
+      });
+    });
   });
 });

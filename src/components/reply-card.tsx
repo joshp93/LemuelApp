@@ -11,8 +11,9 @@ import { Text as ThemedText } from "./themed-text";
  * that opens a bottom-sheet menu (Edit / Delete).
  *
  * In edit mode, the reply text is replaced with a plain-text input with
- * cancel (red) and save (black) icon buttons below it.
- * Saving calls `onSaveEdit` with the updated content and `isUpdate: true`.
+ * cancel (red) and save (black) icon buttons below it. Saving closes the
+ * editor straight away and hands the new text to `onSaveEdit`, which applies it
+ * and reports back only if it had to be undone.
  */
 const ReplyCard = memo(function ReplyCard({
   reply,
@@ -28,21 +29,16 @@ const ReplyCard = memo(function ReplyCard({
   const [menuVisible, setMenuVisible] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(reply.content);
-  const [saving, setSaving] = useState(false);
 
   const timeAgo = getRelativeTime(reply.createdAt);
 
-  const handleSave = useCallback(async () => {
+  const handleSave = useCallback(() => {
     const trimmed = editText.trim();
-    if (!trimmed || saving) return;
-    setSaving(true);
-    try {
-      await onSaveEdit?.(trimmed);
-      setEditing(false);
-    } finally {
-      setSaving(false);
-    }
-  }, [editText, saving, onSaveEdit]);
+    if (!trimmed) return;
+
+    setEditing(false);
+    onSaveEdit?.(trimmed).catch(() => {});
+  }, [editText, onSaveEdit]);
 
   const handleCancelEdit = useCallback(() => {
     setEditText(reply.content);
@@ -90,6 +86,7 @@ const ReplyCard = memo(function ReplyCard({
         {isOwn && !editing && (
           <Pressable
             onPress={() => setMenuVisible(true)}
+            testID="reply-options"
             style={{ marginLeft: "auto" }}
             hitSlop={8}
           >
@@ -104,6 +101,7 @@ const ReplyCard = memo(function ReplyCard({
             value={editText}
             onChangeText={setEditText}
             multiline
+            testID="reply-edit-input"
             style={{
               fontSize: 18,
               fontFamily: "Nunito_400Regular",
@@ -125,6 +123,7 @@ const ReplyCard = memo(function ReplyCard({
             <Pressable
               onPress={handleCancelEdit}
               hitSlop={8}
+              testID="reply-cancel"
               style={{
                 width: 32,
                 height: 32,
@@ -138,13 +137,14 @@ const ReplyCard = memo(function ReplyCard({
             </Pressable>
             <Pressable
               onPress={handleSave}
-              disabled={!editText.trim() || saving}
+              disabled={!editText.trim()}
               hitSlop={8}
+              testID="reply-save"
               style={({ pressed }) => ({
                 width: 32,
                 height: 32,
                 borderRadius: 16,
-                backgroundColor: !editText.trim() || saving ? "#ccc" : "#000",
+                backgroundColor: !editText.trim() ? "#ccc" : "#000",
                 alignItems: "center",
                 justifyContent: "center",
                 opacity: pressed ? 0.7 : 1,

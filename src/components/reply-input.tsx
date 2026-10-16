@@ -4,7 +4,10 @@ import { Pressable, TextInput, View } from "react-native";
 
 /**
  * Inline text input with a send button for submitting quick plain-text replies.
- * Disables input while submitting and clears on success.
+ *
+ * Submitting clears the box at once and does not wait for the server, so the
+ * next reply can be typed while the last one is still in flight. A reply that
+ * fails to send is put back, unless something has been typed since.
  */
 const ReplyInput = memo(function ReplyInput({
   onSubmit,
@@ -14,21 +17,17 @@ const ReplyInput = memo(function ReplyInput({
   disabled?: boolean;
 }) {
   const [text, setText] = useState("");
-  const [submitting, setSubmitting] = useState(false);
   const inputRef = useRef<TextInput>(null);
 
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = useCallback(() => {
     const trimmed = text.trim();
-    if (!trimmed || submitting || disabled) return;
+    if (!trimmed || disabled) return;
 
-    setSubmitting(true);
-    try {
-      await onSubmit(trimmed);
-      setText("");
-    } finally {
-      setSubmitting(false);
-    }
-  }, [text, submitting, disabled, onSubmit]);
+    setText("");
+    onSubmit(trimmed).catch(() => {
+      setText((current) => (current.length === 0 ? trimmed : current));
+    });
+  }, [text, disabled, onSubmit]);
 
   return (
     <View
@@ -48,7 +47,7 @@ const ReplyInput = memo(function ReplyInput({
         placeholderTextColor="#999"
         returnKeyType="send"
         onSubmitEditing={handleSubmit}
-        editable={!submitting && !disabled}
+        editable={!disabled}
         style={{
           flex: 1,
           fontSize: 18,
@@ -63,14 +62,13 @@ const ReplyInput = memo(function ReplyInput({
       />
       <Pressable
         onPress={handleSubmit}
-        disabled={!text.trim() || submitting || disabled}
+        disabled={!text.trim() || disabled}
         hitSlop={12}
         style={({ pressed }) => ({
           width: 36,
           height: 36,
           borderRadius: 18,
-          backgroundColor:
-            !text.trim() || submitting || disabled ? "#ccc" : "#000",
+          backgroundColor: !text.trim() || disabled ? "#ccc" : "#000",
           alignItems: "center",
           justifyContent: "center",
           opacity: pressed ? 0.7 : 1,

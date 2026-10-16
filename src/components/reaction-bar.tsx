@@ -16,6 +16,9 @@ const EMOJIS = ["🙏", "❤️", "👍", "💡", "😊"] as const;
 const BLUE = "#007AFF";
 const GREY = "#000";
 
+/** How long the picker stays open after a tap, so the emoji is seen to react. */
+const POPUP_LINGER_MS = 400;
+
 const ReactionBar = memo(function ReactionBar({
   reactionCounts,
   userReaction,
@@ -27,9 +30,16 @@ const ReactionBar = memo(function ReactionBar({
 }) {
   const [popupOpen, setPopupOpen] = useState(false);
   const [popupRender, setPopupRender] = useState(false);
-  const [pending, setPending] = useState<string | null>(null);
   const popupScale = useSharedValue(0.3);
   const popupOpacity = useSharedValue(0);
+  const pendingClose = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (pendingClose.current) clearTimeout(pendingClose.current);
+    },
+    [],
+  );
 
   const openPopup = useCallback(() => {
     setPopupRender(true);
@@ -49,17 +59,12 @@ const ReactionBar = memo(function ReactionBar({
   }, [popupOpacity, popupScale]);
 
   const handlePress = useCallback(
-    async (emoji: string) => {
+    (emoji: string) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setPending(emoji);
-      await new Promise((r) => setTimeout(r, 400));
-      closePopup();
-      const next = emoji === userReaction ? null : emoji;
-      try {
-        await onReactionChange(next);
-      } finally {
-        setPending(null);
-      }
+      onReactionChange(emoji === userReaction ? null : emoji);
+
+      if (pendingClose.current) clearTimeout(pendingClose.current);
+      pendingClose.current = setTimeout(closePopup, POPUP_LINGER_MS);
     },
     [userReaction, onReactionChange, closePopup],
   );
@@ -81,12 +86,12 @@ const ReactionBar = memo(function ReactionBar({
           emoji={emoji}
           count={count}
           selected={userReaction === emoji}
-          pending={pending === emoji}
         />
       ))}
       <View>
         <Pressable
           onPress={() => (popupOpen ? closePopup() : openPopup())}
+          testID="reaction-picker"
           style={{
             width: 34,
             height: 34,
@@ -213,6 +218,7 @@ function PopEmoji({
           triggerBump();
           onPress(emoji);
         }}
+        testID={`reaction-option-${emoji}`}
         style={{
           width: 36,
           height: 36,
@@ -329,12 +335,10 @@ function CompactPill({
   emoji,
   count,
   selected,
-  pending,
 }: {
   emoji: string;
   count: number;
   selected: boolean;
-  pending: boolean;
 }) {
   const prevCount = useRef(0);
   const countOffset = useSharedValue(0);
@@ -363,7 +367,6 @@ function CompactPill({
         flexDirection: "row",
         alignItems: "center",
         gap: 2,
-        opacity: pending ? 0.4 : 1,
       }}
     >
       <Text style={{ fontSize: 13 }}>{emoji}</Text>

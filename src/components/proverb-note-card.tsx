@@ -4,7 +4,6 @@ import { Pressable, Text, View } from "react-native";
 import Animated from "react-native-reanimated";
 import RenderHtml from "react-native-render-html";
 import type { NoteEntity } from "../api/notes";
-import { deleteReaction, putReaction } from "../api/notes";
 import type { ReactionCounts } from "../models/reactions-and-replies";
 import { DividingLine } from "./dividing-line";
 import { LemuelButton } from "./lemuel-button";
@@ -31,7 +30,7 @@ const ProverbNoteCard = memo(function ProverbNoteCard({
   reactionCounts?: ReactionCounts;
   replyCount?: number;
   userReaction?: string | null;
-  onReactionChange?: () => void;
+  onReactionChange?: (next: string | null) => void;
   onReplyCountChange?: (delta: number) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -40,15 +39,10 @@ const ProverbNoteCard = memo(function ProverbNoteCard({
   const source = useMemo(() => ({ html: note.note }), [note.note]);
 
   const handleReactionChange = useCallback(
-    async (emoji: string | null) => {
-      if (!emoji) {
-        await deleteReaction(note.uuid, note.ref, note.date);
-      } else {
-        await putReaction(note.uuid, note.ref, note.date, emoji);
-      }
-      onReactionChange?.();
+    async (next: string | null) => {
+      onReactionChange?.(next);
     },
-    [note.uuid, note.ref, note.date, onReactionChange],
+    [onReactionChange],
   );
 
   const handleReplyCountChange = useCallback(

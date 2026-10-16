@@ -39,6 +39,8 @@ export function BottomSheetMenu({
   const slideAnim = useRef(new Animated.Value(300)).current;
   const insets = useSafeAreaInsets();
   const [render, setRender] = useState(false);
+  const visibleRef = useRef(visible);
+  visibleRef.current = visible;
 
   useEffect(() => {
     if (visible) {
@@ -54,7 +56,9 @@ export function BottomSheetMenu({
         duration: 200,
         useNativeDriver: true,
       }).start(() => {
-        setRender(false);
+        if (!visibleRef.current) {
+          setRender(false);
+        }
       });
     }
   }, [visible, slideAnim]);
