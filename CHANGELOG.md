@@ -14,6 +14,28 @@ Play submission have all succeeded.
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-10-18
+
+### Added
+
+- A forgot-password flow from the sign-in screen: request a reset code, then
+  choose a new password.
+- A new-password screen for accounts whose password an administrator has reset.
+  It answers Cognito's new-password challenge and continues to the page the
+  user originally asked for.
+
+### Fixed
+
+- Notes, account records and account statistics can only be read or changed by
+  their owner. The backend now takes the user from the sign-in token instead of
+  the uuid in the URL.
+- Saving a note no longer clears its reaction and reply counts.
+- Two notes by the same author on the same proverb no longer share a list key,
+  and a reply count only updates the note it belongs to.
+- The web note editor now re-initialises when a different note is opened.
+- Device registration no longer links a device token to an account; linking is
+  done only through the authenticated device-token route.
+
 ## [1.1.1] - 2026-10-18
 
 ### Changed
