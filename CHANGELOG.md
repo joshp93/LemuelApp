@@ -14,6 +14,14 @@ Play submission have all succeeded.
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-10-18
+
+### Changed
+
+- Android releases are submitted to the Play production track rather than the
+  alpha track, so this is the first version to reach production users. The build
+  itself is the same as 1.1.0.
+
 ## [1.1.0] - 2026-10-16
 
 ### Added
@@ -107,6 +115,7 @@ First public release.
 - iOS is scaffolded in `app.config.ts` but is not a supported or verified
   target.
 
-[Unreleased]: https://github.com/joshp93/LemuelApp/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/joshp93/LemuelApp/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/joshp93/LemuelApp/releases/tag/v1.1.1
 [1.1.0]: https://github.com/joshp93/LemuelApp/releases/tag/v1.1.0
 [1.0.0]: https://github.com/joshp93/LemuelApp/releases/tag/v1.0.0
