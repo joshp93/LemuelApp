@@ -59,9 +59,7 @@ export function useNoteReactions({
 
     try {
       const results = await Promise.allSettled(
-        notes.map((note) =>
-          getReactions(note.uuid, note.ref, note.date, userId),
-        ),
+        notes.map((note) => getReactions(note.uuid, note.ref, note.date)),
       );
       const data: Record<string, GetReactionsResponse> = {};
       results.forEach((result, index) => {
@@ -140,12 +138,7 @@ export function useNoteReactions({
         }
 
         try {
-          const confirmed = await getReactions(
-            note.uuid,
-            note.ref,
-            note.date,
-            userId,
-          );
+          const confirmed = await getReactions(note.uuid, note.ref, note.date);
           if (!stillLatest()) return;
           setReactionData((current) => ({ ...current, [key]: confirmed }));
         } catch (error) {

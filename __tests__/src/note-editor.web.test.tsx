@@ -51,6 +51,23 @@ describe("NoteEditor (web)", () => {
     expect(editorNode.innerHTML).toBe("<p>Trust in the LORD</p>");
   });
 
+  it("re-initialises with the new note after the editor is reloaded", () => {
+    const { rerender, editorNode } = renderEditor(true);
+
+    expect(editorNode.innerHTML).toBe("<p>Trust in the LORD</p>");
+
+    rerender(<WebNoteEditor {...baseProps} contentLoaded={false} />);
+    rerender(
+      <WebNoteEditor
+        {...baseProps}
+        editorContent="<p>A different note</p>"
+        contentLoaded
+      />,
+    );
+
+    expect(editorNode.innerHTML).toBe("<p>A different note</p>");
+  });
+
   it("leaves the editor empty while the content is still loading", () => {
     const { editorNode } = renderEditor(false);
 

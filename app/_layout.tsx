@@ -152,6 +152,8 @@ function AppContent() {
         <Stack.Screen name="sign-in" />
         <Stack.Screen name="sign-up" />
         <Stack.Screen name="confirm-sign-up" />
+        <Stack.Screen name="forgot-password" />
+        <Stack.Screen name="new-password" />
         <Stack.Screen name="settings" />
         <Stack.Screen name="meditation" />
         <Stack.Screen name="account" />

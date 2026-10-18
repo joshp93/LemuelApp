@@ -116,10 +116,24 @@ export async function signIn(
   success: boolean;
   message?: string;
   requiresConfirmation?: boolean;
+  newPasswordRequired?: boolean;
+  passwordResetRequired?: boolean;
+  session?: string;
 }> {
   try {
     remoteLog("info", "[Auth API] Attempting sign in");
     const response = await cognito.signIn(email, password);
+
+    if (response.ChallengeName === "NEW_PASSWORD_REQUIRED") {
+      remoteLog("info", "[Auth API] User must choose a new password");
+      return {
+        success: false,
+        newPasswordRequired: true,
+        session: response.Session,
+        message: "Your password has been reset. Please choose a new one.",
+      };
+    }
+
     const { IdToken, AccessToken, RefreshToken } =
       response.AuthenticationResult || {};
 
@@ -137,6 +151,18 @@ export async function signIn(
     remoteLog("error", "[Auth API] Sign in failed", { error });
 
     if (
+      error.name === "PasswordResetRequiredException" ||
+      error.code === "PasswordResetRequiredException"
+    ) {
+      remoteLog("info", "[Auth API] User must reset their password");
+      return {
+        success: false,
+        passwordResetRequired: true,
+        message: "Your password has been reset. Please request a reset code.",
+      };
+    }
+
+    if (
       error.name === "UserNotConfirmedException" ||
       error.code === "UserNotConfirmedException"
     ) {
@@ -148,6 +174,93 @@ export async function signIn(
       };
     }
 
+    return { success: false, message: error.message };
+  }
+}
+
+/**
+ * Sends a password-reset code to an email address.
+ *
+ * @param email - The user's email address.
+ * @returns Whether the code was sent, and a message on failure.
+ */
+export async function requestPasswordReset(
+  email: string,
+): Promise<{ success: boolean; message?: string }> {
+  try {
+    remoteLog("info", "[Auth API] Requesting password reset");
+    await cognito.forgotPassword(email);
+    return { success: true };
+  } catch (error: any) {
+    remoteLog("error", "[Auth API] Password reset request failed", { error });
+    return { success: false, message: error.message };
+  }
+}
+
+/**
+ * Sets a new password using a code from the reset email.
+ *
+ * @param email - The user's email address.
+ * @param code - The verification code from the reset email.
+ * @param newPassword - The password to set.
+ * @returns Whether the password was changed, and a message on failure.
+ */
+export async function confirmPasswordReset(
+  email: string,
+  code: string,
+  newPassword: string,
+): Promise<{ success: boolean; message?: string }> {
+  try {
+    remoteLog("info", "[Auth API] Confirming password reset");
+    await cognito.confirmForgotPassword(email, code, newPassword);
+    return { success: true };
+  } catch (error: any) {
+    remoteLog("error", "[Auth API] Password reset confirmation failed", {
+      error,
+    });
+    return { success: false, message: error.message };
+  }
+}
+
+/**
+ * Answers Cognito's new-password challenge and stores the resulting tokens.
+ *
+ * @param email - The user's email address.
+ * @param session - The challenge session returned by the failed sign-in.
+ * @param newPassword - The password to set.
+ * @returns Whether the password was set and the user signed in.
+ */
+export async function completeNewPassword(
+  email: string,
+  session: string,
+  newPassword: string,
+): Promise<{ success: boolean; message?: string }> {
+  try {
+    remoteLog("info", "[Auth API] Completing new-password challenge");
+    const response = await cognito.respondToNewPasswordChallenge(
+      email,
+      session,
+      newPassword,
+    );
+    const { IdToken, AccessToken, RefreshToken } =
+      response.AuthenticationResult || {};
+
+    if (IdToken && AccessToken && RefreshToken) {
+      await saveTokens({
+        idToken: IdToken,
+        accessToken: AccessToken,
+        refreshToken: RefreshToken,
+      });
+      remoteLog("info", "[Auth API] New password accepted");
+      return { success: true };
+    }
+
+    return {
+      success: false,
+      message: "Password updated, but sign in did not complete.",
+    };
+  } catch (error: any) {
+    remoteLog("error", "[Auth API] New-password challenge failed", { error });
     return { success: false, message: error.message };
   }
 }

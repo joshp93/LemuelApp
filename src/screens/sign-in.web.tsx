@@ -70,6 +70,25 @@ export default function WebSignIn() {
           authenticatedUser?.userId ?? "",
         ),
       );
+    } else if (result.newPasswordRequired) {
+      router.push({
+        pathname: "/new-password",
+        params: {
+          email,
+          session: result.session ?? "",
+          ...(redirect && { redirect }),
+          ...(route && { route }),
+        },
+      });
+    } else if (result.passwordResetRequired) {
+      router.push({
+        pathname: "/forgot-password",
+        params: {
+          email,
+          ...(redirect && { redirect }),
+          ...(route && { route }),
+        },
+      });
     } else if (result.requiresConfirmation) {
       router.replace({
         pathname: "/confirm-sign-up",
@@ -82,6 +101,17 @@ export default function WebSignIn() {
 
   const handleBack = () => {
     router.replace("/email-entry");
+  };
+
+  const handleForgotPassword = () => {
+    router.push({
+      pathname: "/forgot-password",
+      params: {
+        email,
+        ...(redirect && { redirect }),
+        ...(route && { route }),
+      },
+    });
   };
 
   return (
@@ -137,9 +167,17 @@ export default function WebSignIn() {
               {loading ? "Signing in..." : "Sign in"}
             </LemuelButton>
 
-            <Pressable style={styles.backButton} onPress={handleBack}>
-              <Text style={styles.backButtonText}>Back to Email</Text>
-            </Pressable>
+            <View style={styles.linksRow}>
+              <Pressable style={styles.backButton} onPress={handleBack}>
+                <Text style={styles.backButtonText}>Back to email</Text>
+              </Pressable>
+              <Pressable
+                style={styles.backButton}
+                onPress={handleForgotPassword}
+              >
+                <Text style={styles.backButtonText}>Forgot password?</Text>
+              </Pressable>
+            </View>
           </View>
         </SafeAreaView>
       </LemuelKeyboardAvoidingView>
@@ -208,6 +246,11 @@ const styles = StyleSheet.create({
   showPasswordText: {
     color: "#007AFF",
     fontSize: 16,
+  },
+  linksRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   backButton: {
     marginTop: 15,

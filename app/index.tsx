@@ -77,7 +77,7 @@ export default function Index() {
 
     if (user) {
       promises.push(
-        getProverbNotes(proverb.ref, user!.userId)
+        getProverbNotes(proverb.ref)
           .then((res) => setNotes(res.items))
           .catch(() => setNotes([])),
       );
@@ -102,10 +102,10 @@ export default function Index() {
     ready: dataReady,
   });
 
-  const updateNoteReplyCount = useCallback((pk: string, delta: number) => {
+  const updateNoteReplyCount = useCallback((noteKey: string, delta: number) => {
     setNotes((prev) =>
       prev.map((n) =>
-        n.pk === pk
+        reactionKey(n) === noteKey
           ? { ...n, replyCount: Math.max(0, (n.replyCount ?? 0) + delta) }
           : n,
       ),
@@ -288,7 +288,7 @@ export default function Index() {
                   const rd = reactionData[rk];
                   return (
                     <ProverbNoteCard
-                      key={note.pk}
+                      key={rk}
                       note={note}
                       contentWidth={contentWidth}
                       showEdit={note.uuid === user?.userId}
@@ -299,7 +299,7 @@ export default function Index() {
                       userReaction={rd?.userReaction}
                       onReactionChange={(next) => changeReaction(note, next)}
                       onReplyCountChange={(delta) =>
-                        updateNoteReplyCount(note.pk, delta)
+                        updateNoteReplyCount(rk, delta)
                       }
                       onEdit={
                         note.uuid === user?.userId

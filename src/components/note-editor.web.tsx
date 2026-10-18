@@ -62,6 +62,13 @@ export default function WebNoteEditor({
   }, [contentLoaded]);
 
   const contentInitialised = useRef(false);
+
+  useEffect(() => {
+    if (!contentLoaded) {
+      contentInitialised.current = false;
+    }
+  }, [contentLoaded]);
+
   useEffect(() => {
     if (!contentLoaded || !editorRef.current || contentInitialised.current)
       return;

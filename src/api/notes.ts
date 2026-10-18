@@ -226,32 +226,24 @@ export async function getUserNotes(
  * Fetches all notes for a given proverb reference.
  *
  * Makes an authenticated GET request to `/notes/proverbs/${ref}`.
- * Returns a list of note entities from all users. When a `userId` is provided,
- * the author's own private notes are included in the response; other users'
- * private notes are always excluded.
+ * Returns a list of note entities from all users. The backend takes the
+ * requesting user from the access token, so the author's own private notes
+ * are included in the response while other users' private notes are excluded.
  *
  * @param ref - The proverb reference, e.g. `Proverbs3:5`.
- * @param userId - The requesting user's Cognito UUID (optional). When provided,
- *                 the user's own private notes are included in the result.
  * @returns A paginated response with note items.
  * @throws If the request fails or if not authenticated.
  */
 export async function getProverbNotes(
   ref: string,
-  userId?: string,
 ): Promise<ProverbNotesResponse> {
   const token = await getValidIdToken();
   if (!token) {
     throw new Error("Not authenticated");
   }
 
-  const params = new URLSearchParams();
-  if (userId) {
-    params.set("userId", userId);
-  }
-
   const response = await fetch(
-    `${LEMUEL_API_BASE_URL}/notes/proverbs/${convertDisplayProverbToProverbKey(ref)}?${params.toString()}`,
+    `${LEMUEL_API_BASE_URL}/notes/proverbs/${convertDisplayProverbToProverbKey(ref)}`,
     {
       method: "GET",
       headers: { Authorization: token },
@@ -352,10 +344,12 @@ export async function deleteReaction(
 /**
  * Fetches all reactions for a given note.
  *
+ * The backend takes the requesting user from the access token to determine
+ * which reaction, if any, belongs to them.
+ *
  * @param noteAuthorUuid - The note author's Cognito UUID.
  * @param ref - The proverb reference, e.g. `Proverbs3:5`.
  * @param date - The date of the daily proverb, e.g. "2026-06-16".
- * @param userId - The requesting user's Cognito UUID (optional). Used to determine the user's own reaction.
  * @returns Reaction counts, the user's reaction, and the full reaction list.
  * @throws If the request fails or if not authenticated.
  */
@@ -363,7 +357,6 @@ export async function getReactions(
   noteAuthorUuid: string,
   ref: string,
   date: string,
-  userId?: string,
 ): Promise<GetReactionsResponse> {
   const token = await getValidIdToken();
   if (!token) {
@@ -371,9 +364,6 @@ export async function getReactions(
   }
 
   const params = new URLSearchParams({ date });
-  if (userId) {
-    params.set("userId", userId);
-  }
 
   const url = `${LEMUEL_API_BASE_URL}/notes/users/${noteAuthorUuid}/${convertDisplayProverbToProverbKey(ref)}/reactions?${params.toString()}`;
 

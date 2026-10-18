@@ -4,6 +4,7 @@ import { signIn as apiSignIn } from "../../src/api/auth";
 
 const mockRefreshUser = jest.fn();
 const mockBack = jest.fn();
+const mockPush = jest.fn();
 const mockReplace = jest.fn();
 const mockDispatch = jest.fn();
 let mockParams: Record<string, string> = {};
@@ -21,6 +22,7 @@ jest.mock("expo-router", () => ({
   useFocusEffect: jest.fn(),
   useRouter: () => ({
     back: mockBack,
+    push: mockPush,
     replace: mockReplace,
   }),
   useLocalSearchParams: () => mockParams,
@@ -280,6 +282,64 @@ describe("SignIn", () => {
         pathname: "/confirm-sign-up",
         params: { email: "test@example.com" },
       });
+    });
+  });
+
+  it("should ask for a new password when Cognito requires one", async () => {
+    mockParams = { email: "test@example.com" };
+    mockSignIn.mockResolvedValueOnce({
+      success: false,
+      newPasswordRequired: true,
+      session: "challenge-session",
+    });
+
+    const { getByPlaceholderText, getAllByText } = render(<SignIn />);
+
+    fireEvent.changeText(getByPlaceholderText("Password"), "temporary");
+
+    const signInButtons = getAllByText("Sign in");
+    fireEvent.press(signInButtons[1]);
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith({
+        pathname: "/new-password",
+        params: { email: "test@example.com", session: "challenge-session" },
+      });
+    });
+  });
+
+  it("should send a reset-required user to the forgot-password flow", async () => {
+    mockParams = { email: "test@example.com" };
+    mockSignIn.mockResolvedValueOnce({
+      success: false,
+      passwordResetRequired: true,
+    });
+
+    const { getByPlaceholderText, getAllByText } = render(<SignIn />);
+
+    fireEvent.changeText(getByPlaceholderText("Password"), "old-password");
+
+    const signInButtons = getAllByText("Sign in");
+    fireEvent.press(signInButtons[1]);
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith({
+        pathname: "/forgot-password",
+        params: { email: "test@example.com" },
+      });
+    });
+  });
+
+  it("should open the forgot-password flow from the link", () => {
+    mockParams = { email: "test@example.com" };
+
+    const { getByText } = render(<SignIn />);
+
+    fireEvent.press(getByText("Forgot password?"));
+
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: "/forgot-password",
+      params: { email: "test@example.com" },
     });
   });
 });

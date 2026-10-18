@@ -104,7 +104,7 @@ function MyMeditationsPage(_props: WithAuthProps) {
           <FlatList
             contentInsetAdjustmentBehavior="automatic"
             data={filteredNotes}
-            keyExtractor={(item) => item.ref}
+            keyExtractor={(item) => `${item.ref}#${item.proverbDate}`}
             contentContainerStyle={styles.listContent}
             ListHeaderComponent={
               <View>

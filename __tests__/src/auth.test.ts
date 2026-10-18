@@ -40,6 +40,148 @@ describe("Auth API", () => {
       });
       expect(result).toEqual({ success: true });
     });
+
+    it("should ask for a new password when Cognito returns the challenge", async () => {
+      jest.spyOn(Cognito, "signIn").mockResolvedValue({
+        ChallengeName: "NEW_PASSWORD_REQUIRED",
+        Session: "challenge-session",
+      } as any);
+
+      const result = await AuthAPI.signIn("test@example.com", "temporary");
+
+      expect(result).toEqual({
+        success: false,
+        newPasswordRequired: true,
+        session: "challenge-session",
+        message: "Your password has been reset. Please choose a new one.",
+      });
+    });
+
+    it("should signal a password reset when Cognito requires one", async () => {
+      const error = new Error("Password reset required");
+      error.name = "PasswordResetRequiredException";
+      jest.spyOn(Cognito, "signIn").mockRejectedValue(error);
+
+      const result = await AuthAPI.signIn("test@example.com", "old-password");
+
+      expect(result).toEqual({
+        success: false,
+        passwordResetRequired: true,
+        message: "Your password has been reset. Please request a reset code.",
+      });
+    });
+  });
+
+  describe("requestPasswordReset", () => {
+    it("should send a reset code", async () => {
+      const forgotPasswordSpy = jest
+        .spyOn(Cognito, "forgotPassword")
+        .mockResolvedValue({} as any);
+
+      const result = await AuthAPI.requestPasswordReset("test@example.com");
+
+      expect(forgotPasswordSpy).toHaveBeenCalledWith("test@example.com");
+      expect(result).toEqual({ success: true });
+    });
+
+    it("should report a failure message", async () => {
+      jest
+        .spyOn(Cognito, "forgotPassword")
+        .mockRejectedValue(new Error("User does not exist"));
+
+      const result = await AuthAPI.requestPasswordReset("test@example.com");
+
+      expect(result).toEqual({
+        success: false,
+        message: "User does not exist",
+      });
+    });
+  });
+
+  describe("confirmPasswordReset", () => {
+    it("should set the new password", async () => {
+      const confirmSpy = jest
+        .spyOn(Cognito, "confirmForgotPassword")
+        .mockResolvedValue({} as any);
+
+      const result = await AuthAPI.confirmPasswordReset(
+        "test@example.com",
+        "123456",
+        "NewPassword1",
+      );
+
+      expect(confirmSpy).toHaveBeenCalledWith(
+        "test@example.com",
+        "123456",
+        "NewPassword1",
+      );
+      expect(result).toEqual({ success: true });
+    });
+
+    it("should report a failure message", async () => {
+      jest
+        .spyOn(Cognito, "confirmForgotPassword")
+        .mockRejectedValue(new Error("Code mismatch"));
+
+      const result = await AuthAPI.confirmPasswordReset(
+        "test@example.com",
+        "000000",
+        "NewPassword1",
+      );
+
+      expect(result).toEqual({ success: false, message: "Code mismatch" });
+    });
+  });
+
+  describe("completeNewPassword", () => {
+    it("should answer the challenge and save the resulting tokens", async () => {
+      const mockTokens = {
+        IdToken: "id-token",
+        AccessToken: "access-token",
+        RefreshToken: "refresh-token",
+      };
+      const challengeSpy = jest
+        .spyOn(Cognito, "respondToNewPasswordChallenge")
+        .mockResolvedValue({ AuthenticationResult: mockTokens } as any);
+      const saveTokensSpy = jest
+        .spyOn(TokenStorage, "saveTokens")
+        .mockResolvedValue(undefined);
+
+      const result = await AuthAPI.completeNewPassword(
+        "test@example.com",
+        "challenge-session",
+        "NewPassword1",
+      );
+
+      expect(challengeSpy).toHaveBeenCalledWith(
+        "test@example.com",
+        "challenge-session",
+        "NewPassword1",
+      );
+      expect(saveTokensSpy).toHaveBeenCalledWith({
+        idToken: "id-token",
+        accessToken: "access-token",
+        refreshToken: "refresh-token",
+      });
+      expect(result).toEqual({ success: true });
+    });
+
+    it("should fail when no tokens are returned", async () => {
+      jest
+        .spyOn(Cognito, "respondToNewPasswordChallenge")
+        .mockResolvedValue({} as any);
+
+      const result = await AuthAPI.completeNewPassword(
+        "test@example.com",
+        "challenge-session",
+        "NewPassword1",
+      );
+
+      expect(result).toEqual({
+        success: false,
+        message: "Password updated, but sign in did not complete.",
+      });
+    });
   });
 
   describe("signOut", () => {

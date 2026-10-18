@@ -2,7 +2,6 @@ import * as BackgroundTask from "expo-background-task";
 import * as Notifications from "expo-notifications";
 import * as TaskManager from "expo-task-manager";
 import { Platform } from "react-native";
-import { getAuthenticatedUser } from "../api/auth";
 import { LEMUEL_API_BASE_URL } from "../api/constants";
 import { getProverbForTheDay } from "../api/proverbs";
 import { remoteLog } from "../api/remote-logger";
@@ -49,18 +48,14 @@ export const setupTokenListener = () => {
 /**
  * POSTs the given FCM token to the backend at `POST /push/register-token`.
  * Used by the token change listener to re-register when the token refreshes.
+ * Linking the token to an account is a separate, authenticated step.
  */
 const registerPushTokenWithBackend = async (token: string) => {
   try {
-    const user = await getAuthenticatedUser();
-    const body: Record<string, string> = { token, platform: Platform.OS };
-    if (user?.userId) {
-      body.uuid = user.userId;
-    }
     await fetch(`${LEMUEL_API_BASE_URL}/push/register-token`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ token, platform: Platform.OS }),
     });
     remoteLog("debug", "[PushListener] Token re-registered after change");
   } catch (error) {

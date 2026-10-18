@@ -73,7 +73,6 @@ describe("useNoteReactions", () => {
       "author-1",
       "Proverbs3:5",
       "2026-06-02",
-      "reader-1",
     );
     expect(result.current.reactionData[KEY]).toEqual({
       reactionCounts: {},

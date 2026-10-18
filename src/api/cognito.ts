@@ -1,7 +1,9 @@
 import {
   type ChallengeNameType,
   CognitoIdentityProviderClient,
+  ConfirmForgotPasswordCommand,
   ConfirmSignUpCommand,
+  ForgotPasswordCommand,
   GlobalSignOutCommand,
   InitiateAuthCommand,
   ResendConfirmationCodeCommand,
@@ -96,6 +98,66 @@ export async function respondToAuthChallenge(
     ChallengeResponses: challengeResponses,
   });
   return cognitoClient.send(command);
+}
+
+/**
+ * Requests a password-reset code for the given email address.
+ * @param email The user's email address (username).
+ */
+export async function forgotPassword(email: string) {
+  return cognitoClient.send(
+    new ForgotPasswordCommand({
+      ClientId: CLIENT_ID,
+      Username: email.toLowerCase(),
+    }),
+  );
+}
+
+/**
+ * Completes a password reset with the code sent to the user's email.
+ * @param email The user's email address (username).
+ * @param code The verification code from the reset email.
+ * @param newPassword The password to set.
+ */
+export async function confirmForgotPassword(
+  email: string,
+  code: string,
+  newPassword: string,
+) {
+  return cognitoClient.send(
+    new ConfirmForgotPasswordCommand({
+      ClientId: CLIENT_ID,
+      Username: email.toLowerCase(),
+      ConfirmationCode: code,
+      Password: newPassword,
+    }),
+  );
+}
+
+/**
+ * Answers Cognito's `NEW_PASSWORD_REQUIRED` challenge, which is returned when
+ * an administrator has set a temporary password that must be replaced before
+ * sign-in can complete.
+ * @param email The user's email address (username).
+ * @param session The challenge session returned by the sign-in attempt.
+ * @param newPassword The password to set.
+ */
+export async function respondToNewPasswordChallenge(
+  email: string,
+  session: string,
+  newPassword: string,
+) {
+  return cognitoClient.send(
+    new RespondToAuthChallengeCommand({
+      ChallengeName: "NEW_PASSWORD_REQUIRED",
+      ClientId: CLIENT_ID,
+      Session: session,
+      ChallengeResponses: {
+        USERNAME: email.toLowerCase(),
+        NEW_PASSWORD: newPassword,
+      },
+    }),
+  );
 }
 
 /**
