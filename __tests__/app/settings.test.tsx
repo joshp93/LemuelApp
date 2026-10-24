@@ -45,6 +45,9 @@ jest.mock("@use-voltra/android-client", () => ({
 
 jest.mock("../../src/notifications/notification-preferences");
 jest.mock("../../src/notifications/daily-proverb-notification");
+jest.mock("../../src/notifications/push-listener", () => ({
+  ensureNotificationsScheduled: jest.fn(),
+}));
 jest.mock("../../src/api/proverbs");
 jest.mock("../../src/api/version-storage");
 jest.mock("../../src/settings/meditation-preferences");
@@ -475,6 +478,25 @@ describe("SettingsScreen", () => {
           "gas-giant",
           "sine-mountains",
         ]);
+      });
+    });
+  });
+
+  describe("onboarding mode", () => {
+    it("shows a fixed Done action and calls onDone", async () => {
+      const onDone = jest.fn();
+      const { getByText } = render(
+        <SettingsScreen onboarding onDone={onDone} />,
+      );
+
+      await act(async () => {
+        jest.advanceTimersByTime(300);
+      });
+
+      fireEvent.press(getByText("Done"));
+
+      await waitFor(() => {
+        expect(onDone).toHaveBeenCalledTimes(1);
       });
     });
   });

@@ -1,8 +1,9 @@
 import { Picker } from "@react-native-picker/picker";
 import * as Notifications from "expo-notifications";
 import { Stack } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Animated, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getReplyNotificationsEnabled, updateAccount } from "../api/account";
 import { remoteLog } from "../api/remote-logger";
 import { useAuth } from "../auth/auth-context";
@@ -42,8 +43,29 @@ import {
 } from "../utils/meditation-shaders";
 import { parseTimePart } from "../utils/time-part";
 
-export default function SettingsScreen() {
+interface SettingsScreenProps {
+  /** Whether Settings is displayed inside the onboarding flow. */
+  onboarding?: boolean;
+  /** Called when the onboarding Done action is pressed. */
+  onDone?: () => void;
+}
+
+/**
+ * Settings screen.
+ *
+ * When used by onboarding it hides the navigation header, flashes the daily
+ * reminder card and shows a fixed Done action.
+ *
+ * @param props - Optional onboarding mode and completion handler.
+ * @returns The settings screen.
+ */
+export default function SettingsScreen({
+  onboarding = false,
+  onDone,
+}: SettingsScreenProps) {
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
+  const reminderFlash = useRef(new Animated.Value(0)).current;
   const [replyNotificationsEnabled, setReplyNotificationsEnabled] =
     useState<boolean>(true);
   const [replyNotificationsLoading, setReplyNotificationsLoading] =
@@ -99,6 +121,45 @@ export default function SettingsScreen() {
 
   useAutoSave(persist, !loading);
 
+  const reminderFlashBackground = reminderFlash.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["#ffffff", "#bfdbfe"],
+  });
+
+  useEffect(() => {
+    if (!onboarding || loading) return;
+
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(reminderFlash, {
+          toValue: 1,
+          duration: 260,
+          useNativeDriver: false,
+        }),
+        Animated.timing(reminderFlash, {
+          toValue: 0,
+          duration: 260,
+          useNativeDriver: false,
+        }),
+      ]),
+      { iterations: 2 },
+    );
+    const start = setTimeout(() => animation.start(), 400);
+
+    return () => {
+      clearTimeout(start);
+      animation.stop();
+      reminderFlash.setValue(0);
+    };
+  }, [loading, onboarding, reminderFlash]);
+
+  const handleDone = useCallback(() => {
+    if (!loading) {
+      void persist();
+    }
+    onDone?.();
+  }, [loading, onDone, persist]);
+
   const handleToggle = async (value: boolean) => {
     setEnabled(value);
     if (value) {
@@ -144,11 +205,14 @@ export default function SettingsScreen() {
 
   return (
     <View style={{ flex: 1 }}>
-      <Stack.Screen options={{ title: "Settings" }} />
+      {!onboarding && <Stack.Screen options={{ title: "Settings" }} />}
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         style={styles.container}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{
+          paddingTop: onboarding ? insets.top : 0,
+          paddingBottom: onboarding ? 160 : 100,
+        }}
       >
         <Text style={styles.sectionHeader}>Notifications</Text>
 
@@ -161,7 +225,13 @@ export default function SettingsScreen() {
           </LemuelButton>
         </View>
 
-        <View style={styles.notificationsCard}>
+        <Animated.View
+          style={[
+            styles.notificationsCard,
+            onboarding && { backgroundColor: reminderFlashBackground },
+          ]}
+          testID="daily-reminders-card"
+        >
           <View style={styles.settingItemRow}>
             <View style={styles.labelContainer}>
               <Text style={styles.label}>
@@ -208,7 +278,7 @@ export default function SettingsScreen() {
               </ExpandableSection>
             </View>
           )}
-        </View>
+        </Animated.View>
 
         {user && (
           <View style={styles.notificationsCard}>
@@ -273,6 +343,21 @@ export default function SettingsScreen() {
           ))}
         </View>
       </ScrollView>
+
+      {onboarding ? (
+        <View
+          style={[
+            styles.doneBar,
+            {
+              paddingBottom: insets.bottom + 16,
+            },
+          ]}
+        >
+          <LemuelButton onPress={handleDone} style={styles.doneButton}>
+            Done
+          </LemuelButton>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -282,6 +367,20 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: CONTENT_INSET,
     backgroundColor: "#F0F8FF",
+  },
+  doneBar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: CONTENT_INSET,
+    paddingTop: 12,
+    backgroundColor: "#F0F8FF",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "#d6e6f4",
+  },
+  doneButton: {
+    paddingVertical: 16,
   },
   sectionHeader: {
     fontSize: 20,

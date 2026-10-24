@@ -118,7 +118,7 @@ export default function WebMeditationScreen() {
     opacity: textOpacity.value,
   }));
 
-  const textBoxHeight = canvasSize.height - (INSET + CORNER_RADIUS + 8) - 100;
+  const textBoxHeight = canvasSize.height - (INSET + CORNER_RADIUS + 8);
   const { fontSize, onTextLayout } = useFitFontSize(
     proverbData?.proverb,
     textBoxHeight,
@@ -176,7 +176,7 @@ export default function WebMeditationScreen() {
       <View style={styles.overlay}>
         {proverbData && !loading && shader && (
           <Animated.View style={[styles.textContainer, textAnimatedStyle]}>
-            <ScrollView>
+            <ScrollView style={styles.textScroll}>
               <Text
                 style={[
                   styles.proverbText,
@@ -237,7 +237,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: INSET + CORNER_RADIUS,
     paddingTop: INSET + CORNER_RADIUS + 8,
-    paddingBottom: 100,
+  },
+  textScroll: {
+    flex: 1,
   },
   proverbText: {
     textAlign: "left",

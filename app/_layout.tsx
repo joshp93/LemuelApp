@@ -5,10 +5,9 @@ import {
   Nunito_400Regular_Italic,
   useFonts,
 } from "@expo-google-fonts/nunito";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Stack, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Image,
   Platform,
@@ -36,7 +35,7 @@ import {
   registerReplyNotificationCategory,
   setupTokenListener,
 } from "../src/notifications/push-listener";
-import { confirm } from "../src/utils/confirm";
+import { hasCompletedOnboarding } from "../src/onboarding/onboarding-storage";
 import { getContentGutter } from "../src/utils/layout";
 import { initializeWidget } from "../src/widgets/initializeWidget";
 
@@ -49,6 +48,7 @@ function AppContent() {
   });
 
   const router = useRouter();
+  const [startupReady, setStartupReady] = useState(Platform.OS === "web");
   const { width: windowWidth } = useWindowDimensions();
   const contentGutter = useMemo(
     () => (Platform.OS === "web" ? getContentGutter(windowWidth) : 0),
@@ -85,40 +85,34 @@ function AppContent() {
   }, []);
 
   useEffect(() => {
-    if (fontsLoaded || fontError) {
+    if (Platform.OS === "web" || (!fontsLoaded && !fontError)) return;
+
+    let active = true;
+
+    hasCompletedOnboarding().then((completed) => {
+      if (!active) return;
+      if (!completed) {
+        router.replace("/onboarding");
+      }
+      setStartupReady(true);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [fontsLoaded, fontError, router]);
+
+  useEffect(() => {
+    if ((fontsLoaded || fontError) && startupReady) {
       SplashScreen.hideAsync();
     }
-  }, [fontsLoaded, fontError]);
+  }, [fontsLoaded, fontError, startupReady]);
 
   useEffect(() => {
-    if (Platform.OS === "web") return;
-    if (!fontsLoaded && !fontError) return;
-
-    (async () => {
-      const shown = await AsyncStorage.getItem("notification_prompt_shown");
-      if (!shown) {
-        setTimeout(async () => {
-          const accepted = await confirm({
-            title: "Daily proverb reminders",
-            message:
-              "Would you like to receive a daily notification with the proverb of the day? You can adjust this anytime in Settings.",
-            confirmLabel: "Go to settings",
-            cancelLabel: "Not now",
-          });
-          if (accepted) {
-            router.push("/settings");
-          }
-        }, 1000);
-        await AsyncStorage.setItem("notification_prompt_shown", "true");
-      }
-    })();
-  }, [fontsLoaded, fontError, router]);
-
-  useEffect(() => {
-    if (!fontsLoaded && !fontError) return;
+    if ((!fontsLoaded && !fontError) || !startupReady) return;
 
     handleInitialNotificationResponse(router);
-  }, [fontsLoaded, fontError, router]);
+  }, [fontsLoaded, fontError, startupReady, router]);
 
   if (!fontsLoaded && !fontError) {
     return null;
@@ -148,6 +142,7 @@ function AppContent() {
         }}
       >
         <Stack.Screen name="index" />
+        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen name="email-entry" />
         <Stack.Screen name="sign-in" />
         <Stack.Screen name="sign-up" />

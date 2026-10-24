@@ -82,8 +82,16 @@ jest.mock("react-native-reanimated", () => {
   return { __esModule: true, default: RE, ...RE };
 });
 
+let mockBottomInset = 0;
+
 jest.mock("react-native-safe-area-context", () => ({
   SafeAreaView: ({ children }: any) => children,
+  useSafeAreaInsets: () => ({
+    top: 0,
+    right: 0,
+    bottom: mockBottomInset,
+    left: 0,
+  }),
 }));
 
 jest.mock("../../src/api/meditation", () => ({
@@ -176,6 +184,7 @@ async function renderToCompletion() {
 describe("MeditationScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockBottomInset = 0;
     mockLocalSearchParams.mockReturnValue({
       proverb: undefined,
       ref: undefined,
@@ -395,6 +404,19 @@ describe("MeditationScreen", () => {
 
       await waitFor(() => {
         expect(getByText("Capture your thoughts...")).toBeTruthy();
+      });
+    });
+
+    it("keeps the capture button above the bottom navigation area", async () => {
+      mockBottomInset = 48;
+      mockLocalSearchParams.mockReturnValue(NOTIFICATION_PARAMS);
+
+      const { getByTestId } = await renderToCompletion();
+
+      await waitFor(() => {
+        expect(getByTestId("meditation-capture-safe-area").props.style).toEqual(
+          { paddingBottom: 48 },
+        );
       });
     });
   });

@@ -24,7 +24,10 @@ import Animated, {
   useDerivedValue,
   useSharedValue,
 } from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { recordMeditationCompletion } from "../api/meditation";
 import { remoteLog } from "../api/remote-logger";
 import { useAuth } from "../auth/auth-context";
@@ -76,6 +79,7 @@ export default function MeditationScreen() {
   const loading = hasParamProverb ? false : hookResult.loading;
 
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const screenHeight = Dimensions.get("screen").height;
   const hasVisibleNavBar = screenHeight - windowHeight > 30;
@@ -148,7 +152,7 @@ export default function MeditationScreen() {
     opacity: textOpacity.value,
   }));
 
-  const textBoxHeight = canvasSize.height - (INSET + cornerRadius + 8) - 100;
+  const textBoxHeight = canvasSize.height - (INSET + cornerRadius + 8);
   const { fontSize, onTextLayout } = useFitFontSize(
     proverbData?.proverb,
     textBoxHeight,
@@ -211,7 +215,7 @@ export default function MeditationScreen() {
               textAnimatedStyle,
             ]}
           >
-            <ScrollView>
+            <ScrollView style={styles.textScroll}>
               <Text
                 style={[
                   styles.proverbText,
@@ -230,10 +234,15 @@ export default function MeditationScreen() {
         )}
 
         {isComplete && proverbData && (
-          <MeditationCaptureButton
-            proverbRef={proverbData.ref}
-            date={effectiveDate}
-          />
+          <View
+            style={{ paddingBottom: insets.bottom }}
+            testID="meditation-capture-safe-area"
+          >
+            <MeditationCaptureButton
+              proverbRef={proverbData.ref}
+              date={effectiveDate}
+            />
+          </View>
         )}
       </View>
     </>
@@ -270,7 +279,9 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     flex: 1,
-    paddingBottom: 100,
+  },
+  textScroll: {
+    flex: 1,
   },
   proverbText: {
     textAlign: "left",

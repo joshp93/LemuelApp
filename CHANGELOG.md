@@ -14,6 +14,27 @@ Play submission have all succeeded.
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-24
+
+### Added
+
+- A four-step onboarding flow for first-time users: a welcome screen, a home
+  screen tour with the daily reminder choice, a live meditation preview, and the
+  account/community-notes introduction.
+- Reminder setup from onboarding opens Settings full screen with a guided
+  reminder-card highlight and a fixed Done action.
+
+### Changed
+
+- First launch now shows onboarding instead of the daily-reminder dialog. The
+  old dialog is retained in the codebase but is no longer mounted.
+
+### Fixed
+
+- The meditation capture button now sits above Android's navigation bar.
+- The meditation proverb area now uses all available space above the capture
+  button and scrolls when the text is too long.
+
 ## [1.1.2] - 2026-10-18
 
 ### Added
@@ -137,7 +158,9 @@ First public release.
 - iOS is scaffolded in `app.config.ts` but is not a supported or verified
   target.
 
-[Unreleased]: https://github.com/joshp93/LemuelApp/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/joshp93/LemuelApp/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/joshp93/LemuelApp/releases/tag/v1.2.0
+[1.1.2]: https://github.com/joshp93/LemuelApp/releases/tag/v1.1.2
 [1.1.1]: https://github.com/joshp93/LemuelApp/releases/tag/v1.1.1
 [1.1.0]: https://github.com/joshp93/LemuelApp/releases/tag/v1.1.0
 [1.0.0]: https://github.com/joshp93/LemuelApp/releases/tag/v1.0.0
