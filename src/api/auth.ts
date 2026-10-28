@@ -1,6 +1,6 @@
 import { jwtDecode } from "jwt-decode";
 import { clearTokens, getTokens, saveTokens } from "../auth/token-storage";
-import { isTokenExpired, isTokenExpiringSoon } from "../auth/token-utils";
+import { getTimeUntilExpiration, isTokenExpired } from "../auth/token-utils";
 import * as cognito from "./cognito";
 import { LEMUEL_API_BASE_URL } from "./constants";
 import { remoteLog } from "./remote-logger";
@@ -311,12 +311,36 @@ export async function getAuthenticatedUser(): Promise<AppAuthUser | null> {
   }
 }
 
+/** How long before expiry a token is refreshed proactively. */
+const REFRESH_MARGIN_MS = 5 * 60 * 1000;
+
+/** The refresh currently running, shared by every caller that needs one. */
+let inFlightRefresh: Promise<boolean> | null = null;
+
 /**
  * Attempts to refresh the access and ID tokens using the stored refresh token.
- * On success, updates stored tokens. On failure, clears all tokens.
+ *
+ * Concurrent callers share a single refresh, so several requests that observe
+ * the same expiring token do not each call Cognito.
+ *
  * @returns True if refresh was successful, false otherwise
  */
-export async function refreshAccessToken(): Promise<boolean> {
+export function refreshAccessToken(): Promise<boolean> {
+  if (!inFlightRefresh) {
+    inFlightRefresh = performRefreshAccessToken().finally(() => {
+      inFlightRefresh = null;
+    });
+  }
+  return inFlightRefresh;
+}
+
+/**
+ * Refreshes the stored tokens, replacing them on success and clearing them on
+ * failure.
+ *
+ * @returns True if refresh was successful, false otherwise
+ */
+async function performRefreshAccessToken(): Promise<boolean> {
   try {
     remoteLog("info", "[Auth API] Attempting to refresh access token");
     const tokens = await getTokens();
@@ -359,51 +383,49 @@ export async function refreshAccessToken(): Promise<boolean> {
 }
 
 /**
- * Gets a valid access token, refreshing if necessary.
- * This function provides the "middleware" behavior - call this before any API request
- * that needs an access token. It proactively refreshes if the token is expired or expiring soon.
- * On refresh failure, clears tokens and returns null.
- * @returns Valid access token string, or null if no valid token available
+ * Reads a stored token, refreshing it first when it has expired or is about to.
+ *
+ * The expiry is decoded once per call, and the refresh is shared with any other
+ * caller that needs one at the same time.
+ *
+ * @param kind - Which stored token to read.
+ * @returns The token, or null when it cannot be made valid
  */
-export async function getValidAccessToken(): Promise<string | null> {
+async function getValidToken(
+  kind: "idToken" | "accessToken",
+): Promise<string | null> {
   try {
     const tokens = await getTokens();
+    const token = tokens?.[kind];
 
-    if (!tokens?.accessToken) {
-      remoteLog("info", "[Auth API] No access token stored");
+    if (!token) {
+      remoteLog("info", `[Auth API] No ${kind} stored`);
       return null;
     }
 
-    if (isTokenExpired(tokens.accessToken)) {
-      remoteLog("info", "[Auth API] Access token expired, attempting refresh");
-      const refreshed = await refreshAccessToken();
-      if (!refreshed) {
-        return null;
-      }
-      const newTokens = await getTokens();
-      return newTokens?.accessToken || null;
+    if (getTimeUntilExpiration(token) > REFRESH_MARGIN_MS) {
+      return token;
     }
 
-    if (isTokenExpiringSoon(tokens.accessToken)) {
-      remoteLog(
-        "info",
-        "[Auth API] Access token expiring soon, proactively refreshing",
-      );
-      const refreshed = await refreshAccessToken();
-      if (!refreshed) {
-        return null;
-      }
-      const newTokens = await getTokens();
-      return newTokens?.accessToken || null;
+    remoteLog("info", `[Auth API] ${kind} expiring, attempting refresh`);
+    if (!(await refreshAccessToken())) {
+      return null;
     }
 
-    return tokens.accessToken;
+    const refreshed = await getTokens();
+    return refreshed?.[kind] ?? null;
   } catch (error) {
-    remoteLog("error", "[Auth API] Error getting valid access token", {
-      error,
-    });
+    remoteLog("error", `[Auth API] Error getting a valid ${kind}`, { error });
     return null;
   }
+}
+
+/**
+ * Gets a valid access token, refreshing if necessary.
+ * @returns Valid access token string, or null if no valid token available
+ */
+export function getValidAccessToken(): Promise<string | null> {
+  return getValidToken("accessToken");
 }
 
 /**
@@ -418,44 +440,8 @@ export async function getIdToken(): Promise<string | null> {
 
 /**
  * Gets a valid ID token, refreshing if necessary.
- * Use this when you need to ensure the ID token is fresh.
  * @returns Valid ID token string, or null if no valid token available
  */
-export async function getValidIdToken(): Promise<string | null> {
-  try {
-    const tokens = await getTokens();
-
-    if (!tokens?.idToken) {
-      remoteLog("info", "[Auth API] No ID token stored");
-      return null;
-    }
-
-    if (isTokenExpired(tokens.idToken)) {
-      remoteLog("info", "[Auth API] ID token expired, attempting refresh");
-      const refreshed = await refreshAccessToken();
-      if (!refreshed) {
-        return null;
-      }
-      const newTokens = await getTokens();
-      return newTokens?.idToken || null;
-    }
-
-    if (isTokenExpiringSoon(tokens.idToken)) {
-      remoteLog(
-        "info",
-        "[Auth API] ID token expiring soon, proactively refreshing",
-      );
-      const refreshed = await refreshAccessToken();
-      if (!refreshed) {
-        return null;
-      }
-      const newTokens = await getTokens();
-      return newTokens?.idToken || null;
-    }
-
-    return tokens.idToken;
-  } catch (error) {
-    remoteLog("error", "[Auth API] Error getting valid ID token", { error });
-    return null;
-  }
+export function getValidIdToken(): Promise<string | null> {
+  return getValidToken("idToken");
 }

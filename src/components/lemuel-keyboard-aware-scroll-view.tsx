@@ -34,10 +34,12 @@ export function LemuelKeyboardAwareScrollView({
   ...props
 }: LemuelKeyboardAwareScrollViewProps) {
   useEffect(() => {
-    setTimeout(() => {
-      navigationSafeAutoFocus?.current?.focus();
+    if (!navigationSafeAutoFocus) return;
+    const timer = setTimeout(() => {
+      navigationSafeAutoFocus.current?.focus();
     }, 100);
-  }, []);
+    return () => clearTimeout(timer);
+  }, [navigationSafeAutoFocus]);
 
   return (
     <KeyboardAwareScrollView {...props}>{children}</KeyboardAwareScrollView>

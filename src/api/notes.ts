@@ -1,3 +1,4 @@
+import { removeCache, withCache, writeCache } from "../cache/store";
 import type {
   GetReactionsResponse,
   GetRepliesResponse,
@@ -8,6 +9,46 @@ import { convertDisplayProverbToProverbKey } from "../utils/proverb-helper";
 import { getValidIdToken } from "./auth";
 import { LEMUEL_API_BASE_URL } from "./constants";
 import { remoteLog } from "./remote-logger";
+
+/** Notes can change on another device, so a cached copy stays fresh briefly. */
+const NOTES_TTL_MS = 30 * 1000;
+
+/**
+ * Builds the cache key for one reader's note on one proverb and date.
+ *
+ * @param uuid - The note author's Cognito UUID.
+ * @param ref - The proverb reference.
+ * @param date - The date of the daily proverb.
+ * @returns The cache key.
+ */
+function noteCacheKey(uuid: string, ref: string, date?: string): string {
+  return `note:${uuid}:${convertDisplayProverbToProverbKey(ref)}:${date ?? ""}`;
+}
+
+/**
+ * Builds the cache key for the list of a user's notes.
+ *
+ * @param uuid - The user's Cognito UUID.
+ * @returns The cache key.
+ */
+function userNotesCacheKey(uuid: string): string {
+  return `user-notes:${uuid}`;
+}
+
+/**
+ * Builds the cache key for a proverb's community notes.
+ *
+ * The reader is part of the key because the response includes their own
+ * private notes and excludes everyone else's.
+ *
+ * @param ref - The proverb reference.
+ * @param viewerId - The signed-in reader, when there is one.
+ * @returns The cache key.
+ */
+function proverbNotesCacheKey(ref: string, viewerId?: string): string {
+  const key = convertDisplayProverbToProverbKey(ref);
+  return `proverb-notes:${key}:${viewerId ?? "anonymous"}`;
+}
 
 /**
  * Response shape returned by the GET and POST note endpoints.
@@ -65,34 +106,36 @@ export async function getUserNote(
   ref: string,
   date?: string,
 ): Promise<UserNoteResponse | null> {
-  const token = await getValidIdToken();
-  if (!token) {
-    throw new Error("Not authenticated");
-  }
+  return withCache(noteCacheKey(uuid, ref, date), NOTES_TTL_MS, async () => {
+    const token = await getValidIdToken();
+    if (!token) {
+      throw new Error("Not authenticated");
+    }
 
-  const url = new URL(
-    `${LEMUEL_API_BASE_URL}/notes/users/${uuid}/${convertDisplayProverbToProverbKey(ref)}`,
-  );
-  if (date) {
-    url.searchParams.set("date", date);
-  }
-
-  const response = await fetch(url.toString(), {
-    method: "GET",
-    headers: { Authorization: token },
-  });
-
-  if (response.status === 404) {
-    return null;
-  }
-
-  if (!response.ok) {
-    throw new Error(
-      `Failed to get user note: ${response.status} ${response.statusText}`,
+    const url = new URL(
+      `${LEMUEL_API_BASE_URL}/notes/users/${uuid}/${convertDisplayProverbToProverbKey(ref)}`,
     );
-  }
+    if (date) {
+      url.searchParams.set("date", date);
+    }
 
-  return response.json() as Promise<UserNoteResponse>;
+    const response = await fetch(url.toString(), {
+      method: "GET",
+      headers: { Authorization: token },
+    });
+
+    if (response.status === 404) {
+      return null;
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to get user note: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    return response.json() as Promise<UserNoteResponse>;
+  });
 }
 
 /**
@@ -142,7 +185,10 @@ export async function saveUserNote(
     );
   }
 
-  return (await response.json()) as UserNoteResponse;
+  const saved = (await response.json()) as UserNoteResponse;
+  await writeCache(noteCacheKey(uuid, ref, date), saved);
+  await removeCache(userNotesCacheKey(uuid));
+  return saved;
 }
 
 /**
@@ -187,6 +233,8 @@ export async function deleteUserNote(
     );
   }
 
+  await removeCache(noteCacheKey(uuid, ref, date));
+  await removeCache(userNotesCacheKey(uuid));
   return true;
 }
 
@@ -203,23 +251,25 @@ export async function deleteUserNote(
 export async function getUserNotes(
   uuid: string,
 ): Promise<ProverbNotesResponse> {
-  const token = await getValidIdToken();
-  if (!token) {
-    throw new Error("Not authenticated");
-  }
+  return withCache(userNotesCacheKey(uuid), NOTES_TTL_MS, async () => {
+    const token = await getValidIdToken();
+    if (!token) {
+      throw new Error("Not authenticated");
+    }
 
-  const response = await fetch(`${LEMUEL_API_BASE_URL}/notes/users/${uuid}`, {
-    method: "GET",
-    headers: { Authorization: token },
+    const response = await fetch(`${LEMUEL_API_BASE_URL}/notes/users/${uuid}`, {
+      method: "GET",
+      headers: { Authorization: token },
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to get user notes: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    return response.json() as Promise<ProverbNotesResponse>;
   });
-
-  if (!response.ok) {
-    throw new Error(
-      `Failed to get user notes: ${response.status} ${response.statusText}`,
-    );
-  }
-
-  return response.json() as Promise<ProverbNotesResponse>;
 }
 
 /**
@@ -231,32 +281,40 @@ export async function getUserNotes(
  * are included in the response while other users' private notes are excluded.
  *
  * @param ref - The proverb reference, e.g. `Proverbs3:5`.
+ * @param viewerId - The signed-in reader, so the cached copy belongs to them.
  * @returns A paginated response with note items.
  * @throws If the request fails or if not authenticated.
  */
 export async function getProverbNotes(
   ref: string,
+  viewerId?: string,
 ): Promise<ProverbNotesResponse> {
-  const token = await getValidIdToken();
-  if (!token) {
-    throw new Error("Not authenticated");
-  }
+  return withCache(
+    proverbNotesCacheKey(ref, viewerId),
+    NOTES_TTL_MS,
+    async () => {
+      const token = await getValidIdToken();
+      if (!token) {
+        throw new Error("Not authenticated");
+      }
 
-  const response = await fetch(
-    `${LEMUEL_API_BASE_URL}/notes/proverbs/${convertDisplayProverbToProverbKey(ref)}`,
-    {
-      method: "GET",
-      headers: { Authorization: token },
+      const response = await fetch(
+        `${LEMUEL_API_BASE_URL}/notes/proverbs/${convertDisplayProverbToProverbKey(ref)}`,
+        {
+          method: "GET",
+          headers: { Authorization: token },
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to get proverb notes: ${response.status} ${response.statusText}`,
+        );
+      }
+
+      return response.json() as Promise<ProverbNotesResponse>;
     },
   );
-
-  if (!response.ok) {
-    throw new Error(
-      `Failed to get proverb notes: ${response.status} ${response.statusText}`,
-    );
-  }
-
-  return response.json() as Promise<ProverbNotesResponse>;
 }
 
 /**

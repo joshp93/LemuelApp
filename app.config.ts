@@ -85,6 +85,12 @@ const config: ExpoConfig = {
     "expo-image",
     "expo-status-bar",
     "expo-background-task",
+    [
+      "expo-secure-store",
+      {
+        configureAndroidBackup: true,
+      },
+    ],
     "./plugins/with-unique-notification-ids",
   ],
   experiments: {

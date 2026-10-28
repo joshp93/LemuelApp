@@ -193,6 +193,20 @@ describe("Index", () => {
     });
   });
 
+  it("shows the proverb before the notes have loaded", () => {
+    mockUseAuth.mockReturnValue({ user: { userId: "user-1" } });
+    mockGetProverbNotes.mockReturnValue(new Promise<never>(() => {}));
+    mockUseProverbForTheDay.mockReturnValue({
+      ...defaultHookReturn,
+      loading: false,
+      proverb: mockProverb,
+    });
+
+    const { getByText } = render(<Index />);
+
+    expect(getByText("Trust in the LORD with all your heart")).toBeTruthy();
+  });
+
   it("should render citation when provided", async () => {
     mockUseProverbForTheDay.mockReturnValue({
       ...defaultHookReturn,
@@ -211,6 +225,8 @@ describe("Index", () => {
   });
 
   it("should render loading state when proverb is loading", () => {
+    mockUseProverbForTheDay.mockReturnValue(defaultHookReturn);
+
     const { getByTestId } = render(<Index />);
 
     expect(getByTestId("lemuel-loading")).toBeTruthy();

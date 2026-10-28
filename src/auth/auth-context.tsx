@@ -9,6 +9,7 @@ import {
 import { getDisplayName } from "../api/account";
 import * as auth from "../api/auth";
 import { remoteLog } from "../api/remote-logger";
+import { clearCache } from "../cache/store";
 
 export interface AuthUser {
   userId: string;
@@ -45,27 +46,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       remoteLog("info", "[Auth] Checking for authenticated user");
       const authenticatedUser = await auth.getAuthenticatedUser();
-      if (authenticatedUser) {
-        remoteLog(
-          "info",
-          "[Auth] User is authenticated, fetching valid ID token",
-        );
-        const token = await auth.getValidIdToken();
-        if (token) {
-          remoteLog("info", "[Auth] User signed in successfully");
-          setUser({
-            ...authenticatedUser,
-            token,
-            displayName: await getDisplayName(authenticatedUser.userId),
-          });
-        } else {
-          remoteLog("info", "[Auth] No valid ID token found, user is null");
-          setUser(null);
-        }
-      } else {
+
+      if (!authenticatedUser) {
         remoteLog("info", "[Auth] No authenticated user found");
         setUser(null);
+        return;
       }
+
+      remoteLog(
+        "info",
+        "[Auth] User is authenticated, fetching valid ID token",
+      );
+      const token = await auth.getValidIdToken();
+
+      if (!token) {
+        remoteLog("info", "[Auth] No valid ID token found, user is null");
+        setUser(null);
+        return;
+      }
+
+      remoteLog("info", "[Auth] User signed in successfully");
+      setUser({ ...authenticatedUser, token, displayName: "" });
+
+      const displayName = await getDisplayName(authenticatedUser.userId);
+      setUser((current) =>
+        current?.userId === authenticatedUser.userId
+          ? { ...current, displayName }
+          : current,
+      );
     } catch (error: unknown) {
       remoteLog("error", "[Auth] Error checking auth state", { error });
       setUser(null);
@@ -103,6 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     remoteLog("info", "[Auth] Signing out user");
     await auth.signOut();
+    await clearCache();
     remoteLog("info", "[Auth] User signed out");
     setUser(null);
   }, []);

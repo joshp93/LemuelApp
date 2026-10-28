@@ -1,5 +1,5 @@
 import { MaterialIcons } from "@expo/vector-icons";
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import Animated from "react-native-reanimated";
 import RenderHtml from "react-native-render-html";
@@ -37,6 +37,10 @@ const ProverbNoteCard = memo(function ProverbNoteCard({
   const [contentHeight, setContentHeight] = useState(0);
   const [repliesVisible, setRepliesVisible] = useState(false);
   const source = useMemo(() => ({ html: note.note }), [note.note]);
+
+  useEffect(() => {
+    setContentHeight(0);
+  }, [note.note, contentWidth]);
 
   const handleReactionChange = useCallback(
     async (next: string | null) => {
@@ -96,30 +100,30 @@ const ProverbNoteCard = memo(function ProverbNoteCard({
           </>
         ) : null}
       </View>
-      <View
-        style={{
-          position: "absolute",
-          left: 12,
-          right: 12,
-          opacity: 0,
-          zIndex: -1,
-        }}
-        pointerEvents="none"
-      >
+      {contentHeight === 0 && (
         <View
-          onLayout={(e) => {
-            if (contentHeight === 0) {
-              setContentHeight(e.nativeEvent.layout.height);
-            }
+          style={{
+            position: "absolute",
+            left: 12,
+            right: 12,
+            opacity: 0,
+            zIndex: -1,
           }}
+          pointerEvents="none"
         >
-          <RenderHtml
-            contentWidth={contentWidth}
-            source={source}
-            baseStyle={{ color: "#333", fontSize: 19 }}
-          />
+          <View
+            onLayout={(e) => {
+              setContentHeight(e.nativeEvent.layout.height);
+            }}
+          >
+            <RenderHtml
+              contentWidth={contentWidth}
+              source={source}
+              baseStyle={{ color: "#333", fontSize: 19 }}
+            />
+          </View>
         </View>
-      </View>
+      )}
       <Pressable onPress={() => setExpanded(!expanded)}>
         <Animated.View
           style={{

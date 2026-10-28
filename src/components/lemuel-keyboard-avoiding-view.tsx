@@ -34,10 +34,12 @@ export function LemuelKeyboardAvoidingView({
   ...props
 }: LemuelKeyboardAvoidingViewProps) {
   useEffect(() => {
-    setTimeout(() => {
-      navigationSafeAutoFocus?.current?.focus();
+    if (!navigationSafeAutoFocus) return;
+    const timer = setTimeout(() => {
+      navigationSafeAutoFocus.current?.focus();
     }, 100);
-  }, []);
+    return () => clearTimeout(timer);
+  }, [navigationSafeAutoFocus]);
 
   return <KeyboardAvoidingView {...props}>{children}</KeyboardAvoidingView>;
 }

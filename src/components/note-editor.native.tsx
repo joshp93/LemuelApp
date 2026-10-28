@@ -1,5 +1,5 @@
 import { MaterialIcons } from "@expo/vector-icons";
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import {
   actions,
@@ -44,14 +44,6 @@ export default function NoteEditor({
 }: NoteEditorProps) {
   const richTextRef = useRef<RichEditor>(null);
 
-  useEffect(() => {
-    if (!contentLoaded) return;
-    const timer = setTimeout(() => {
-      richTextRef.current?.focusContentEditor();
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [contentLoaded]);
-
   if (!contentLoaded) {
     return <LemuelLoadingScreen />;
   }
@@ -83,6 +75,7 @@ export default function NoteEditor({
             "font-size: 16px; font-family: Nunito; padding: 8px; overflow: hidden;",
         }}
         initialContentHTML={editorContent}
+        initialFocus
         initialHeight={150}
         autoCapitalize="sentences"
         autoCorrect

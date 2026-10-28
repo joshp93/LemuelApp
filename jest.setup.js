@@ -13,6 +13,25 @@ global.console = {
 
 jest.mock("./src/api/remote-logger");
 
+jest.mock("expo-secure-store", () => {
+  const store = new Map();
+  return {
+    isAvailableAsync: jest.fn(async () => true),
+    getItemAsync: jest.fn(async (key) => store.get(key) ?? null),
+    setItemAsync: jest.fn(async (key, value) => {
+      store.set(key, value);
+    }),
+    deleteItemAsync: jest.fn(async (key) => {
+      store.delete(key);
+    }),
+    __reset: () => store.clear(),
+  };
+});
+
+beforeEach(async () => {
+  await require("./src/cache/store").clearCache();
+});
+
 jest.mock("react-native-keyboard-controller", () => {
   const React = require("react");
   const RN = require("react-native");

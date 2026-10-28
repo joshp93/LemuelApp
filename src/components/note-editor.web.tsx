@@ -52,15 +52,6 @@ export default function WebNoteEditor({
   contentLoaded,
 }: WebNoteEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!contentLoaded || !editorRef.current) return;
-    const timer = setTimeout(() => {
-      editorRef.current?.focus();
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [contentLoaded]);
-
   const contentInitialised = useRef(false);
 
   useEffect(() => {
@@ -74,6 +65,7 @@ export default function WebNoteEditor({
       return;
     contentInitialised.current = true;
     editorRef.current.innerHTML = editorContent;
+    editorRef.current.focus({ preventScroll: true });
   }, [contentLoaded, editorContent]);
 
   const exec = useCallback(

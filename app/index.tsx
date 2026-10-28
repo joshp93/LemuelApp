@@ -7,6 +7,7 @@ import {
 } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   AppState,
   type AppStateStatus,
   RefreshControl,
@@ -37,9 +38,14 @@ import { CONTENT_COLUMN, CONTENT_INSET } from "../src/constants/layout";
 import { useFitFontSize } from "../src/hooks/useFitFontSize";
 import { useNoteReactions } from "../src/hooks/useNoteReactions";
 import { useProverbForTheDay } from "../src/hooks/useProverbForTheDay";
+import type { ReactionCounts } from "../src/models/reactions-and-replies";
+import { toLocalDateString } from "../src/utils/date";
 import { reactionKey } from "../src/utils/reactions";
 
 const FONT_SIZES = [56, 40, 24];
+
+/** Shared empty counts, so a note without reactions keeps a stable prop. */
+const EMPTY_REACTION_COUNTS: ReactionCounts = {};
 
 export default function Index() {
   const router = useRouter();
@@ -59,47 +65,62 @@ export default function Index() {
     goToDate,
   } = useProverbForTheDay();
   const { date: paramDate } = useLocalSearchParams<{ date?: string }>();
-  const todayString = useMemo(() => new Date().toISOString().split("T")[0], []);
+  const todayString = useMemo(() => toLocalDateString(new Date()), []);
   const isToday = !date || date === todayString;
   const [notes, setNotes] = useState<NoteEntity[]>([]);
+  const [notesLoading, setNotesLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [dataReady, setDataReady] = useState(false);
   const [userNote, setUserNote] = useState<UserNoteResponse | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  const loadPageData = useCallback(async () => {
-    if (!proverb?.ref) return;
-    remoteLog("debug", "[Index] Loading page data", {
-      ref: proverb.ref,
-      authenticated: !!user,
-    });
-    const promises: Promise<void>[] = [];
+  /**
+   * Loads the community notes and the reader's own note for the proverb on
+   * screen.
+   *
+   * A silent load leaves what is already displayed alone until the requests
+   * answer, so returning to the page does not replace it with a spinner.
+   *
+   * @param options - Whether to hide the section's loading state.
+   */
+  const loadPageData = useCallback(
+    async ({ silent = false }: { silent?: boolean } = {}) => {
+      if (!proverb?.ref) return;
+      remoteLog("debug", "[Index] Loading page data", {
+        ref: proverb.ref,
+        authenticated: !!user,
+      });
 
-    if (user) {
-      promises.push(
-        getProverbNotes(proverb.ref)
-          .then((res) => setNotes(res.items))
-          .catch(() => setNotes([])),
-      );
-      promises.push(
-        getUserNote(user.userId, proverb.ref, date ?? todayString)
-          .then(setUserNote)
-          .catch(() => setUserNote(null)),
-      );
-    } else {
-      setNotes([]);
-      setUserNote(null);
-    }
+      if (!silent) setNotesLoading(true);
 
-    await Promise.all(promises);
-    remoteLog("info", "[Index] Page data loaded", { ref: proverb.ref });
-    setDataReady(true);
-  }, [proverb, user, date, todayString]);
+      const promises: Promise<void>[] = [];
+
+      if (user) {
+        promises.push(
+          getProverbNotes(proverb.ref, user.userId)
+            .then((res) => setNotes(res.items))
+            .catch(() => setNotes([])),
+        );
+        promises.push(
+          getUserNote(user.userId, proverb.ref, date ?? todayString)
+            .then(setUserNote)
+            .catch(() => setUserNote(null)),
+        );
+      } else {
+        setNotes([]);
+        setUserNote(null);
+      }
+
+      await Promise.all(promises);
+      remoteLog("info", "[Index] Page data loaded", { ref: proverb.ref });
+      setNotesLoading(false);
+    },
+    [proverb, user, date, todayString],
+  );
 
   const { reactionData, changeReaction } = useNoteReactions({
     notes,
     userId: user?.userId ?? null,
-    ready: dataReady,
+    ready: !notesLoading,
   });
 
   const updateNoteReplyCount = useCallback((noteKey: string, delta: number) => {
@@ -113,24 +134,22 @@ export default function Index() {
   }, []);
 
   /**
-   * Which proverb the page's notes and user note belong to.
-   *
-   * A version change leaves this alone — the reference and the date are the
-   * same verse either way — so the page can keep what it is showing while the
-   * new wording cross-fades in, instead of falling back to the loading screen.
+   * The date whose notes are on screen. A version change leaves this alone, so
+   * the page keeps the notes it is showing while the new wording cross-fades
+   * in.
    */
-  const pageKey = `${proverb?.ref ?? ""}#${date ?? todayString}`;
-  const loadedKey = useRef<string | null>(null);
+  const dateKey = date ?? todayString;
+
+  useEffect(() => {
+    setNotes([]);
+    setUserNote(null);
+    setNotesLoading(true);
+  }, [dateKey]);
 
   useEffect(() => {
     if (!proverb || loading) return;
-
-    if (loadedKey.current !== pageKey) {
-      loadedKey.current = pageKey;
-      setDataReady(false);
-    }
     loadPageData();
-  }, [proverb, loading, loadPageData, pageKey]);
+  }, [proverb, loading, loadPageData]);
 
   const loadPageDataRef = useRef(loadPageData);
   loadPageDataRef.current = loadPageData;
@@ -138,11 +157,10 @@ export default function Index() {
   useEffect(() => {
     const unsubscribe = navigation.addListener("focus", () => {
       if (!proverb?.ref) return;
-      setDataReady(false);
-      loadPageDataRef.current();
+      loadPageDataRef.current({ silent: true });
     });
     return unsubscribe;
-  }, [navigation]);
+  }, [navigation, proverb?.ref]);
 
   useEffect(() => {
     if (paramDate && selectedVersion) {
@@ -181,7 +199,6 @@ export default function Index() {
     (day: string) => {
       remoteLog("debug", "[Index] Date selected from picker", { day });
       setShowDatePicker(false);
-      setDataReady(false);
       goToDate(day);
     },
     [goToDate],
@@ -228,17 +245,14 @@ export default function Index() {
         keyboardShouldPersistTaps="handled"
         bottomOffset={insets.bottom + 8}
       >
-        {!dataReady && !error && <LemuelLoadingScreen />}
+        {!proverb && !error && <LemuelLoadingScreen />}
         {error && <Text>{error}</Text>}
-        {dataReady && proverb && !error && (
+        {proverb && !error && (
           <FadeInDown key={proverb.ref}>
             {!isToday && (
               <NotTodayBanner
                 date={date!}
-                onPressReturnToToday={() => {
-                  setDataReady(false);
-                  goToDate(undefined);
-                }}
+                onPressReturnToToday={() => goToDate(undefined)}
               />
             )}
             <ProverbCrossFade
@@ -272,7 +286,14 @@ export default function Index() {
                 >
                   Meditations
                 </Text>
-                {notes.length === 0 && (
+                {notesLoading && (
+                  <ActivityIndicator
+                    size="small"
+                    color="#333"
+                    style={{ marginTop: 12 }}
+                  />
+                )}
+                {!notesLoading && notes.length === 0 && (
                   <Text
                     style={{
                       color: "black",
@@ -293,7 +314,9 @@ export default function Index() {
                       contentWidth={contentWidth}
                       showEdit={note.uuid === user?.userId}
                       reactionCounts={
-                        rd?.reactionCounts ?? note.reactionCounts ?? {}
+                        rd?.reactionCounts ??
+                        note.reactionCounts ??
+                        EMPTY_REACTION_COUNTS
                       }
                       replyCount={note.replyCount ?? 0}
                       userReaction={rd?.userReaction}
@@ -351,10 +374,9 @@ export default function Index() {
                     justifyContent: "center",
                   }}
                   onPress={() => {
-                    setDataReady(false);
-                    const prev = new Date(date ?? todayString);
+                    const prev = new Date(`${dateKey}T00:00:00`);
                     prev.setDate(prev.getDate() - 1);
-                    goToDate(prev.toISOString().split("T")[0]);
+                    goToDate(toLocalDateString(prev));
                   }}
                 >
                   <MaterialIcons name="arrow-back" size={24} color="white" />
@@ -393,10 +415,9 @@ export default function Index() {
                       justifyContent: "center",
                     }}
                     onPress={() => {
-                      setDataReady(false);
-                      const next = new Date(date ?? todayString);
+                      const next = new Date(`${dateKey}T00:00:00`);
                       next.setDate(next.getDate() + 1);
-                      goToDate(next.toISOString().split("T")[0]);
+                      goToDate(toLocalDateString(next));
                     }}
                   >
                     <MaterialIcons
