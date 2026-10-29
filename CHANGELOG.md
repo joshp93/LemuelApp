@@ -14,6 +14,34 @@ Play submission have all succeeded.
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-10-29
+
+### Added
+
+- Device caching for proverbs, Bible versions, monthly calendars and notes.
+  A proverb for a given version and date is kept indefinitely; notes are
+  re-read after 30 seconds.
+
+### Changed
+
+- The daily proverb is shown as soon as it arrives, instead of waiting for the
+  community notes and the reader's own note to load.
+- Returning to the home screen, and opening a note, no longer clear what is
+  already displayed while the data refreshes.
+- Signing in no longer waits for the account's display name before the app is
+  usable.
+- Authentication tokens are stored in the platform keystore (Android Keystore
+  and iOS Keychain) rather than unencrypted AsyncStorage. Tokens already on the
+  device are moved on the first launch after the update. The web build has no
+  keystore available and keeps its existing browser storage.
+
+### Fixed
+
+- The note editor reliably places the caret when it opens, instead of relying on
+  a fixed delay after the editor mounts.
+- "Today" is taken from the device's local date, so the home screen and the
+  previous/next day buttons are correct either side of midnight.
+
 ## [1.2.0] - 2026-10-24
 
 ### Added
